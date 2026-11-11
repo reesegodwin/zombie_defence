@@ -49,7 +49,7 @@ func _unit_checks() -> void:
 	g.input_auto = true
 	var you: Dictionary = g.crew[0]
 	var za: Dictionary = g.spawn_zombie("walker", 1.0, 0.0)
-	za["x"] = 6.0; za["y"] = 10.0
+	za["x"] = 9.0; za["y"] = 11.5
 	g.input_aim = Vector2(16.0, 9.0)          # cursor off to the right
 	g.update_crew(0.016)
 	var want := atan2(za["y"] - you["y"], za["x"] - you["x"])

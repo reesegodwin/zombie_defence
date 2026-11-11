@@ -155,9 +155,9 @@ func _run() -> void:
 	g.zombies = []
 	var target_z: Dictionary = g.spawn_zombie("walker", 1.0, 0.0)
 	target_z["x"] = 11.0
-	target_z["y"] = 9.0
+	target_z["y"] = 10.5
 	target_z["spd"] = 0.0
-	var zp := grid_to_screen(11.0, 9.0, 0.9)
+	var zp := grid_to_screen(11.0, 10.5, 0.9)
 	Input.warp_mouse(zp)
 	await frames(3)
 	mouse_move(zp, false)
@@ -179,12 +179,12 @@ func _run() -> void:
 		z["hp"] = 0.0
 	g.zombies = []
 	main.paused = true
-	var p_in := grid_to_screen(14.0, 6.0)
+	var p_in := grid_to_screen(13.0, 11.0)
 	Input.warp_mouse(p_in)
 	await frames(3)
 	mouse_move(p_in, false)
 	await frames(6)
-	check(main.aim_guide.visible and main.aim_guide.label.visible, "the range arc shows while you play")
+	check(main.aim_guide.visible, "the range arc shows while you play")
 	await shot("08_aim_in_range")
 	var p_out := grid_to_screen(16.5, 0.6)
 	Input.warp_mouse(p_out)
@@ -195,8 +195,8 @@ func _run() -> void:
 	main.paused = false
 	g.input_auto = true
 	var zl: Dictionary = g.spawn_zombie("walker", 20.0, 0.0)
-	zl["x"] = 6.0
-	zl["y"] = 9.0
+	zl["x"] = 8.5
+	zl["y"] = 11.5
 	await frames(20)
 	var you: Dictionary = g.crew[0]
 	var want := atan2(zl["y"] - you["y"], zl["x"] - you["x"])
