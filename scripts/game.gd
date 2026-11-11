@@ -30,9 +30,8 @@ var traps: Array = []
 var storage := {"cap": 8, "items": []}
 var mods := {"crew_dmg": 1.0, "crew_rate": 1.0, "wire": 0.0}
 var scrap := D.START_SCRAP
-var food := 6
+var food := D.START_FOOD       # eaten continuously by everyone in the crew
 var hungry := false
-var meal_t := D.MEAL_EVERY
 var trip = null                # the scavenging trip in progress, or null
 var looted := {}               # site key -> true once a scavenger has picked it clean
 var purchases: Array = []
@@ -1075,24 +1074,29 @@ func _stranger_arrives() -> void:
 
 
 # --- Food -------------------------------------------------------------------
-# Every few minutes everyone eats one food. If there isn't enough, the whole
-# crew goes hungry and shoots slower until the next meal they can afford.
+# Everyone eats all the time: each survivor, you included and anyone out
+# scavenging, gets through FOOD_PER_MINUTE. When the stock runs out the whole
+# crew is hungry and shoots slower until food comes in.
+
+## Food eaten per minute by the whole crew right now.
+func food_per_minute() -> float:
+	return crew.size() * D.FOOD_PER_MINUTE
+
+
+## Seconds until the food runs out at the current rate.
+func food_time_left() -> float:
+	var rate := food_per_minute()
+	return INF if rate <= 0.0 else food / rate * 60.0
+
+
 func update_food(dt: float) -> void:
-	meal_t -= dt
-	if meal_t > 0:
-		return
-	meal_t = D.MEAL_EVERY
-	var mouths := crew.size()
-	if food >= mouths:
-		food -= mouths
-		if hungry:
-			toast.emit("Everyone eats. The crew is back to full strength.", "good")
-		hungry = false
-	else:
-		food = 0
-		if not hungry:
-			toast.emit("Not enough food. The crew is hungry and shoots slower.", "danger")
+	food = maxf(0.0, food - food_per_minute() / 60.0 * dt)
+	if food <= 0.0 and not hungry:
 		hungry = true
+		toast.emit("The food has run out. The crew is hungry and shoots slower.", "danger")
+	elif food > 0.0 and hungry:
+		hungry = false
+		toast.emit("There's food again. The crew is back to full strength.", "good")
 
 
 # --- Workshop ---------------------------------------------------------------

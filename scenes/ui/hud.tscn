@@ -35,7 +35,7 @@ layout_mode = 1
 offset_left = 16.0
 offset_top = 16.0
 offset_right = 316.0
-offset_bottom = 180.0
+offset_bottom = 200.0
 mouse_filter = 2
 
 [node name="VBox" type="VBoxContainer" parent="Root/StatsPanel"]
@@ -63,7 +63,23 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"HeaderLabel"
 theme_override_font_sizes/font_size = 20
-text = "Scrap 80   ·   Food 6"
+text = "Scrap 80"
+
+[node name="FoodLabel" type="Label" parent="Root/StatsPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Food 6.0   ·   −0.5/min   ·   lasts 12:00"
+
+[node name="FoodBar" type="ProgressBar" parent="Root/StatsPanel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(270, 10)
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"FoodBar"
+max_value = 20.0
+value = 6.0
+show_percentage = false
 
 [node name="StatsLabel" type="Label" parent="Root/StatsPanel/VBox"]
 unique_name_in_owner = true
@@ -304,7 +320,7 @@ layout_mode = 1
 anchors_preset = 9
 anchor_bottom = 1.0
 offset_left = 16.0
-offset_top = 196.0
+offset_top = 226.0
 offset_right = 376.0
 offset_bottom = -16.0
 grow_vertical = 2

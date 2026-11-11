@@ -185,12 +185,18 @@ func _unit_checks() -> void:
 	# Food.
 	g = Game.new()
 	g.add_survivor("Dana", "pistol", false)
-	g.food = 1
-	g.update_food(D.MEAL_EVERY + 0.1)
-	check(g.hungry and g.survivor_stats(g.crew[0])["interval"] > D.WEAPONS["pistol"]["rate"], "without enough food the crew is hungry and slower")
-	g.food = 5
-	g.update_food(D.MEAL_EVERY + 0.1)
-	check(not g.hungry and g.food == 3, "a meal costs one food each and ends the hunger")
+	g.food = 10.0
+	check(absf(g.food_per_minute() - 2 * D.FOOD_PER_MINUTE) < 0.001, "every survivor eats, you included")
+	for i in 600:
+		g.update_food(0.1)       # one minute
+	check(absf(g.food - (10.0 - 2 * D.FOOD_PER_MINUTE)) < 0.01, "the stock drops by the crew's rate each minute")
+	g.food = 0.05
+	for i in 100:
+		g.update_food(0.1)
+	check(g.hungry and g.food == 0.0 and g.survivor_stats(g.crew[0])["interval"] > D.WEAPONS["pistol"]["rate"], "with no food the crew is hungry and slower")
+	g.food = 4.0
+	g.update_food(0.1)
+	check(not g.hungry, "food coming in ends the hunger")
 
 
 func _sim_run(limit: float) -> Dictionary:

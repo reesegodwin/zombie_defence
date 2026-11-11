@@ -9,8 +9,10 @@ through the pass to scavenge: pick a place on the hand-drawn map by how long
 they'll be gone and how much scrap it holds (each place can only be looted
 once; it's crossed out afterwards). They come back with scrap, and
 with luck a gun, food or another survivor. Spend scrap in the workshop on guns,
-gear, traps, supplies and a stronger wall. Keep food in store or the crew goes
-hungry and shoots slower. It is one continuous run that keeps getting harder as
+gear, traps, supplies and a stronger wall. Every survivor eats all the time
+(half a food a minute each); the food bar shows your stock, how fast it's
+going and how long it will last. If it runs out the crew goes hungry and
+shoots slower. It is one continuous run that keeps getting harder as
 night falls, with hordes that keep growing.
 
 The game is 3D with a fixed isometric camera, so it gets real lighting:
@@ -60,7 +62,7 @@ floodlight, muzzle flashes, burning fuel, explosions and blood on the ground.
 | `data/zombies/*.tres` | **Zombie stats and colours**: health, speed, wall damage, size… |
 | `data/sites/*.tres` | **Scavenging sites**: time away, scrap level, odds of guns, food and survivors, map position |
 | `scripts/game.gd` | Game rules: difficulty curve, combat, traps, inventory, scavenging, food, workshop |
-| `scripts/defs.gd` | Workshop prices, scrap ranges, food and stranger timings, items, map layout |
+| `scripts/defs.gd` | Workshop prices, scrap ranges, food per survivor, stranger timings, items, map layout |
 | `scripts/sfx.gd` | Sound effects, generated in code |
 
 The simulation in `scripts/game.gd` has no nodes; the scenes read its state each

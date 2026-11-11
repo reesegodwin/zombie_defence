@@ -29,7 +29,9 @@ const SCRAP_TIERS := [[12, 24], [24, 42], [45, 80]]   # low, medium, high: min a
 const SCRAP_NAMES := ["Low", "Medium", "High"]
 const FIRST_STRANGER_AT := 30.0        # seconds into a run when the first survivor walks in
 const STRANGER_EVERY_WHEN_ALONE := 25.0 # after that, only once you've lost everyone: average wait
-const MEAL_EVERY := 120.0               # seconds between meals; everyone eats 1 food
+const START_FOOD := 6.0
+const FOOD_PER_MINUTE := 0.5            # eaten by each survivor (you included), all the time
+const FOOD_BAR_MIN := 20.0              # the food bar's scale: this much, or more if you hold more
 const HUNGRY_SLOWDOWN := 1.25           # hungry crews take this much longer between shots
 
 # --- Workshop: what scrap buys ---------------------------------------------

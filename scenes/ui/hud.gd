@@ -15,6 +15,8 @@ var slots: Array = []
 @onready var wall_bar: ProgressBar = %WallBar
 @onready var resources_label: Label = %ResourcesLabel
 @onready var trip_label: Label = %TripLabel
+@onready var food_label: Label = %FoodLabel
+@onready var food_bar: ProgressBar = %FoodBar
 @onready var stats_label: Label = %StatsLabel
 @onready var hint: Label = %Hint
 @onready var toasts: VBoxContainer = %Toasts
@@ -249,16 +251,26 @@ func update_hud() -> void:
 	wall_bar.max_value = w["max_hp"]
 	wall_bar.value = w["hp"]
 	wall_label.text = "Wall  %d / %d  ·  %s" % [ceili(w["hp"]), int(w["max_hp"]), g.wall_mat()["name"]]
-	var meal := int(ceil(g.meal_t))
-	resources_label.text = "Scrap %d   ·   Food %d%s" % [g.scrap, g.food, "   ·   HUNGRY" if g.hungry else ""]
-	resources_label.add_theme_color_override("font_color", Color(1, 0.45, 0.35) if g.hungry else Color(0.88, 0.7, 0.29))
+	resources_label.text = "Scrap %d" % g.scrap
+	# Food: stock bar, how fast it's going, how long it lasts.
+	food_bar.max_value = maxf(D.FOOD_BAR_MIN, g.food)
+	food_bar.value = g.food
+	var rate: float = g.food_per_minute()
+	var low: bool = g.hungry or g.food_time_left() < 60.0
+	if g.hungry:
+		food_label.text = "Food 0   ·   HUNGRY: shooting slower"
+	else:
+		var left := int(g.food_time_left())
+		food_label.text = "Food %.1f   ·   −%.1f/min   ·   lasts %d:%02d" % [g.food, rate, left / 60, left % 60]
+	food_label.add_theme_color_override("font_color", Color(1, 0.45, 0.35) if low else Color(0.93, 0.92, 0.9))
+	food_bar.modulate = Color(1, 0.5, 0.4) if low else Color.WHITE
 	var trip_text := ""
 	if g.trip != null:
 		var left := int(ceil(g.trip_time_left()))
 		var verb: String = {"leaving": "heading out to", "away": "scavenging at", "returning": "coming back from"}.get(g.trip["who"]["state"], "at")
 		trip_text = "%s is %s the %s. Back in %d:%02d." % [g.trip["who"]["name"], verb, D.SITES[g.trip["site"]]["name"], left / 60, left % 60]
-	var next_meal := "Next meal in %d:%02d (%d food for %d people)." % [meal / 60, meal % 60, g.crew.size(), g.crew.size()]
-	trip_label.text = (trip_text + "\n" if trip_text != "" else "") + next_meal
+	trip_label.text = trip_text
+	trip_label.visible = trip_text != ""
 	var t := int(g.time)
 	stats_label.text = "Time %d:%02d   Kills %d   Threat %d   Crew %d/%d" % [t / 60, t % 60, g.kills, g.threat, g.crew.size(), D.MAX_CREW]
 	btn_auto.text = "Auto-fire: %s (F)" % ("on" if g.input_auto else "off")

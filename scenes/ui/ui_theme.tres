@@ -81,6 +81,13 @@ corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
+[sub_resource type="StyleBoxFlat" id="bar_food"]
+bg_color = Color(0.45, 0.72, 0.36, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
 [sub_resource type="StyleBoxFlat" id="card"]
 content_margin_left = 0.0
 content_margin_top = 0.0
@@ -192,6 +199,9 @@ ProgressBar/styles/background = SubResource("bar_bg")
 WallBar/base_type = &"ProgressBar"
 WallBar/styles/background = SubResource("bar_bg")
 WallBar/styles/fill = SubResource("bar_wall")
+FoodBar/base_type = &"ProgressBar"
+FoodBar/styles/background = SubResource("bar_bg")
+FoodBar/styles/fill = SubResource("bar_food")
 XpBar/base_type = &"ProgressBar"
 XpBar/styles/background = SubResource("bar_bg")
 XpBar/styles/fill = SubResource("bar_xp")
