@@ -240,7 +240,8 @@ func _run() -> void:
 	await click(main.hud.btn_workshop)
 
 	print("Scavenging")
-	var dana: Dictionary = g.add_survivor("Dana", "pistol", false)
+	var dana: Dictionary = g.add_survivor("Dana", "pistol", false, {"repair": 2, "fleet": 1})
+	g.death_mul = 0.0   # the rest of the test needs Dana back
 	await frames(5)
 	await click(main.hud.btn_map)
 	check(main.hud.map_open(), "the scavenge button opens the map")

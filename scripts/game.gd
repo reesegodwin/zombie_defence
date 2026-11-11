@@ -11,6 +11,7 @@ signal sound(name: String)
 signal inv_changed
 signal trip_returned(report: Dictionary)
 signal survivor_arrived(name: String)
+signal scavenger_lost(name: String, site: String)
 signal exploded(x: float, y: float, radius: float)
 signal zombie_died(x: float, y: float, type: String)
 signal wall_breached(x: float)
@@ -49,6 +50,8 @@ var horde_left := 0
 var horde_acc := 0.0
 var shake := 0.0
 var fx_id := 1                 # ids for fires, so the 3D view can track them
+var sid := 1                   # ids for survivors, so the 3D view can track them
+var death_mul := 1.0           # scales the risk of dying while scavenging (tests set 0)
 
 # Player input, written by main.gd each frame (grid coordinates).
 var input_aim = null           # Vector2 or null
@@ -87,16 +90,57 @@ func new_item(key: String, uses = null) -> Dictionary:
 
 
 # --- Crew -------------------------------------------------------------------
-func add_survivor(sname: String, weapon: String, is_player: bool) -> Dictionary:
+func add_survivor(sname: String, weapon: String, is_player: bool, skills = null) -> Dictionary:
 	var i := crew.size()
 	crew.append({
+		"id": sid, "skills": roll_skills(is_player) if skills == null else skills,
 		"name": sname, "weapon": weapon, "is_player": is_player, "gear": [null, null], "mol_cd": 0.0,
 		"x": 0.0, "y": 0.0, "slot_x": 0.0, "state": "wall", "path_t": 0.0, "cd": 0.3 + randf() * 0.3, "aim": -PI * 0.75, "flash": 0.0, "recoil": 0.0,
 		"jacket": Color("3e5a6e") if is_player else D.JACKETS[i % D.JACKETS.size()],
 		"skin": Color("d9a77f") if is_player else D.SKINS[(i * 3) % D.SKINS.size()],
 	})
+	sid += 1
 	layout_crew()
 	return crew[-1]
+
+
+## One to three different random skills, each at level 1 to 3: {key: level}.
+static func roll_skills(is_player: bool) -> Dictionary:
+	var pool: Array = []
+	for k in D.SKILLS:
+		if D.SKILLS[k]["player"] or not is_player:
+			pool.append(k)
+	pool.shuffle()
+	var n := _pick_weighted(D.SKILL_COUNT_ODDS) + 1
+	var out := {}
+	for k in pool.slice(0, n):
+		out[k] = _pick_weighted(D.SKILL_LEVEL_ODDS) + 1
+	return out
+
+
+static func _pick_weighted(odds: Array) -> int:
+	var r := randf()
+	for i in odds.size():
+		r -= odds[i]
+		if r < 0.0:
+			return i
+	return odds.size() - 1
+
+
+## "Handy II, Careful I"
+static func skills_text(s: Dictionary) -> String:
+	var parts: PackedStringArray = []
+	for k in s.get("skills", {}):
+		parts.append(D.skill_label(k, s["skills"][k]))
+	return ", ".join(parts) if parts.size() > 0 else "No special skills"
+
+
+## One line per skill, with what it does.
+static func skills_detail(s: Dictionary) -> String:
+	var lines: PackedStringArray = []
+	for k in s.get("skills", {}):
+		lines.append("%s: %s." % [D.skill_label(k, s["skills"][k]), D.skill_desc(k, s["skills"][k])])
+	return "\n".join(lines) if lines.size() > 0 else "No special skills."
 
 
 func layout_crew() -> void:
@@ -134,6 +178,8 @@ func survivor_stats(s: Dictionary) -> Dictionary:
 			"trigger": rate *= 0.85
 			"molotov": crates += 1
 	dmg *= 1.0 + 0.25 * hollow
+	dmg *= D.skill_fx(s, "aim")
+	rate *= D.skill_fx(s, "quick")
 	if hungry:
 		rate *= D.HUNGRY_SLOWDOWN
 	var w: Dictionary = D.WEAPONS[s["weapon"]]
@@ -295,7 +341,7 @@ func fire(s: Dictionary, tx: float, ty: float, dmg_mul: float) -> void:
 			"t": 0.0, "dur": 0.25 + d / 12.0, "dmg": w["dmg"] * dmg_mul, "splash": w["splash"]})
 		return
 	for p in int(w["pellets"]):
-		var a: float = ang + (randf() * 2.0 - 1.0) * w["spread"]
+		var a: float = ang + (randf() * 2.0 - 1.0) * w["spread"] * (2.0 - D.skill_fx(s, "aim"))
 		var dx := cos(a)
 		var dy := sin(a)
 		var hits: Array = []
@@ -900,10 +946,22 @@ func send_scavenger(si: int, site_key: String) -> Dictionary:
 	s["repairing"] = false
 	s["state"] = "leaving"
 	s["path_t"] = 0.0
-	trip = {"who": s, "site": site_key, "away": maxf(5.0, site["gone"] - walk * 2.0), "t": 0.0, "walk": walk}
+	var gone: float = trip_seconds(s, site_key)
+	trip = {"who": s, "site": site_key, "away": maxf(5.0, gone - walk * 2.0), "t": 0.0, "walk": walk}
 	toast.emit("%s heads out through the pass to the %s." % [s["name"], site["name"]], "info")
 	_changed()
 	return {"ok": true}
+
+
+## How long a survivor would be gone to a site, there and back.
+func trip_seconds(s: Dictionary, site_key: String) -> float:
+	return D.SITES[site_key]["gone"] * D.skill_fx(s, "fleet")
+
+
+## Chance (0..1) that a survivor sent to a site never comes back.
+func death_chance(s: Dictionary, site_key: String) -> float:
+	var base: float = D.SCAVENGE_DEATH * D.SITES[site_key]["gone"] / D.SCAVENGE_DEATH_REF
+	return clampf(base * D.skill_fx(s, "careful") * death_mul, 0.0, 1.0)
 
 
 ## Seconds until the survivor out scavenging is back on the wall.
@@ -929,7 +987,10 @@ func update_trip(dt: float) -> void:
 	if s["state"] == "away":
 		trip["t"] += dt
 		if trip["t"] >= trip["away"]:
-			trip["report"] = _roll_loot(trip["site"])
+			if randf() < death_chance(s, trip["site"]):
+				_lose_scavenger()
+				return
+			trip["report"] = _roll_loot(trip["site"], s)
 			s["state"] = "returning"
 			s["path_t"] = 1.0
 			if trip["report"]["survivor"] != "":
@@ -961,7 +1022,7 @@ func update_walkers(dt: float) -> void:
 					_deliver_trip()
 				else:
 					survivor_arrived.emit(s["name"])
-					toast.emit("%s made it through the pass and joins you on the wall." % s["name"], "good")
+					toast.emit("%s made it through the pass and joins you on the wall. Skills: %s." % [s["name"], skills_text(s)], "good")
 					sound.emit("coin")
 				_changed()
 		var p := path_point(s["slot_x"], minf(1.0, s["path_t"]))
@@ -969,15 +1030,29 @@ func update_walkers(dt: float) -> void:
 		s["y"] = p.y
 
 
-func _roll_loot(site_key: String) -> Dictionary:
+## The scavenger didn't make it: they, their gun and their gear are gone.
+func _lose_scavenger() -> void:
+	var s: Dictionary = trip["who"]
+	var site: Dictionary = D.SITES[trip["site"]]
+	crew.erase(s)
+	trip = null
+	layout_crew()
+	toast.emit("%s never came back from the %s." % [s["name"], site["name"]], "danger")
+	sound.emit("horn")
+	scavenger_lost.emit(s["name"], site["name"])
+	_changed()
+
+
+func _roll_loot(site_key: String, who = null) -> Dictionary:
 	var site: Dictionary = D.SITES[site_key]
 	var tier: Array = D.SCRAP_TIERS[site["scrap"]]
-	var r := {"site": site_key, "scrap": randi_range(tier[0], tier[1]), "weapon": "", "food": 0, "survivor": ""}
-	if randf() < site["weapon_chance"]:
+	var luck: float = D.skill_fx(who, "scrounge") if who != null else 1.0
+	var r := {"site": site_key, "scrap": int(round(randi_range(tier[0], tier[1]) * luck)), "weapon": "", "food": 0, "survivor": ""}
+	if randf() < site["weapon_chance"] * luck:
 		r["weapon"] = ["smg", "shotgun", "rifle", "launcher", "smg", "shotgun", "rifle"].pick_random()
-	if randf() < site["food_chance"]:
+	if randf() < site["food_chance"] * luck:
 		r["food"] = randi_range(2, 5)
-	if randf() < site["survivor_chance"] and crew.size() < D.MAX_CREW:
+	if randf() < site["survivor_chance"] * luck and crew.size() < D.MAX_CREW:
 		r["survivor"] = free_name()
 	return r
 
@@ -1056,6 +1131,15 @@ func repairers() -> int:
 	return n
 
 
+## Wall restored per second by everyone repairing right now.
+func repair_rate() -> float:
+	var r := 0.0
+	for s in crew:
+		if s.get("repairing", false):
+			r += D.REPAIR_PER_SECOND * D.skill_fx(s, "repair")
+	return r
+
+
 func toggle_repair(i: int) -> Dictionary:
 	if i < 0 or i >= crew.size():
 		return {"msg": ""}
@@ -1090,9 +1174,9 @@ func update_repairs(dt: float) -> void:
 			s["repairing"] = false
 			toast.emit("Out of scrap. Repairs have stopped.", "danger")
 			continue
-		var gain := minf(D.REPAIR_PER_SECOND * dt, wall["max_hp"] - wall["hp"])
+		var gain := minf(D.REPAIR_PER_SECOND * D.skill_fx(s, "repair") * dt, wall["max_hp"] - wall["hp"])
 		wall["hp"] += gain
-		_repair_debt += gain / D.WALL_PER_SCRAP
+		_repair_debt += gain / (D.WALL_PER_SCRAP * D.skill_fx(s, "thrift"))
 		while _repair_debt >= 1.0 and scrap > 0:
 			_repair_debt -= 1.0
 			scrap -= 1

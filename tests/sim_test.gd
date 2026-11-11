@@ -84,12 +84,12 @@ func _unit_checks() -> void:
 	r = g.move_item({"where": "storage", "i": 1}, {"where": "gear", "s": 0, "g": 0})
 	check(r.has("ok") and g.crew[0]["gear"][0]["key"] == "hollow", "gear goes in a gear slot")
 	check(g.survivor_stats(g.crew[0])["dmg"] > 1.2, "hollow points raise damage")
-	var n: Dictionary = g.add_survivor("Dana", "pistol", false)
+	var n: Dictionary = g.add_survivor("Dana", "pistol", false, {})
 	check(g.crew.size() == 2 and n["weapon"] == "pistol", "new survivors start with pistols")
 
 	# Repairing the wall.
 	g = Game.new()
-	g.add_survivor("Dana", "pistol", false)
+	g.add_survivor("Dana", "pistol", false, {})
 	g.wall["hp"] = 100.0
 	g.scrap = 100
 	check(g.toggle_repair(1).has("ok") and g.crew[1]["repairing"], "clicking a survivor sets them repairing")
@@ -154,11 +154,12 @@ func _unit_checks() -> void:
 
 	# Scavenging.
 	g = Game.new()
+	g.death_mul = 0.0
 	check(not g.send_scavenger(0, "gas_station").has("ok"), "you can't send yourself")
-	g.add_survivor("Dana", "pistol", false)
+	g.add_survivor("Dana", "pistol", false, {})
 	var dana: Dictionary = g.crew[1]
 	check(g.send_scavenger(1, "gas_station").has("ok") and dana["state"] == "leaving", "a survivor can be sent out")
-	g.add_survivor("Kofi", "pistol", false)
+	g.add_survivor("Kofi", "pistol", false, {})
 	check(not g.send_scavenger(2, "farmhouse").has("ok"), "only one survivor can be out at a time")
 	var gone: float = D.SITES["gas_station"]["gone"]
 	check(absf(g.trip_time_left() - gone) < 0.5, "the trip takes as long as the map says")
@@ -212,15 +213,80 @@ func _unit_checks() -> void:
 			break
 	check(came, "once you've lost everyone, strangers come again")
 
+	# Skills.
+	var counts := {}
+	var levels := [0, 0, 0]
+	var player_ok := true
+	for i in 600:
+		var sk: Dictionary = Game.roll_skills(false)
+		counts[sk.size()] = counts.get(sk.size(), 0) + 1
+		for k in sk:
+			levels[sk[k] - 1] += 1
+		for k in Game.roll_skills(true):
+			if not D.SKILLS[k]["player"]:
+				player_ok = false
+	print("    600 survivors, skills per head: ", counts, "  levels I/II/III: ", levels)
+	check(counts.get(1, 0) > 0 and counts.get(2, 0) > 0 and counts.get(3, 0) > 0 and not counts.has(0) and not counts.has(4), "survivors get one to three random skills")
+	check(levels[0] > levels[1] and levels[1] > levels[2] and levels[2] > 0, "skills come in three degrees, stronger ones rarer")
+	check(player_ok, "you never roll scavenging skills")
+	g = Game.new()
+	var plain: Dictionary = g.add_survivor("Ada", "pistol", false, {})
+	var ace: Dictionary = g.add_survivor("Sol", "pistol", false, {"aim": 3, "quick": 2})
+	var ks: Dictionary = g.survivor_stats(plain)
+	var ka: Dictionary = g.survivor_stats(ace)
+	check(ka["dmg"] > ks["dmg"] and ka["interval"] < ks["interval"], "sharpshooters hit harder and quick hands shoot faster")
+	var fixer: Dictionary = g.add_survivor("Lev", "pistol", false, {"repair": 2, "thrift": 3})
+	g.wall["hp"] = 100.0
+	g.scrap = 100
+	g.toggle_repair(3)
+	for i in 100:
+		g.update_repairs(0.1)
+	var fixed: float = g.wall["hp"] - 100.0
+	check(absf(fixed - D.REPAIR_PER_SECOND * 1.5 * 10.0) < 1.0, "a handy survivor repairs faster: %d wall in 10 seconds" % int(fixed))
+	check(100 - g.scrap < int(fixed / D.WALL_PER_SCRAP) - 5, "a thrifty survivor uses less scrap: %d for %d wall" % [100 - g.scrap, int(fixed)])
+	var runner: Dictionary = g.add_survivor("Imke", "pistol", false, {"fleet": 3, "careful": 3})
+	check(g.trip_seconds(runner, "police_station") < g.trip_seconds(plain, "police_station"), "fleet-footed survivors make shorter trips")
+	check(g.death_chance(runner, "police_station") < g.death_chance(plain, "police_station") * 0.5, "careful survivors are less likely to die")
+	check(g.death_chance(plain, "police_station") > 0.0 and g.death_chance(plain, "police_station") < 0.15, "there's a slight chance of dying on a trip")
+	var rich := {"scrap": 0, "weapon": 0}
+	var poor := {"scrap": 0, "weapon": 0}
+	var scrounger := {"skills": {"scrounge": 3}}
+	for k in 400:
+		var la: Dictionary = g._roll_loot("police_station", scrounger)
+		var lb: Dictionary = g._roll_loot("police_station", plain)
+		rich["scrap"] += la["scrap"]; poor["scrap"] += lb["scrap"]
+		if la["weapon"] != "": rich["weapon"] += 1
+		if lb["weapon"] != "": poor["weapon"] += 1
+	check(rich["scrap"] > poor["scrap"] * 1.4 and rich["weapon"] > poor["weapon"], "scroungers bring back more")
+
+	# Dying while scavenging.
+	g = Game.new()
+	var doomed: Dictionary = g.add_survivor("Rosa", "rifle", false, {})
+	g.add_survivor("Kofi", "pistol", false, {})
+	g.death_mul = 1000.0
+	var lost := []
+	g.scavenger_lost.connect(func(nm, _site): lost.append(nm))
+	var scrap1: int = g.scrap
+	g.send_scavenger(1, "gas_station")
+	for i in 2000:
+		g.update_trip(0.1)
+		g.update_walkers(0.1)
+		if g.trip == null:
+			break
+	check(lost == ["Rosa"] and g.crew.size() == 2 and not g.crew.has(doomed), "a scavenger can die and never come back")
+	check(g.scrap == scrap1 and not g.looted.has("gas_station"), "nothing comes back, and the place is still there to loot")
+	check(g.crew[1]["name"] == "Kofi" and g.crew[1]["state"] == "wall", "the rest of the crew carries on")
+
 	# Food.
 	g = Game.new()
-	g.add_survivor("Dana", "pistol", false)
+	g.add_survivor("Dana", "pistol", false, {})
 	g.food = 10.0
 	check(absf(g.food_per_minute() - 2 * D.FOOD_PER_MINUTE) < 0.001, "every survivor eats, you included")
 	for i in 600:
 		g.update_food(0.1)       # one minute
 	check(absf(g.food - (10.0 - 2 * D.FOOD_PER_MINUTE)) < 0.01, "the stock drops by the crew's rate each minute")
 	g.food = 0.05
+	g.crew[0]["skills"] = {}
 	for i in 100:
 		g.update_food(0.1)
 	check(g.hungry and g.food == 0.0 and g.survivor_stats(g.crew[0])["interval"] > D.WEAPONS["pistol"]["rate"], "with no food the crew is hungry and slower")

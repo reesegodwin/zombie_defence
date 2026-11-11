@@ -31,7 +31,7 @@ var game
 var started := false
 var paused := false
 var zombie_nodes := {}     # zombie id -> node
-var crew_nodes: Array = []
+var crew_nodes := {}           # survivor id -> node
 var trap_nodes := {}       # trap uid -> node
 var hover_trap_uid := -1
 
@@ -62,7 +62,7 @@ func _new_game() -> void:
 	for n in zombie_nodes.values():
 		n.queue_free()
 	zombie_nodes.clear()
-	for n in crew_nodes:
+	for n in crew_nodes.values():
 		n.queue_free()
 	crew_nodes.clear()
 	for n in trap_nodes.values():
@@ -148,15 +148,22 @@ func _sync_scene(dt: float) -> void:
 			zombie_nodes[id].die()
 			zombie_nodes.erase(id)
 	# Crew.
-	while crew_nodes.size() < game.crew.size():
-		var s: Dictionary = game.crew[crew_nodes.size()]
-		var n: Node3D = survivor_scene.instantiate()
-		crew_root.add_child(n)
-		n.setup(s)
-		crew_nodes.append(n)
-	for i in crew_nodes.size():
-		crew_nodes[i].hovered = i == hover_survivor
-		crew_nodes[i].sync(game.crew[i], dt)
+	var here := {}
+	for i in game.crew.size():
+		var s: Dictionary = game.crew[i]
+		here[s["id"]] = true
+		var n = crew_nodes.get(s["id"])
+		if n == null:
+			n = survivor_scene.instantiate()
+			crew_root.add_child(n)
+			n.setup(s)
+			crew_nodes[s["id"]] = n
+		n.hovered = i == hover_survivor
+		n.sync(s, dt)
+	for id in crew_nodes.keys():
+		if not here.has(id):   # lost out scavenging
+			crew_nodes[id].queue_free()
+			crew_nodes.erase(id)
 	# Traps.
 	var alive := {}
 	for t in game.traps:

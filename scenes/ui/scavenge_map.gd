@@ -19,6 +19,7 @@ signal closed
 var main
 var site := ""
 var who := -1
+var status_extra := ""       # the chosen survivor's skills and odds on this trip
 
 
 func _ready() -> void:
@@ -94,6 +95,13 @@ func _refresh() -> void:
 			who = idx
 			_refresh())
 		who_row.add_child(b)
+	if who >= 0 and who < g.crew.size():
+		var sv: Dictionary = g.crew[who]
+		var risk: float = g.death_chance(sv, site) * 100.0
+		var tt := int(g.trip_seconds(sv, site))
+		status_extra = "%s: %s.\nWith %s: gone %d:%02d, %s%% chance of not coming back." % [sv["name"], g.skills_text(sv), sv["name"], tt / 60, tt % 60, ("%.1f" % risk) if risk < 10.0 else str(int(round(risk)))]
+	else:
+		status_extra = ""
 	var chk: Dictionary = g.can_send(who, site)
 	send_button.disabled = not chk.has("ok")
 	send_button.text = "Send %s to the %s" % [g.crew[who]["name"], s["name"]] if chk.has("ok") else "Send"
@@ -112,7 +120,7 @@ func _update_status() -> void:
 	elif g.available_scavengers().is_empty():
 		status_label.text = "Nobody to send. You have to stay on the wall. Wait for a survivor to find you."
 	else:
-		status_label.text = "Only one person can be out at a time. Their gun leaves the wall with them."
+		status_label.text = status_extra if status_extra != "" else "Only one person can be out at a time. Their gun leaves the wall with them."
 
 
 func _send() -> void:

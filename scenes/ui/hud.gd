@@ -158,7 +158,20 @@ func _rebuild_inventory() -> void:
 		nm.text = "%s\n%s · %d dps" % [s["name"], D.WEAPONS[s["weapon"]]["name"], k["dps"]]
 		nm.theme_type_variation = &"DimLabel"
 		nm.custom_minimum_size = Vector2(170, 0)
-		row.add_child(nm)
+		var info := VBoxContainer.new()
+		info.add_theme_constant_override("separation", 0)
+		info.custom_minimum_size = Vector2(170, 0)
+		info.mouse_filter = Control.MOUSE_FILTER_PASS
+		info.tooltip_text = g.skills_detail(s)
+		info.add_child(nm)
+		var sk := Label.new()
+		sk.text = g.skills_text(s)
+		sk.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		sk.custom_minimum_size = Vector2(170, 0)
+		sk.add_theme_font_size_override("font_size", 13)
+		sk.add_theme_color_override("font_color", Color(0.88, 0.7, 0.29, 0.9))
+		info.add_child(sk)
+		row.add_child(info)
 		row.add_child(_slot({"where": "weapon", "s": s_i}))
 		row.add_child(_slot({"where": "gear", "s": s_i, "g": 0}))
 		row.add_child(_slot({"where": "gear", "s": s_i, "g": 1}))
@@ -253,7 +266,7 @@ func update_hud() -> void:
 	wall_label.text = "Wall  %d / %d  ·  %s" % [ceili(w["hp"]), int(w["max_hp"]), g.wall_mat()["name"]]
 	var fixing: int = g.repairers()
 	if fixing > 0:
-		wall_label.text += "  ·  repairing +%d/s" % int(fixing * D.REPAIR_PER_SECOND)
+		wall_label.text += "  ·  repairing +%d/s" % int(g.repair_rate())
 	resources_label.text = "Scrap %d" % g.scrap
 	# Food: stock bar, how fast it's going, how long it lasts.
 	food_bar.max_value = maxf(D.FOOD_BAR_MIN, g.food)

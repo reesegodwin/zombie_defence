@@ -39,6 +39,35 @@ const HUNGRY_SLOWDOWN := 1.25           # hungry crews take this much longer bet
 const REPAIR_PER_SECOND := 12.0         # wall restored per second, per repairer
 const WALL_PER_SCRAP := 10.0            # wall restored for each scrap spent
 
+# --- Skills -----------------------------------------------------------------
+# Every survivor turns up with one to three random skills, each at level 1, 2
+# or 3. "fx" holds the effect at each level (index 0 = level 1):
+#   repair   multiplies how fast they repair the wall
+#   thrift   multiplies how much wall each scrap buys when they repair
+#   aim      multiplies their damage; their spread shrinks to (2 - fx) of normal
+#   quick    multiplies the time between their shots (lower is faster)
+#   scrounge multiplies the scrap they bring back and their odds of lucky finds
+#   fleet    multiplies how long their scavenging trips take (lower is faster)
+#   careful  multiplies their chance of dying on a scavenging trip
+# "player": false means you never roll it (you can't leave the wall).
+const SKILLS := {
+	"repair": {"name": "Handy", "fx": [1.25, 1.5, 1.85], "fmt": "Repairs the wall %s faster", "player": true},
+	"thrift": {"name": "Thrifty", "fx": [1.25, 1.5, 1.85], "fmt": "Gets %s more wall out of each scrap when repairing", "player": true},
+	"aim": {"name": "Sharpshooter", "fx": [1.1, 1.2, 1.32], "fmt": "Aims better: %s more damage and a tighter spread", "player": true},
+	"quick": {"name": "Quick hands", "fx": [0.92, 0.85, 0.77], "fmt": "Shoots %s faster", "player": true},
+	"scrounge": {"name": "Scrounger", "fx": [1.2, 1.4, 1.65], "fmt": "Brings back %s more scrap and finds more on trips", "player": false},
+	"fleet": {"name": "Fleet-footed", "fx": [0.88, 0.76, 0.64], "fmt": "Scavenging trips take %s less time", "player": false},
+	"careful": {"name": "Careful", "fx": [0.6, 0.35, 0.15], "fmt": "%s less likely to die out scavenging", "player": false},
+}
+const SKILL_COUNT_ODDS := [0.5, 0.4, 0.1]   # chance of having 1, 2 or 3 skills
+const SKILL_LEVEL_ODDS := [0.55, 0.32, 0.13] # chance of a skill being level 1, 2 or 3
+const LEVEL_MARKS := ["I", "II", "III"]
+
+# Chance of a scavenger never coming back: SCAVENGE_DEATH for a trip that is
+# SCAVENGE_DEATH_REF seconds long, scaled by the site's trip length.
+const SCAVENGE_DEATH := 0.05
+const SCAVENGE_DEATH_REF := 90.0
+
 # --- Workshop: what scrap buys ---------------------------------------------
 # Items go to base storage. Shelving, wall and drill take effect at once and
 # get dearer each time.
@@ -143,3 +172,20 @@ static func item_desc(key: String) -> String:
 static func item_kind(key: String) -> String:
 	return ITEMS[key]["kind"]
 
+
+
+## "Handy II"
+static func skill_label(key: String, lvl: int) -> String:
+	return "%s %s" % [SKILLS[key]["name"], LEVEL_MARKS[lvl - 1]]
+
+
+## "Repairs the wall 50% faster"
+static func skill_desc(key: String, lvl: int) -> String:
+	var fx: float = SKILLS[key]["fx"][lvl - 1]
+	return SKILLS[key]["fmt"] % ("%d%%" % int(round(absf(fx - 1.0) * 100.0)))
+
+
+## A survivor's skill multiplier (1.0 if they don't have the skill).
+static func skill_fx(s: Dictionary, key: String) -> float:
+	var lvl: int = s.get("skills", {}).get(key, 0)
+	return 1.0 if lvl <= 0 else float(SKILLS[key]["fx"][lvl - 1])

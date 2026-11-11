@@ -12,7 +12,18 @@ with luck a gun, food or another survivor. Spend scrap in the workshop on guns,
 gear, traps, supplies and a stronger wall. Every survivor eats all the time
 (half a food a minute each); the food bar shows your stock, how fast it's
 going and how long it will last. If it runs out the crew goes hungry and
-shoots slower. It is one continuous run that keeps getting harder as
+shoots slower.
+
+Every survivor (you included) turns up with one to three random skills, each
+at level I, II or III: **Handy** (repairs faster), **Thrifty** (less scrap per
+repair), **Sharpshooter** (more damage, tighter spread), **Quick hands**
+(shoots faster), **Scrounger** (more scrap and better finds), **Fleet-footed**
+(shorter trips) and **Careful** (less likely to die out there). The last three
+only matter for scavenging, so you never get them. Scavenging is risky: there
+is a slight chance, higher on longer trips, that whoever you send never comes
+back, and their gun and gear are lost with them. The map shows the odds for
+the survivor you've picked; the storage panel lists everyone's skills (hover
+for details). It is one continuous run that keeps getting harder as
 night falls, with hordes that keep growing.
 
 The game is 3D with a fixed isometric camera, so it gets real lighting:
@@ -63,7 +74,7 @@ floodlight, muzzle flashes, burning fuel, explosions and blood on the ground.
 | `data/zombies/*.tres` | **Zombie stats and colours**: health, speed, wall damage, size… |
 | `data/sites/*.tres` | **Scavenging sites**: time away, scrap level, odds of guns, food and survivors, map position |
 | `scripts/game.gd` | Game rules: difficulty curve, combat, traps, inventory, scavenging, food, workshop |
-| `scripts/defs.gd` | Workshop prices, repair speed and cost, scrap ranges, food per survivor, stranger timings, items, map layout |
+| `scripts/defs.gd` | Workshop prices, repair speed and cost, scrap ranges, food per survivor, stranger timings, survivor skills and their odds, the risk of dying while scavenging, items, map layout |
 | `scripts/sfx.gd` | Sound effects, generated in code |
 
 The simulation in `scripts/game.gd` has no nodes; the scenes read its state each
