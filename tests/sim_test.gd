@@ -157,20 +157,27 @@ func _unit_checks() -> void:
 	check(finds["high"] == 400, "high-scrap sites always give high scrap")
 	check(finds["weapon"] > 70 and finds["weapon"] < 170, "weapon finds match the site's odds")
 
-	# Strangers arrive, much more often when you are alone.
-	var alone := 0
-	var crewed := 0
-	for k in 40:
-		var ga = Game.new()
-		var gb = Game.new()
-		gb.add_survivor("Dana", "pistol", false)
-		for i in 600:
-			ga.update_arrivals(0.1)
-			gb.update_arrivals(0.1)
-		alone += ga.crew.size() - 1
-		crewed += gb.crew.size() - 2
-	print("    strangers in 60s, 40 runs: alone %d, with a crew %d" % [alone, crewed])
-	check(alone > crewed * 2, "strangers turn up more often when you're alone")
+	# Strangers: one walks in at 30 seconds; after that only if you're alone.
+	g = Game.new()
+	while g.time < D.FIRST_STRANGER_AT - 0.5:
+		g.time += 0.1
+		g.update_arrivals(0.1)
+	check(g.crew.size() == 1, "nobody comes through the pass before 30 seconds")
+	g.time += 1.0
+	g.update_arrivals(0.1)
+	check(g.crew.size() == 2 and g.crew[1]["state"] == "arriving", "a survivor comes down the pass at 30 seconds")
+	for i in 6000:
+		g.time += 0.1
+		g.update_arrivals(0.1)
+	check(g.crew.size() == 2, "no more strangers while you still have a survivor")
+	g.crew.resize(1)   # everyone else is gone
+	var came := false
+	for i in 3000:
+		g.update_arrivals(0.1)
+		if g.crew.size() > 1:
+			came = true
+			break
+	check(came, "once you've lost everyone, strangers come again")
 
 	# Food.
 	g = Game.new()

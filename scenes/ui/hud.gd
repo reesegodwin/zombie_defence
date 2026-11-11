@@ -275,8 +275,8 @@ func update_hud() -> void:
 			h = "Auto-fire is on: you shoot whatever is closest to the wall." if g.input_auto else "Hold the left mouse button to shoot. Your aim snaps to the zombie under the cursor."
 		elif not _hinted_map and g.trip == null and not g.available_scavengers().is_empty():
 			h = "You have someone who could go scavenging. Press M to open the map."
-		elif g.crew.size() == 1 and g.time < 60:
-			h = "You're alone for now. Survivors sometimes find their way here through the mountain pass."
+		elif g.crew.size() == 1 and g.time < D.FIRST_STRANGER_AT:
+			h = "You're alone for now. Keep an eye on the mountain pass behind the base."
 		elif not _hinted_storage and g.storage["items"].size() > 0:
 			h = "You have something in storage. Press I to open it and hand it out."
 		elif inv_panel.visible:

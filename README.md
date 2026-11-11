@@ -2,8 +2,9 @@
 
 An isometric zombie defence game. One wall, one way in, and the dead never stop
 coming. You start alone with a pistol on the walkway behind the wall, with the
-mountains at your back. Survivors sometimes find their way to you through the
-mountain pass (more often while you're alone). Send one at a time back out
+mountains at your back. Thirty seconds in, a survivor comes down the mountain
+pass to join you; after that, strangers only come down the pass if you've lost
+all your survivors. Send one at a time back out
 through the pass to scavenge: pick a place on the hand-drawn map by how long
 they'll be gone and how much scrap it holds. They come back with scrap, and
 with luck a gun, food or another survivor. Spend scrap in the workshop on guns,

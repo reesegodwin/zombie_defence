@@ -27,8 +27,8 @@ const WALK_SPEED := 1.5                 # tiles per second, walking to and from 
 const PASS_PATH := [Vector2(11.2, 17.2), Vector2(11.2, 23.0), Vector2(11.7, 26.5), Vector2(12.5, 30.0), Vector2(12.6, 34.0), Vector2(12.1, 38.0)]
 const SCRAP_TIERS := [[12, 24], [24, 42], [45, 80]]   # low, medium, high: min and max scrap
 const SCRAP_NAMES := ["Low", "Medium", "High"]
-const ARRIVAL_EVERY := 210.0            # average seconds between strangers arriving
-const ARRIVAL_EVERY_ALONE := 25.0       # ... while you have nobody
+const FIRST_STRANGER_AT := 30.0        # seconds into a run when the first survivor walks in
+const STRANGER_EVERY_WHEN_ALONE := 25.0 # after that, only once you've lost everyone: average wait
 const MEAL_EVERY := 120.0               # seconds between meals; everyone eats 1 food
 const HUNGRY_SLOWDOWN := 1.25           # hungry crews take this much longer between shots
 

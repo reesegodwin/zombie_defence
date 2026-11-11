@@ -1029,20 +1029,33 @@ static func path_point(slot_x: float, t: float) -> Vector2:
 
 
 # --- Strangers --------------------------------------------------------------
-# Now and then a survivor finds the outpost on their own and walks in through
-# the pass. It happens much more often while you are alone.
+# One survivor always finds the outpost and walks in through the pass early
+# on. After that, strangers only come down the pass if you've lost everyone:
+# while you're alone, one turns up every so often.
+var first_stranger_done := false
+
+
 func update_arrivals(dt: float) -> void:
 	if crew.size() >= D.MAX_CREW:
 		return
-	var every: float = D.ARRIVAL_EVERY_ALONE if crew.size() == 1 else D.ARRIVAL_EVERY
-	if randf() < dt / every:
-		var n := add_survivor(free_name(), "pistol", false)
-		n["state"] = "arriving"
-		n["path_t"] = 1.0
-		var p := path_point(n["slot_x"], 1.0)
-		n["x"] = p.x
-		n["y"] = p.y
-		toast.emit("Someone is coming down the mountain pass…", "info")
+	if not first_stranger_done:
+		if time >= D.FIRST_STRANGER_AT:
+			first_stranger_done = true
+			_stranger_arrives()
+		return
+	# Survivors out scavenging or walking in still count as alive.
+	if crew.size() == 1 and randf() < dt / D.STRANGER_EVERY_WHEN_ALONE:
+		_stranger_arrives()
+
+
+func _stranger_arrives() -> void:
+	var n := add_survivor(free_name(), "pistol", false)
+	n["state"] = "arriving"
+	n["path_t"] = 1.0
+	var p := path_point(n["slot_x"], 1.0)
+	n["x"] = p.x
+	n["y"] = p.y
+	toast.emit("Someone is coming down the mountain pass…", "info")
 
 
 # --- Food -------------------------------------------------------------------
