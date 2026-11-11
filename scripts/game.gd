@@ -34,6 +34,7 @@ var food := 6
 var hungry := false
 var meal_t := D.MEAL_EVERY
 var trip = null                # the scavenging trip in progress, or null
+var looted := {}               # site key -> true once a scavenger has picked it clean
 var purchases: Array = []
 var drills := 0
 var shelves := 0
@@ -878,8 +879,22 @@ func can_scavenge(si: int) -> Dictionary:
 	return {"ok": true}
 
 
+func site_open(site_key: String) -> bool:
+	return not looted.has(site_key) and not (trip != null and trip["site"] == site_key)
+
+
+func open_sites() -> Array:
+	return D.SITE_KEYS.filter(func(k): return site_open(k))
+
+
+func can_send(si: int, site_key: String) -> Dictionary:
+	if looted.has(site_key):
+		return {"msg": "The %s has already been picked clean." % D.SITES[site_key]["name"]}
+	return can_scavenge(si)
+
+
 func send_scavenger(si: int, site_key: String) -> Dictionary:
-	var chk := can_scavenge(si)
+	var chk := can_send(si, site_key)
 	if not chk.has("ok"):
 		return chk
 	var site: Dictionary = D.SITES[site_key]
@@ -973,6 +988,7 @@ func _deliver_trip() -> void:
 	var s: Dictionary = trip["who"]
 	var r: Dictionary = trip["report"]
 	var site: Dictionary = D.SITES[r["site"]]
+	looted[r["site"]] = true
 	scrap += r["scrap"]
 	food += r["food"]
 	var found: Array = ["%d scrap" % r["scrap"]]
@@ -1162,9 +1178,10 @@ func auto_shop() -> void:
 ## Sends someone out if nobody is out. Used by the automated balance test.
 func auto_scavenge() -> void:
 	var who := available_scavengers()
-	if trip != null or who.is_empty():
+	var sites := open_sites()
+	if trip != null or who.is_empty() or sites.is_empty():
 		return
-	send_scavenger(who.pick_random(), D.SITE_KEYS.pick_random())
+	send_scavenger(who.pick_random(), sites.pick_random())
 
 # --- Director ---------------------------------------------------------------
 static func spawn_rate(t: float) -> float:

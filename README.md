@@ -6,7 +6,8 @@ mountains at your back. Thirty seconds in, a survivor comes down the mountain
 pass to join you; after that, strangers only come down the pass if you've lost
 all your survivors. Send one at a time back out
 through the pass to scavenge: pick a place on the hand-drawn map by how long
-they'll be gone and how much scrap it holds. They come back with scrap, and
+they'll be gone and how much scrap it holds (each place can only be looted
+once; it's crossed out afterwards). They come back with scrap, and
 with luck a gun, food or another survivor. Spend scrap in the workshop on guns,
 gear, traps, supplies and a stronger wall. Keep food in store or the crew goes
 hungry and shoots slower. It is one continuous run that keeps getting harder as

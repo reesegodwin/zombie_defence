@@ -31,8 +31,9 @@ func _ready() -> void:
 func open() -> void:
 	canvas.main = main
 	visible = true
-	if site == "":
-		site = D.SITE_KEYS[0]
+	var open_sites: Array = main.game.open_sites()
+	if site == "" or main.game.looted.has(site):
+		site = open_sites[0] if not open_sites.is_empty() else D.SITE_KEYS[0]
 	var free: Array = main.game.available_scavengers()
 	if not free.has(who):
 		who = free[0] if not free.is_empty() else -1
@@ -69,8 +70,15 @@ func _refresh() -> void:
 	var t := int(s["gone"])
 	gone_label.text = "Gone for %d:%02d (there and back)" % [t / 60, t % 60]
 	var tier: Array = D.SCRAP_TIERS[s["scrap"]]
-	scrap_label.text = "Scrap: %s  (%d–%d)" % [D.SCRAP_NAMES[s["scrap"]].to_upper(), tier[0], tier[1]]
-	finds_label.text = "Guns: %s\nFood: %s\nSurvivors: %s" % [_chance(s["weapon_chance"]), _chance(s["food_chance"]), _chance(s["survivor_chance"])]
+	var looted: bool = g.looted.has(site)
+	$Center/Sheet/Details/FindsTitle.visible = not looted
+	if looted:
+		gone_label.text = "Picked clean."
+		scrap_label.text = "Nothing left worth the walk."
+		finds_label.text = ""
+	else:
+		scrap_label.text = "Scrap: %s  (%d–%d)" % [D.SCRAP_NAMES[s["scrap"]].to_upper(), tier[0], tier[1]]
+		finds_label.text = "Guns: %s\nFood: %s\nSurvivors: %s" % [_chance(s["weapon_chance"]), _chance(s["food_chance"]), _chance(s["survivor_chance"])]
 	for c in who_row.get_children():
 		c.queue_free()
 	var free: Array = g.available_scavengers()
@@ -86,7 +94,7 @@ func _refresh() -> void:
 			who = idx
 			_refresh())
 		who_row.add_child(b)
-	var chk: Dictionary = g.can_scavenge(who)
+	var chk: Dictionary = g.can_send(who, site)
 	send_button.disabled = not chk.has("ok")
 	send_button.text = "Send %s to the %s" % [g.crew[who]["name"], s["name"]] if chk.has("ok") else "Send"
 	_update_status()
@@ -94,7 +102,11 @@ func _refresh() -> void:
 
 func _update_status() -> void:
 	var g = main.game
-	if g.trip != null:
+	if g.looted.has(site):
+		status_label.text = "Already looted. Pick a place that isn't crossed out."
+	elif g.open_sites().is_empty() and g.trip == null:
+		status_label.text = "Every place on the map has been picked clean."
+	elif g.trip != null:
 		var left := int(ceil(g.trip_time_left()))
 		status_label.text = "%s is out at the %s. Back in %d:%02d." % [g.trip["who"]["name"], D.SITES[g.trip["site"]]["name"], left / 60, left % 60]
 	elif g.available_scavengers().is_empty():

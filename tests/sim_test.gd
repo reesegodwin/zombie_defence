@@ -23,7 +23,7 @@ func _init() -> void:
 	for run in int(OS.get_environment("RUNS") if OS.get_environment("RUNS") != "" else "6"):
 		var r := _sim_run(1500.0)
 		times.append(r["time"])
-		print("  run %d: survived %.0fs, kills %d, purchases %d, hungry %s, crew %s" % [run + 1, r["time"], r["kills"], r["scrap_spent"], str(r["hungry"]), str(r["crew"])])
+		print("  run %d: survived %.0fs, kills %d, purchases %d, places looted %d, crew %s" % [run + 1, r["time"], r["kills"], r["scrap_spent"], r["looted"], str(r["crew"])])
 	times.sort()
 	print("  median survival: %.0fs" % times[times.size() / 2])
 	check(times[0] > 60.0, "every run lasts over a minute")
@@ -145,6 +145,9 @@ func _unit_checks() -> void:
 	check(seen_away, "the survivor disappears while away")
 	check(g.trip == null and dana["state"] == "wall" and absf(t - gone) < 1.0, "they come back after the trip time")
 	check(g.scrap - scrap0 >= D.SCRAP_TIERS[0][0] and g.scrap - scrap0 <= D.SCRAP_TIERS[0][1], "they bring back scrap in the site's range")
+	check(g.looted.has("gas_station") and not g.site_open("gas_station"), "a looted place is marked as picked clean")
+	check(not g.send_scavenger(1, "gas_station").has("ok"), "a looted place can't be visited again")
+	check(g.send_scavenger(1, "farmhouse").has("ok"), "other places are still open")
 	# Lucky finds over many trips at a rich site.
 	var finds := {"weapon": 0, "food": 0, "survivor": 0, "high": 0}
 	for k in 400:
@@ -204,4 +207,4 @@ func _sim_run(limit: float) -> Dictionary:
 	var weapons: Array = []
 	for s in g.crew:
 		weapons.append(s["weapon"])
-	return {"time": g.time, "kills": g.kills, "crew": weapons, "scrap_spent": g.purchases.size(), "food": g.food, "hungry": g.hungry}
+	return {"looted": g.looted.size(), "time": g.time, "kills": g.kills, "crew": weapons, "scrap_spent": g.purchases.size(), "food": g.food, "hungry": g.hungry}

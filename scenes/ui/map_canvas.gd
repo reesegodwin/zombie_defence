@@ -240,6 +240,14 @@ func _draw_site(key: String) -> void:
 	elif key == hover:
 		wcircle(p + Vector2(0, -6), 44, FADED, 1.5, sd)
 	ink_text(p + Vector2(0, 30), site["name"], 26, col)
+	if main.game.looted.has(key):
+		# Picked clean: a big scribbled cross over the place, and the name struck out.
+		var w := font.get_string_size(site["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, 26).x
+		wline(p + Vector2(-w * 0.5 - 4, 22), p + Vector2(w * 0.5 + 4, 20), RED, 2.4, sd + 7)
+		wline(p + Vector2(-30, -40), p + Vector2(30, 14), RED, 3.6, sd + 8)
+		wline(p + Vector2(30, -40), p + Vector2(-30, 14), RED, 3.6, sd + 9)
+		ink_text(p + Vector2(0, 52), "picked clean", 22, RED)
+		return
 	var t := int(site["gone"])
 	ink_text(p + Vector2(0, 52), "%d:%02d away · %s scrap" % [t / 60, t % 60, D.SCRAP_NAMES[site["scrap"]].to_lower()], 20, RED if on else FADED)
 
