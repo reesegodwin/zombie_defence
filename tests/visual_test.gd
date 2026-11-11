@@ -3,6 +3,8 @@
 #   godot --path . --script res://tests/visual_test.gd -- <output dir>
 extends SceneTree
 
+const D = preload("res://scripts/defs.gd")
+
 var main
 var out_dir := "user://shots"
 var failures := 0
@@ -82,13 +84,15 @@ func drag(a: Vector2, b: Vector2) -> void:
 func fast_forward(seconds: float) -> void:
 	var g = main.game
 	var t := 0.0
+	var think := 0.0
 	while t < seconds and not g.over:
-		if not g.cards.is_empty():
-			main.choose_card(randi() % g.cards.size())
-			g.auto_equip()
-			continue
 		g.step(1.0 / 30.0)
 		t += 1.0 / 30.0
+		think -= 1.0 / 30.0
+		if think <= 0.0:
+			think = 2.0
+			g.auto_scavenge()
+			g.auto_shop()
 
 
 func grid_to_screen(gx: float, gy: float, h := 0.0) -> Vector2:
@@ -159,10 +163,65 @@ func _run() -> void:
 	mouse_move(zp, false)
 	await frames(2)
 	mouse_button(zp, true)
-	await create_timer(2.5).timeout
+	# Keep the cursor on it, as a player would while it gets knocked back.
+	for k in 12:
+		await create_timer(0.4).timeout
+		if target_z["hp"] <= 0:
+			break
+		zp = grid_to_screen(target_z["x"], target_z["y"], 0.9)
+		mouse_move(zp, true)
 	mouse_button(zp, false)
 	check(target_z["hp"] <= 0, "holding the mouse on a zombie shoots it dead")
 	g.input_auto = true
+	if OS.get_environment("QUICK2") != "":
+		quit(0)
+		return
+	print("Workshop")
+	g.scrap = 200
+	await click(main.hud.btn_workshop)
+	check(main.hud.workshop.visible, "the workshop button opens the workshop")
+	var n_items: int = g.storage["items"].size()
+	await click(main.hud._shop_rows["rifle"])
+	check(g.storage["items"].size() == n_items + 1 and g.storage["items"][-1]["key"] == "rifle" and g.scrap == 200 - D.SHOP["rifle"]["cost"], "buying a rifle costs scrap and puts it in storage")
+	await shot("05_workshop")
+	await click(main.hud.btn_workshop)
+
+	print("Scavenging")
+	var dana: Dictionary = g.add_survivor("Dana", "pistol", false)
+	await frames(5)
+	await click(main.hud.btn_map)
+	check(main.hud.map_open(), "the scavenge button opens the map")
+	var t_before: float = g.time
+	await frames(20)
+	check(g.time == t_before, "the game waits while the map is open")
+	var canvas: Control = main.hud.scav_map.canvas
+	var site_pos: Vector2 = canvas.get_global_rect().position + canvas.site_px("hardware_store") + Vector2(0, -8)
+	await click_at(site_pos)
+	check(main.hud.scav_map.site == "hardware_store", "clicking a place on the map selects it")
+	await shot("06_map")
+	var scrap0: int = g.scrap
+	await click(main.hud.scav_map.send_button)
+	check(g.trip != null and g.trip["who"] == dana and not main.hud.map_open(), "Send starts the trip and closes the map")
+	# Follow them out through the pass.
+	main.rig.position = Vector3(11.5, 0, 24.0)
+	while dana["state"] == "leaving" and dana["path_t"] < 0.62:
+		g.step(1.0 / 30.0)
+		if randf() < 0.15:
+			await frames(1)
+	await frames(10)
+	await shot("07_through_the_pass")
+	var seen_away := false
+	var guard := 0
+	while g.trip != null and guard < 20000:
+		g.step(1.0 / 30.0)
+		g.zombies.clear()   # keep the wall standing for this check
+		if dana["state"] == "away":
+			seen_away = true
+		guard += 1
+	check(seen_away and dana["state"] == "wall", "the scavenger disappears, then comes back to the wall")
+	check(g.scrap - scrap0 >= D.SCRAP_TIERS[1][0], "they bring back medium scrap from the hardware store")
+	main.rig.reset()
+
 	print("Gameplay")
 	fast_forward(110.0)
 	await frames(30)
@@ -175,18 +234,6 @@ func _run() -> void:
 	fast_forward(60.0)
 	await frames(20)
 	await shot("04c_night")
-	if g.over:
-		main.restart()
-		g = main.game
-		await frames(5)
-	if not g.cards.is_empty():
-		main.choose_card(0)
-	g.xp = g.xp_next
-	await frames(10)
-	check(main.hud.cards_overlay.visible, "the level-up cards appear")
-	await shot("05_cards")
-	main.choose_card(0)
-	await frames(5)
 	fast_forward(1500.0)
 	await create_timer(2.5).timeout
 	check(g.over and main.hud.over_overlay.visible, "the game-over screen appears when the wall falls")
@@ -196,6 +243,21 @@ func _run() -> void:
 	check(not main.game.over and main.game.time < 1.0, "restart starts a fresh run")
 	print("RESULT: %s (%d failures)" % ["OK" if failures == 0 else "FAILED", failures])
 	quit(1 if failures > 0 else 0)
+
+
+func click(c: Control) -> void:
+	await click_at(c.get_global_rect().get_center())
+
+
+func click_at(p: Vector2) -> void:
+	Input.warp_mouse(p)
+	await frames(3)
+	mouse_move(p, false)
+	await frames(2)
+	mouse_button(p, true)
+	await frames(2)
+	mouse_button(p, false)
+	await frames(4)
 
 
 func _find(slots: Array, where: String, s: int, gi: int):

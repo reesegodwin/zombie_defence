@@ -17,7 +17,49 @@ const WALK_Y := 15.2
 const MAX_CREW := 5
 const WIRE_MAX := 24.0
 const STORAGE_MAX := 24
-const HORDE_EVERY := 70.0
+const HORDE_EVERY := 75.0
+const FIRST_HORDE := 150.0
+const START_SCRAP := 80
+
+# --- Scavenging, strangers, food -------------------------------------------
+const WALK_SPEED := 1.5                 # tiles per second, walking to and from the pass
+# The route from the back of the base up through the mountain pass (x, y).
+const PASS_PATH := [Vector2(11.2, 17.2), Vector2(11.2, 23.0), Vector2(11.7, 26.5), Vector2(12.5, 30.0), Vector2(12.6, 34.0), Vector2(12.1, 38.0)]
+const SCRAP_TIERS := [[12, 24], [24, 42], [45, 80]]   # low, medium, high: min and max scrap
+const SCRAP_NAMES := ["Low", "Medium", "High"]
+const ARRIVAL_EVERY := 210.0            # average seconds between strangers arriving
+const ARRIVAL_EVERY_ALONE := 25.0       # ... while you have nobody
+const MEAL_EVERY := 120.0               # seconds between meals; everyone eats 1 food
+const HUNGRY_SLOWDOWN := 1.25           # hungry crews take this much longer between shots
+
+# --- Workshop: what scrap buys ---------------------------------------------
+# Items go to base storage. Shelving, wall and drill take effect at once and
+# get dearer each time.
+const SHOP := {
+	"smg": {"cost": 35, "name": "SMG"},
+	"shotgun": {"cost": 45, "name": "Shotgun"},
+	"rifle": {"cost": 70, "name": "Hunting rifle"},
+	"launcher": {"cost": 110, "name": "Grenade launcher"},
+	"hollow": {"cost": 30, "name": "Hollow points"},
+	"trigger": {"cost": 30, "name": "Hair trigger"},
+	"molotov": {"cost": 40, "name": "Molotov crate"},
+	"repair": {"cost": 25, "name": "Repair kit"},
+	"wire": {"cost": 25, "name": "Wire coil"},
+	"spikes": {"cost": 15, "name": "Spike strip"},
+	"beartrap": {"cost": 20, "name": "Bear trap"},
+	"mine": {"cost": 15, "name": "Landmine"},
+	"slick": {"cost": 15, "name": "Fuel slick"},
+	"shelves": {"cost": 30, "name": "Shelving", "desc": "Base storage holds 4 more items."},
+	"reinforce": {"cost": 60, "name": "Reinforce the wall", "desc": "The wall gets 30% tougher, fully built: timber, then stone, then steel."},
+	"drill": {"cost": 50, "name": "Drill the crew", "desc": "Everyone else on the wall does 30% more damage and fires 12% faster."},
+}
+const SHOP_SECTIONS := [
+	["Guns", ["smg", "shotgun", "rifle", "launcher"]],
+	["Gear", ["hollow", "trigger", "molotov"]],
+	["Traps", ["spikes", "beartrap", "mine", "slick"]],
+	["Supplies", ["repair", "wire"]],
+	["Base", ["reinforce", "shelves", "drill"]],
+]
 
 # Zombie types and weapons live in data/zombies/*.tres and data/weapons/*.tres
 # so they can be tuned in the Inspector. They are read into plain dictionaries
@@ -27,6 +69,8 @@ const WEAPON_KEYS := ["pistol", "smg", "shotgun", "rifle", "launcher"]
 static var ZTYPES: Dictionary = _load_dir("res://data/zombies/", ZOMBIE_KEYS)
 
 static var WEAPONS: Dictionary = _load_dir("res://data/weapons/", WEAPON_KEYS)
+const SITE_KEYS := ["gas_station", "farmhouse", "hardware_store", "trailer_park", "radio_tower", "police_station", "rail_yard"]
+static var SITES: Dictionary = _load_dir("res://data/sites/", SITE_KEYS)
 
 
 static func _load_dir(dir: String, keys: Array) -> Dictionary:

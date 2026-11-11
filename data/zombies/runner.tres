@@ -9,7 +9,6 @@ health = 24.0
 speed = 1.35
 wall_damage = 5.0
 seconds_between_hits = 0.6
-experience = 2
 radius = 0.17
 model_scale = 0.88
 skin_color = Color(0.655, 0.706, 0.541, 1)

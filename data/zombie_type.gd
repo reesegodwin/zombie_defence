@@ -10,7 +10,6 @@ extends Resource
 @export var speed := 0.6                 ## Tiles per second.
 @export var wall_damage := 8.0           ## Per hit on the wall.
 @export var seconds_between_hits := 1.0
-@export var experience := 1              ## Given to you when it dies.
 @export var radius := 0.2                ## Body size for crowding and bullet hits, in tiles.
 @export_group("Look")
 @export var model_scale := 1.0
@@ -22,6 +21,6 @@ extends Resource
 func to_dict() -> Dictionary:
 	return {
 		"name": display_name, "hp": health, "speed": speed, "dmg": wall_damage,
-		"rate": seconds_between_hits, "xp": experience, "r": radius, "scale": model_scale,
+		"rate": seconds_between_hits, "r": radius, "scale": model_scale,
 		"skin": skin_color, "shirts": Array(shirt_colors), "eyes": eye_color,
 	}

@@ -18,12 +18,12 @@ func check(cond: bool, label: String) -> void:
 func _init() -> void:
 	print("Unit checks")
 	_unit_checks()
-	print("Balance runs (auto-fire, auto-equip, random cards)")
+	print("Balance runs (auto-fire; a bot scavenges at random sites, shops and equips)")
 	var times: Array = []
 	for run in int(OS.get_environment("RUNS") if OS.get_environment("RUNS") != "" else "6"):
 		var r := _sim_run(1500.0)
 		times.append(r["time"])
-		print("  run %d: survived %.0fs, level %d, kills %d, crew %s" % [run + 1, r["time"], r["level"], r["kills"], str(r["crew"])])
+		print("  run %d: survived %.0fs, kills %d, purchases %d, hungry %s, crew %s" % [run + 1, r["time"], r["kills"], r["scrap_spent"], str(r["hungry"]), str(r["crew"])])
 	times.sort()
 	print("  median survival: %.0fs" % times[times.size() / 2])
 	check(times[0] > 60.0, "every run lasts over a minute")
@@ -42,7 +42,7 @@ func _unit_checks() -> void:
 	for i in 5:
 		g.fire(g.crew[0], z["x"], z["y"], 1.0)
 	check(z["hp"] <= 0, "five pistol shots kill a walker")
-	check(g.kills == 1 and g.xp == 1, "a kill gives experience")
+	check(g.kills == 1, "kills are counted")
 
 	# Zombies reach the wall and damage it.
 	g = Game.new()
@@ -53,10 +53,10 @@ func _unit_checks() -> void:
 		g.update_zombies(1.0 / 30.0)
 	check(g.wall["hp"] < hp0, "a zombie at the wall damages it")
 
-	# Inventory: cards put items in storage, items move into slots.
+	# Inventory: bought items go to storage, items move into slots.
 	g = Game.new()
-	g.apply_card({"id": "item", "key": "smg", "title": "SMG"})
-	check(g.storage["items"].size() == 1, "a weapon card adds the gun to storage")
+	g.scrap = 1000
+	check(g.buy("smg").has("ok") and g.storage["items"].size() == 1, "buying a gun puts it in storage")
 	var r: Dictionary = g.move_item({"where": "storage", "i": 0}, {"where": "weapon", "s": 0})
 	check(r.has("ok") and g.crew[0]["weapon"] == "smg" and g.storage["items"][0]["key"] == "pistol", "dragging a gun onto a survivor swaps it with theirs")
 	g.add_to_storage("hollow")
@@ -65,8 +65,8 @@ func _unit_checks() -> void:
 	r = g.move_item({"where": "storage", "i": 1}, {"where": "gear", "s": 0, "g": 0})
 	check(r.has("ok") and g.crew[0]["gear"][0]["key"] == "hollow", "gear goes in a gear slot")
 	check(g.survivor_stats(g.crew[0])["dmg"] > 1.2, "hollow points raise damage")
-	g.apply_card({"id": "hire", "name": "Dana", "weapon": "pistol", "title": "Take in Dana"})
-	check(g.crew.size() == 2 and g.crew[1]["weapon"] == "pistol", "new survivors start with pistols")
+	var n: Dictionary = g.add_survivor("Dana", "pistol", false)
+	check(g.crew.size() == 2 and n["weapon"] == "pistol", "new survivors start with pistols")
 
 	# Supplies.
 	g.wall["hp"] = 100.0
@@ -92,29 +92,90 @@ func _unit_checks() -> void:
 	check(b["held"] > 0 and g.traps[0]["uses"] == 5.0, "a bear trap holds a brute")
 	check(not g.pick_up_trap(g.traps[0]["uid"]).has("ok"), "a trap holding a zombie cannot be picked up")
 
-	# Level-up.
+	# Workshop.
 	g = Game.new()
-	g.xp = 10
-	g.step(0.01)
-	check(g.cards.size() == 3 and g.level == 2, "levelling up offers three cards")
-	var t0: float = g.time
-	g.step(0.5)
-	check(g.time == t0, "the game waits while cards are shown")
-	g.choose_card(0)
-	check(g.cards.is_empty(), "choosing a card resumes the game")
+	g.scrap = 10
+	check(not g.buy("rifle").has("ok") and g.scrap == 10, "you can't buy what you can't afford")
+	g.scrap = 500
+	var maxhp0: float = g.wall["max_hp"]
+	var c0: int = g.shop_cost("reinforce")
+	g.buy("reinforce")
+	check(g.wall["max_hp"] > maxhp0 and g.wall["stage"] == 1 and g.scrap == 500 - c0, "reinforcing the wall costs scrap and makes it tougher")
+	check(g.shop_cost("reinforce") > c0, "each wall upgrade costs more")
+
+	# Scavenging.
+	g = Game.new()
+	check(not g.send_scavenger(0, "gas_station").has("ok"), "you can't send yourself")
+	g.add_survivor("Dana", "pistol", false)
+	var dana: Dictionary = g.crew[1]
+	check(g.send_scavenger(1, "gas_station").has("ok") and dana["state"] == "leaving", "a survivor can be sent out")
+	g.add_survivor("Kofi", "pistol", false)
+	check(not g.send_scavenger(2, "farmhouse").has("ok"), "only one survivor can be out at a time")
+	var gone: float = D.SITES["gas_station"]["gone"]
+	check(absf(g.trip_time_left() - gone) < 0.5, "the trip takes as long as the map says")
+	var scrap0: int = g.scrap
+	var seen_away := false
+	var t := 0.0
+	while g.trip != null and t < gone + 10:
+		g.update_trip(0.1)
+		g.update_walkers(0.1)
+		g.update_crew(0.1)
+		if dana["state"] == "away":
+			seen_away = true
+		t += 0.1
+	check(seen_away, "the survivor disappears while away")
+	check(g.trip == null and dana["state"] == "wall" and absf(t - gone) < 1.0, "they come back after the trip time")
+	check(g.scrap - scrap0 >= D.SCRAP_TIERS[0][0] and g.scrap - scrap0 <= D.SCRAP_TIERS[0][1], "they bring back scrap in the site's range")
+	# Lucky finds over many trips at a rich site.
+	var finds := {"weapon": 0, "food": 0, "survivor": 0, "high": 0}
+	for k in 400:
+		var lr: Dictionary = g._roll_loot("police_station")
+		if lr["weapon"] != "": finds["weapon"] += 1
+		if lr["food"] > 0: finds["food"] += 1
+		if lr["survivor"] != "": finds["survivor"] += 1
+		if lr["scrap"] >= D.SCRAP_TIERS[2][0]: finds["high"] += 1
+	print("    police station, 400 trips: ", finds)
+	check(finds["high"] == 400, "high-scrap sites always give high scrap")
+	check(finds["weapon"] > 70 and finds["weapon"] < 170, "weapon finds match the site's odds")
+
+	# Strangers arrive, much more often when you are alone.
+	var alone := 0
+	var crewed := 0
+	for k in 40:
+		var ga = Game.new()
+		var gb = Game.new()
+		gb.add_survivor("Dana", "pistol", false)
+		for i in 600:
+			ga.update_arrivals(0.1)
+			gb.update_arrivals(0.1)
+		alone += ga.crew.size() - 1
+		crewed += gb.crew.size() - 2
+	print("    strangers in 60s, 40 runs: alone %d, with a crew %d" % [alone, crewed])
+	check(alone > crewed * 2, "strangers turn up more often when you're alone")
+
+	# Food.
+	g = Game.new()
+	g.add_survivor("Dana", "pistol", false)
+	g.food = 1
+	g.update_food(D.MEAL_EVERY + 0.1)
+	check(g.hungry and g.survivor_stats(g.crew[0])["interval"] > D.WEAPONS["pistol"]["rate"], "without enough food the crew is hungry and slower")
+	g.food = 5
+	g.update_food(D.MEAL_EVERY + 0.1)
+	check(not g.hungry and g.food == 3, "a meal costs one food each and ends the hunger")
 
 
 func _sim_run(limit: float) -> Dictionary:
 	var g = Game.new()
 	g.input_auto = true
 	var dt := 1.0 / 30.0
+	var next_think := 0.0
 	while not g.over and g.time < limit:
-		if not g.cards.is_empty():
-			g.choose_card(randi() % g.cards.size())
-			g.auto_equip()
-			continue
 		g.step(dt)
+		if g.time >= next_think:
+			next_think = g.time + 2.0
+			g.auto_scavenge()
+			g.auto_shop()
 	var weapons: Array = []
 	for s in g.crew:
 		weapons.append(s["weapon"])
-	return {"time": g.time, "level": g.level, "kills": g.kills, "crew": weapons}
+	return {"time": g.time, "kills": g.kills, "crew": weapons, "scrap_spent": g.purchases.size(), "food": g.food, "hungry": g.hungry}

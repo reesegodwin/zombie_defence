@@ -1,5 +1,6 @@
 # The whole simulation: wall, zombies, crew, weapons, traps, inventory,
-# experience and upgrade cards, and the director that keeps raising the pressure.
+# scavenging trips, food, the workshop, and the director that keeps raising the
+# pressure.
 # It has no nodes, so it can be run headlessly by the tests.
 extends RefCounted
 
@@ -8,7 +9,8 @@ const D = preload("res://scripts/defs.gd")
 signal toast(text: String, kind: String)
 signal sound(name: String)
 signal inv_changed
-signal leveled_up
+signal trip_returned(report: Dictionary)
+signal survivor_arrived(name: String)
 signal exploded(x: float, y: float, radius: float)
 signal zombie_died(x: float, y: float, type: String)
 signal wall_breached(x: float)
@@ -27,12 +29,14 @@ var texts: Array = []
 var traps: Array = []
 var storage := {"cap": 8, "items": []}
 var mods := {"crew_dmg": 1.0, "crew_rate": 1.0, "wire": 0.0}
-var xp := 0
-var level := 1
-var xp_next := 0
-var pending_levels := 0
-var cards: Array = []          # non-empty while a level-up choice is open
-var picks: Array = []
+var scrap := D.START_SCRAP
+var food := 6
+var hungry := false
+var meal_t := D.MEAL_EVERY
+var trip = null                # the scavenging trip in progress, or null
+var purchases: Array = []
+var drills := 0
+var shelves := 0
 var kills := 0
 var dark := 0.12
 var over := false
@@ -40,7 +44,7 @@ var seen := {}
 var zid := 1
 var uid := 1
 var spawn_acc := 0.0
-var next_horde := D.HORDE_EVERY
+var next_horde := D.FIRST_HORDE
 var horde_left := 0
 var horde_acc := 0.0
 var shake := 0.0
@@ -56,15 +60,10 @@ func _init() -> void:
 	wall = {"hp": 500.0, "max_hp": 500.0, "stage": 0, "hurt": []}
 	for i in D.X1 - D.X0:
 		wall["hurt"].append(0.0)
-	xp_next = xp_need(1)
 	add_survivor("You", "pistol", true)
 
 
 # --- Helpers ----------------------------------------------------------------
-static func xp_need(lv: int) -> int:
-	return int(round(4 + lv * 3 + lv * lv * 0.4))
-
-
 func wall_mat() -> Dictionary:
 	var s: int = wall["stage"]
 	var i := 0 if s == 0 else (1 if s <= 2 else 2)
@@ -88,23 +87,26 @@ func new_item(key: String, uses = null) -> Dictionary:
 
 
 # --- Crew -------------------------------------------------------------------
-func add_survivor(sname: String, weapon: String, is_player: bool) -> void:
+func add_survivor(sname: String, weapon: String, is_player: bool) -> Dictionary:
 	var i := crew.size()
 	crew.append({
 		"name": sname, "weapon": weapon, "is_player": is_player, "gear": [null, null], "mol_cd": 0.0,
-		"x": 0.0, "y": 0.0, "cd": 0.3 + randf() * 0.3, "aim": -PI * 0.75, "flash": 0.0, "recoil": 0.0,
+		"x": 0.0, "y": 0.0, "slot_x": 0.0, "state": "wall", "path_t": 0.0, "cd": 0.3 + randf() * 0.3, "aim": -PI * 0.75, "flash": 0.0, "recoil": 0.0,
 		"jacket": Color("3e5a6e") if is_player else D.JACKETS[i % D.JACKETS.size()],
 		"skin": Color("d9a77f") if is_player else D.SKINS[(i * 3) % D.SKINS.size()],
 	})
 	layout_crew()
+	return crew[-1]
 
 
 func layout_crew() -> void:
 	var mid := (D.X0 + D.X1) / 2.0
 	for i in crew.size():
 		var s: Dictionary = crew[i]
-		s["x"] = clampf(mid + D.CREW_SLOTS[i], D.X0 + 0.6, D.X1 - 0.6)
-		s["y"] = D.WALK_Y
+		s["slot_x"] = clampf(mid + D.CREW_SLOTS[i], D.X0 + 0.6, D.X1 - 0.6)
+		if s.get("state", "wall") == "wall":
+			s["x"] = s["slot_x"]
+			s["y"] = D.WALK_Y
 
 
 func free_name() -> String:
@@ -132,6 +134,8 @@ func survivor_stats(s: Dictionary) -> Dictionary:
 			"trigger": rate *= 0.85
 			"molotov": crates += 1
 	dmg *= 1.0 + 0.25 * hollow
+	if hungry:
+		rate *= D.HUNGRY_SLOWDOWN
 	var w: Dictionary = D.WEAPONS[s["weapon"]]
 	var per_shot: float = w["dmg"] * w["pellets"] * dmg
 	return {
@@ -251,7 +255,6 @@ func damage(z: Dictionary, amt: float, quiet := false) -> void:
 		z["hit"] = 0.08
 	if z["hp"] <= 0:
 		var T := ZT(z["type"])
-		xp += int(T["xp"])
 		kills += 1
 		zombie_died.emit(z["x"], z["y"], z["type"])
 		burst(z["x"], z["y"], 10 + int(round(T["scale"] * 6)), {"colors": [Color("5a2a26"), Color("7a3a2c"), T["skin"]], "spread": 2.2, "up": 130.0, "life": 0.8, "size": 2.6 * T["scale"], "z": 14.0 * T["scale"]})
@@ -322,9 +325,11 @@ func fire(s: Dictionary, tx: float, ty: float, dmg_mul: float) -> void:
 
 func update_crew(dt: float) -> void:
 	for s in crew:
-		s["cd"] -= dt
 		s["flash"] = maxf(0.0, s["flash"] - dt)
 		s["recoil"] = maxf(0.0, s["recoil"] - dt)
+		if s["state"] != "wall":
+			continue
+		s["cd"] -= dt
 		var w: Dictionary = D.WEAPONS[s["weapon"]]
 		var k := survivor_stats(s)
 
@@ -666,6 +671,9 @@ static func same_loc(a: Dictionary, b: Dictionary) -> bool:
 
 # Checks a move without doing it. Returns {"ok": true} or {"msg": "..."}.
 func can_move(from: Dictionary, to: Dictionary) -> Dictionary:
+	for loc in [from, to]:
+		if loc["where"] != "storage" and loc["s"] < crew.size() and crew[loc["s"]]["state"] != "wall":
+			return {"msg": crew[loc["s"]]["name"] + " isn't on the wall right now."}
 	var a = item_at(from)
 	if a == null or same_loc(from, to):
 		return {"msg": ""}
@@ -836,113 +844,315 @@ func auto_equip() -> void:
 				break
 
 
-# --- Experience and cards ---------------------------------------------------
-func _item_card(key: String) -> Dictionary:
-	var kind := D.item_kind(key)
-	return {"id": "item", "key": key, "tag": D.KIND_TAG[kind], "title": D.item_name(key),
-		"desc": D.item_desc(key) + (" Goes to storage; drag it onto the field." if kind == "trap" else " Goes to storage.")}
+# --- Scavenging -------------------------------------------------------------
+# One survivor at a time can leave through the mountain pass to loot a site on
+# the map. They walk out, are gone for a while, then walk back with scrap and
+# maybe a gun, food or another survivor.
 
-
-func _candidates() -> Array:
-	var c: Array = []
-	var wall_frac: float = wall["hp"] / wall["max_hp"]
-	var room := storage_free() > 0
-	if room:
-		for k in ["smg", "shotgun", "rifle", "launcher"]:
-			c.append({"w": 0.9, "card": _item_card(k)})
-		c.append({"w": 1.0, "card": _item_card("hollow")})
-		c.append({"w": 1.0, "card": _item_card("trigger")})
-		c.append({"w": 0.8, "card": _item_card("molotov")})
-		c.append({"w": 2.2 if wall_frac < 0.5 else (1.0 if wall_frac < 0.85 else 0.4), "card": _item_card("repair")})
-		if mods["wire"] < D.WIRE_MAX:
-			c.append({"w": 0.7, "card": _item_card("wire")})
-		for k in ["spikes", "beartrap", "mine", "slick"]:
-			c.append({"w": 0.5, "card": _item_card(k)})
-	if storage["cap"] < D.STORAGE_MAX:
-		c.append({"w": 0.4 if room else 3.0, "card": {"id": "shelves", "tag": "Base", "title": "Shelving", "desc": "Base storage holds 4 more items. It holds %d now." % storage["cap"]}})
-	if crew.size() < D.MAX_CREW:
-		var n := free_name()
-		c.append({"w": 1.5, "card": {"id": "hire", "name": n, "weapon": "pistol", "tag": "Crew", "title": "Take in " + n, "desc": n + " joins you on the wall with a pistol and two empty gear slots."}})
-	if crew.size() > 1:
-		c.append({"w": 1.0, "card": {"id": "drill", "tag": "Crew", "title": "Drill the crew", "desc": "Everyone else on the wall does 30% more base damage and fires 12% faster."}})
-	var st: int = wall["stage"]
-	var nxt := "Stone facing" if st == 0 else ("Steel plating" if st == 2 else ("More stone" if st < 3 else "More steel"))
-	c.append({"w": 0.9, "card": {"id": "reinforce", "tag": "Wall", "title": nxt, "desc": "The wall gets 30% tougher, and the new strength comes fully built."}})
-	return c
-
-
-func draw_cards() -> Array:
-	var pool := _candidates()
+## Survivors who could be sent out right now (indices into crew).
+func available_scavengers() -> Array:
 	var out: Array = []
-	while out.size() < 3 and pool.size() > 0:
-		var total := 0.0
-		for c in pool:
-			total += c["w"]
-		var r := randf() * total
-		var k := 0
-		while k < pool.size() - 1:
-			r -= pool[k]["w"]
-			if r <= 0:
-				break
-			k += 1
-		out.append(pool[k]["card"])
-		pool.remove_at(k)
+	for i in crew.size():
+		if not crew[i]["is_player"] and crew[i]["state"] == "wall":
+			out.append(i)
 	return out
 
 
-func apply_card(card: Dictionary) -> void:
-	match card["id"]:
-		"item":
-			add_to_storage(card["key"])
-		"shelves":
-			storage["cap"] = mini(D.STORAGE_MAX, storage["cap"] + 4)
-			_changed()
-		"hire":
-			add_survivor(card["name"], card["weapon"], false)
-			_changed()
-		"drill":
-			mods["crew_dmg"] += 0.3
-			mods["crew_rate"] = maxf(0.5, mods["crew_rate"] * 0.88)
-			_changed()
-		"reinforce":
-			var add := roundf(wall["max_hp"] * 0.3)
-			wall["max_hp"] += add
-			wall["hp"] += add
-			wall["stage"] += 1
-	picks.append(card["title"])
+func can_scavenge(si: int) -> Dictionary:
+	if trip != null:
+		return {"msg": trip["who"]["name"] + " is already out. Only one person can go at a time."}
+	if si < 0 or si >= crew.size():
+		return {"msg": "Nobody to send. Wait for a survivor to find you."}
+	var s: Dictionary = crew[si]
+	if s["is_player"]:
+		return {"msg": "You have to stay and hold the wall."}
+	if s["state"] != "wall":
+		return {"msg": s["name"] + " isn't on the wall right now."}
+	return {"ok": true}
 
 
-func choose_card(i: int) -> void:
-	if i < 0 or i >= cards.size():
+func send_scavenger(si: int, site_key: String) -> Dictionary:
+	var chk := can_scavenge(si)
+	if not chk.has("ok"):
+		return chk
+	var site: Dictionary = D.SITES[site_key]
+	var s: Dictionary = crew[si]
+	var walk := path_length(s["slot_x"]) / D.WALK_SPEED
+	s["state"] = "leaving"
+	s["path_t"] = 0.0
+	trip = {"who": s, "site": site_key, "away": maxf(5.0, site["gone"] - walk * 2.0), "t": 0.0, "walk": walk}
+	toast.emit("%s heads out through the pass to the %s." % [s["name"], site["name"]], "info")
+	_changed()
+	return {"ok": true}
+
+
+## Seconds until the survivor out scavenging is back on the wall.
+func trip_time_left() -> float:
+	if trip == null:
+		return 0.0
+	var s: Dictionary = trip["who"]
+	var walk: float = trip["walk"]
+	match s["state"]:
+		"leaving":
+			return walk * (1.0 - s["path_t"]) + trip["away"] + walk
+		"away":
+			return trip["away"] - trip["t"] + walk
+		"returning":
+			return walk * s["path_t"]
+	return 0.0
+
+
+func update_trip(dt: float) -> void:
+	if trip == null:
 		return
-	apply_card(cards[i])
-	cards = []
-	if pending_levels > 0:
-		pending_levels -= 1
-		cards = draw_cards()
-		leveled_up.emit()
+	var s: Dictionary = trip["who"]
+	if s["state"] == "away":
+		trip["t"] += dt
+		if trip["t"] >= trip["away"]:
+			trip["report"] = _roll_loot(trip["site"])
+			s["state"] = "returning"
+			s["path_t"] = 1.0
+			if trip["report"]["survivor"] != "":
+				var n := add_survivor(trip["report"]["survivor"], "pistol", false)
+				n["state"] = "arriving"
+				n["path_t"] = 1.12   # a few steps behind
+				n["x"] = D.PASS_PATH[-1].x
+				n["y"] = D.PASS_PATH[-1].y
 
 
-func _check_level() -> void:
-	while xp >= xp_next:
-		xp -= xp_next
-		level += 1
-		xp_next = xp_need(level)
-		pending_levels += 1
-	if pending_levels > 0 and cards.is_empty():
-		pending_levels -= 1
-		cards = draw_cards()
-		sound.emit("levelup")
-		leveled_up.emit()
+## Moves everyone who is walking between the wall and the pass.
+func update_walkers(dt: float) -> void:
+	for s in crew:
+		var st: String = s["state"]
+		if st == "wall" or st == "away":
+			continue
+		var length := path_length(s["slot_x"])
+		var dp := D.WALK_SPEED * dt / length
+		if st == "leaving":
+			s["path_t"] = minf(1.0, s["path_t"] + dp)
+			if s["path_t"] >= 1.0:
+				s["state"] = "away"
+		else:
+			s["path_t"] = maxf(0.0, s["path_t"] - dp)
+			if s["path_t"] <= 0.0:
+				s["state"] = "wall"
+				s["cd"] = 0.5
+				if st == "returning":
+					_deliver_trip()
+				else:
+					survivor_arrived.emit(s["name"])
+					toast.emit("%s made it through the pass and joins you on the wall." % s["name"], "good")
+					sound.emit("coin")
+				_changed()
+		var p := path_point(s["slot_x"], minf(1.0, s["path_t"]))
+		s["x"] = p.x
+		s["y"] = p.y
 
+
+func _roll_loot(site_key: String) -> Dictionary:
+	var site: Dictionary = D.SITES[site_key]
+	var tier: Array = D.SCRAP_TIERS[site["scrap"]]
+	var r := {"site": site_key, "scrap": randi_range(tier[0], tier[1]), "weapon": "", "food": 0, "survivor": ""}
+	if randf() < site["weapon_chance"]:
+		r["weapon"] = ["smg", "shotgun", "rifle", "launcher", "smg", "shotgun", "rifle"].pick_random()
+	if randf() < site["food_chance"]:
+		r["food"] = randi_range(2, 5)
+	if randf() < site["survivor_chance"] and crew.size() < D.MAX_CREW:
+		r["survivor"] = free_name()
+	return r
+
+
+func _deliver_trip() -> void:
+	var s: Dictionary = trip["who"]
+	var r: Dictionary = trip["report"]
+	var site: Dictionary = D.SITES[r["site"]]
+	scrap += r["scrap"]
+	food += r["food"]
+	var found: Array = ["%d scrap" % r["scrap"]]
+	r["weapon_kept"] = false
+	if r["weapon"] != "":
+		if add_to_storage(r["weapon"]):
+			r["weapon_kept"] = true
+			found.append("a " + D.item_name(r["weapon"]).to_lower())
+		else:
+			found.append("a " + D.item_name(r["weapon"]).to_lower() + " (left behind: storage is full)")
+	if r["food"] > 0:
+		found.append("%d food" % r["food"])
+	if r["survivor"] != "":
+		found.append(r["survivor"] + ", a survivor")
+	var text := "%s is back from the %s with " % [s["name"], site["name"]]
+	if found.size() == 1:
+		text += found[0] + "."
+	else:
+		text += ", ".join(PackedStringArray(found.slice(0, found.size() - 1))) + " and " + found[-1] + "."
+	r["who"] = s["name"]
+	r["text"] = text
+	trip = null
+	sound.emit("coin")
+	toast.emit(text, "good")
+	trip_returned.emit(r)
+
+
+# --- The walk to the pass ---------------------------------------------------
+## The route from a survivor's spot on the walkway out through the pass.
+static func path_points(slot_x: float) -> Array:
+	var pts: Array = [Vector2(slot_x, D.WALK_Y), Vector2(slot_x, D.WALK_Y + 1.2)]
+	pts.append_array(D.PASS_PATH)
+	return pts
+
+
+static func path_length(slot_x: float) -> float:
+	var pts := path_points(slot_x)
+	var total := 0.0
+	for i in range(1, pts.size()):
+		total += pts[i - 1].distance_to(pts[i])
+	return total
+
+
+## A point along the route, t from 0 (walkway) to 1 (out of sight in the pass).
+static func path_point(slot_x: float, t: float) -> Vector2:
+	var pts := path_points(slot_x)
+	var target := clampf(t, 0.0, 1.0) * path_length(slot_x)
+	for i in range(1, pts.size()):
+		var seg: float = pts[i - 1].distance_to(pts[i])
+		if target <= seg:
+			return pts[i - 1].lerp(pts[i], target / maxf(seg, 0.001))
+		target -= seg
+	return pts[-1]
+
+
+# --- Strangers --------------------------------------------------------------
+# Now and then a survivor finds the outpost on their own and walks in through
+# the pass. It happens much more often while you are alone.
+func update_arrivals(dt: float) -> void:
+	if crew.size() >= D.MAX_CREW:
+		return
+	var every: float = D.ARRIVAL_EVERY_ALONE if crew.size() == 1 else D.ARRIVAL_EVERY
+	if randf() < dt / every:
+		var n := add_survivor(free_name(), "pistol", false)
+		n["state"] = "arriving"
+		n["path_t"] = 1.0
+		var p := path_point(n["slot_x"], 1.0)
+		n["x"] = p.x
+		n["y"] = p.y
+		toast.emit("Someone is coming down the mountain pass…", "info")
+
+
+# --- Food -------------------------------------------------------------------
+# Every few minutes everyone eats one food. If there isn't enough, the whole
+# crew goes hungry and shoots slower until the next meal they can afford.
+func update_food(dt: float) -> void:
+	meal_t -= dt
+	if meal_t > 0:
+		return
+	meal_t = D.MEAL_EVERY
+	var mouths := crew.size()
+	if food >= mouths:
+		food -= mouths
+		if hungry:
+			toast.emit("Everyone eats. The crew is back to full strength.", "good")
+		hungry = false
+	else:
+		food = 0
+		if not hungry:
+			toast.emit("Not enough food. The crew is hungry and shoots slower.", "danger")
+		hungry = true
+
+
+# --- Workshop ---------------------------------------------------------------
+## Current price of a workshop entry (some get dearer each time you buy them).
+func shop_cost(id: String) -> int:
+	var base: int = D.SHOP[id]["cost"]
+	match id:
+		"reinforce":
+			return int(round(base * (1.0 + 0.6 * wall["stage"])))
+		"drill":
+			return int(round(base * (1.0 + 0.7 * drills)))
+		"shelves":
+			return base + 15 * shelves
+	return base
+
+
+func can_buy(id: String) -> Dictionary:
+	var cost := shop_cost(id)
+	if id == "shelves" and storage["cap"] >= D.STORAGE_MAX:
+		return {"msg": "Storage can't get any bigger."}
+	if id == "drill" and crew.size() < 2:
+		return {"msg": "You need a crew to drill."}
+	if D.ITEMS.has(id) and storage_free() <= 0:
+		return {"msg": "Storage is full."}
+	if id == "wire" and mods["wire"] >= D.WIRE_MAX:
+		return {"msg": "There is no room for more wire."}
+	if scrap < cost:
+		return {"msg": "Not enough scrap (%d needed)." % cost}
+	return {"ok": true}
+
+
+func buy(id: String) -> Dictionary:
+	var chk := can_buy(id)
+	if not chk.has("ok"):
+		return chk
+	scrap -= shop_cost(id)
+	if D.ITEMS.has(id):
+		add_to_storage(id)
+	else:
+		match id:
+			"shelves":
+				storage["cap"] = mini(D.STORAGE_MAX, storage["cap"] + 4)
+				shelves += 1
+			"drill":
+				mods["crew_dmg"] += 0.3
+				mods["crew_rate"] = maxf(0.5, mods["crew_rate"] * 0.88)
+				drills += 1
+			"reinforce":
+				var add := roundf(wall["max_hp"] * 0.3)
+				wall["max_hp"] += add
+				wall["hp"] += add
+				wall["stage"] += 1
+	purchases.append(D.SHOP[id]["name"])
+	sound.emit("build")
+	_changed()
+	return {"ok": true}
+
+
+# Spends scrap sensibly. Used by the automated balance test.
+func auto_shop() -> void:
+	var guard := 0
+	while guard < 20:
+		guard += 1
+		var want := ""
+		var worst := 99
+		for c in crew:
+			worst = mini(worst, RANK[c["weapon"]])
+		if wall["hp"] < wall["max_hp"] * 0.55 and storage_free() > 0:
+			want = "repair"
+		elif worst < 2 and storage_free() > 0:
+			want = "smg" if scrap < shop_cost("rifle") else "rifle"
+		elif wall["stage"] < 4:
+			want = "reinforce"
+		elif crew.size() > 1 and drills < 3:
+			want = "drill"
+		else:
+			want = ["hollow", "trigger", "mine", "spikes", "launcher"].pick_random()
+		if not buy(want).has("ok"):
+			break
+	auto_equip()
+
+
+## Sends someone out if nobody is out. Used by the automated balance test.
+func auto_scavenge() -> void:
+	var who := available_scavengers()
+	if trip != null or who.is_empty():
+		return
+	send_scavenger(who.pick_random(), D.SITE_KEYS.pick_random())
 
 # --- Director ---------------------------------------------------------------
 static func spawn_rate(t: float) -> float:
-	return 0.4 + t * 0.0075 + pow(t / 200.0, 2) * 0.6
+	return 0.3 + t * 0.005 + pow(t / 230.0, 2) * 0.6
 
 
 static func hp_mul(t: float) -> float:
-	return 1.0 + t / 170.0 + pow(t / 420.0, 2)
+	return 1.0 + t / 220.0 + pow(t / 450.0, 2)
 
 
 static func spd_mul(t: float) -> float:
@@ -980,7 +1190,7 @@ func update_director(dt: float) -> void:
 		_spawn_one()
 	if time >= next_horde:
 		next_horde += D.HORDE_EVERY
-		horde_left += 8 + int(time / 10.0)
+		horde_left += 6 + int(time / 12.0)
 		toast.emit("A horde is coming.", "danger")
 		sound.emit("horn")
 	if horde_left > 0:
@@ -997,13 +1207,16 @@ func update_director(dt: float) -> void:
 # --- Main step --------------------------------------------------------------
 # Advances the world by dt seconds. Does nothing while a card choice is open.
 func step(dt: float) -> void:
-	if over or not cards.is_empty():
+	if over:
 		update_parts(dt)
 		return
 	update_director(dt)
+	update_trip(dt)
+	update_walkers(dt)
+	update_arrivals(dt)
+	update_food(dt)
 	update_traps(dt)
 	update_zombies(dt)
 	update_crew(dt)
 	update_shots(dt)
 	update_parts(dt)
-	_check_level()

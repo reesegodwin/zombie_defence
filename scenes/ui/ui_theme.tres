@@ -1,6 +1,7 @@
 [gd_resource type="Theme" format=3]
 
 [ext_resource type="FontFile" path="res://assets/fonts/Oswald-SemiBold.ttf" id="oswald"]
+[ext_resource type="FontFile" path="res://assets/fonts/Caveat-SemiBold.ttf" id="caveat"]
 
 [sub_resource type="StyleBoxFlat" id="panel"]
 content_margin_left = 14.0
@@ -116,6 +117,44 @@ corner_radius_bottom_left = 10
 shadow_color = Color(0.88, 0.7, 0.29, 0.25)
 shadow_size = 16
 
+[sub_resource type="StyleBoxFlat" id="ink_btn"]
+content_margin_left = 10.0
+content_margin_top = 2.0
+content_margin_right = 10.0
+content_margin_bottom = 2.0
+bg_color = Color(0.4, 0.27, 0.15, 0.08)
+border_width_bottom = 2
+border_color = Color(0.2, 0.13, 0.08, 0.6)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+
+[sub_resource type="StyleBoxFlat" id="ink_btn_hover"]
+content_margin_left = 10.0
+content_margin_top = 2.0
+content_margin_right = 10.0
+content_margin_bottom = 2.0
+bg_color = Color(0.62, 0.1, 0.06, 0.1)
+border_width_bottom = 2
+border_color = Color(0.62, 0.1, 0.06, 0.9)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+
+[sub_resource type="StyleBoxFlat" id="ink_btn_on"]
+content_margin_left = 10.0
+content_margin_top = 2.0
+content_margin_right = 10.0
+content_margin_bottom = 2.0
+bg_color = Color(0.62, 0.1, 0.06, 0.16)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.62, 0.1, 0.06, 0.95)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
 [resource]
 default_font_size = 16
 Button/colors/font_color = Color(0.92, 0.92, 0.9, 1)
@@ -156,3 +195,27 @@ WallBar/styles/fill = SubResource("bar_wall")
 XpBar/base_type = &"ProgressBar"
 XpBar/styles/background = SubResource("bar_bg")
 XpBar/styles/fill = SubResource("bar_xp")
+InkLabel/base_type = &"Label"
+InkLabel/colors/font_color = Color(0.2, 0.13, 0.08, 0.95)
+InkLabel/colors/font_shadow_color = Color(0, 0, 0, 0)
+InkLabel/font_sizes/font_size = 28
+InkLabel/fonts/font = ExtResource("caveat")
+InkTitle/base_type = &"Label"
+InkTitle/colors/font_color = Color(0.62, 0.1, 0.06, 1)
+InkTitle/colors/font_shadow_color = Color(0, 0, 0, 0)
+InkTitle/font_sizes/font_size = 52
+InkTitle/fonts/font = ExtResource("caveat")
+InkButton/base_type = &"Button"
+InkButton/colors/font_color = Color(0.2, 0.13, 0.08, 1)
+InkButton/colors/font_hover_color = Color(0.62, 0.1, 0.06, 1)
+InkButton/colors/font_pressed_color = Color(0.62, 0.1, 0.06, 1)
+InkButton/colors/font_hover_pressed_color = Color(0.62, 0.1, 0.06, 1)
+InkButton/colors/font_disabled_color = Color(0.2, 0.13, 0.08, 0.35)
+InkButton/font_sizes/font_size = 30
+InkButton/fonts/font = ExtResource("caveat")
+InkButton/styles/normal = SubResource("ink_btn")
+InkButton/styles/hover = SubResource("ink_btn_hover")
+InkButton/styles/pressed = SubResource("ink_btn_on")
+InkButton/styles/hover_pressed = SubResource("ink_btn_on")
+InkButton/styles/disabled = SubResource("ink_btn")
+InkButton/styles/focus = SubResource("empty")

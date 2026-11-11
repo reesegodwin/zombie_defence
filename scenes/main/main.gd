@@ -54,7 +54,6 @@ func _new_game() -> void:
 	game.toast.connect(func(t, k): hud.toast(t, k))
 	game.sound.connect(func(n): sfx.play(n))
 	game.inv_changed.connect(func(): hud.on_inv_changed())
-	game.leveled_up.connect(func(): hud.show_cards())
 	game.wall_breached.connect(func(x): wall.collapse(x))
 	game.exploded.connect(func(_x, _y, _r): rig.shake = maxf(rig.shake, 0.6))
 	effects.bind(game)
@@ -81,8 +80,11 @@ func start() -> void:
 
 func restart() -> void:
 	hud.hide_game_over()
-	hud.hide_cards()
 	hud.close_inventory()
+	if hud.map_open():
+		hud.toggle_map()
+	if hud.workshop.visible:
+		hud.toggle_workshop()
 	_new_game()
 	paused = false
 	rig.reset()
@@ -90,7 +92,7 @@ func restart() -> void:
 
 
 func toggle_pause() -> void:
-	if started and not game.over and game.cards.is_empty():
+	if started and not game.over:
 		paused = not paused
 
 
@@ -102,27 +104,21 @@ func toggle_sound() -> void:
 	sfx.muted = not sfx.muted
 
 
-func choose_card(i: int) -> void:
-	if game.cards.is_empty():
-		return
-	game.choose_card(i)
-	sfx.play("coin")
-	if game.cards.is_empty():
-		hud.hide_cards()
-
-
 # --- Loop -------------------------------------------------------------------
 func _process(dt: float) -> void:
 	_clock += dt
 	_keyboard_pan(dt)
 	if started:
 		_update_aim()
-		if not paused:
+		# The world waits while you study the scavenging map.
+		if not paused and not hud.map_open():
 			game.step(minf(dt, 0.05))
 	if game.over and not _over_handled:
 		_over_handled = true
 		game.input_firing = false
 		hud.close_inventory()
+		if hud.map_open():
+			hud.toggle_map()
 		rig.shake = 1.2
 		get_tree().create_timer(1.6).timeout.connect(func(): if game.over: hud.show_game_over())
 	rig.shake = maxf(rig.shake, game.shake * 0.6)
@@ -174,6 +170,14 @@ func _sync_scene(dt: float) -> void:
 		if not alive.has(uid):
 			trap_nodes[uid].queue_free()
 			trap_nodes.erase(uid)
+	# Rock in the mountain pass turns see-through around anyone walking it.
+	var walkers: Array = []
+	for s in game.crew:
+		if s["state"] != "wall" and s["state"] != "away" and s["y"] > D.WALK_Y + 2.0:
+			walkers.append(Vector3(s["x"], 0.0, s["y"]))
+	var none := Vector3(0, -100, 0)
+	RenderingServer.global_shader_parameter_set("walker_a", walkers[0] if walkers.size() > 0 else none)
+	RenderingServer.global_shader_parameter_set("walker_b", walkers[1] if walkers.size() > 1 else none)
 	wall.sync(game, _clock)
 	effects.sync(game)
 	level.set_darkness(_darkness(), dt)
@@ -245,11 +249,21 @@ func _unhandled_input(event: InputEvent) -> void:
 		KEY_P, KEY_SPACE:
 			toggle_pause()
 		KEY_ESCAPE:
-			if hud.inventory_open():
+			if hud.map_open():
+				hud.toggle_map()
+			elif hud.inventory_open():
 				hud.close_inventory()
+			elif hud.workshop.visible:
+				hud.toggle_workshop()
 			else:
 				toggle_pause()
 		KEY_M:
+			if started:
+				hud.toggle_map()
+		KEY_B:
+			if started:
+				hud.toggle_workshop()
+		KEY_N:
 			toggle_sound()
 		KEY_R:
 			if game.over:
@@ -260,8 +274,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			rig.zoom_by(1.15)
 		KEY_MINUS, KEY_KP_SUBTRACT:
 			rig.zoom_by(1 / 1.15)
-		KEY_1, KEY_2, KEY_3:
-			choose_card(event.keycode - KEY_1)
 
 
 func _grid(p: Vector2) -> Vector2:

@@ -1,0 +1,171 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/scavenge_map.gd" id="map"]
+[ext_resource type="Script" path="res://scenes/ui/map_canvas.gd" id="canvas"]
+[ext_resource type="Texture2D" path="res://assets/textures/parchment.png" id="paper"]
+
+[node name="ScavengeMap" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("map")
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.02, 0.03, 0.7)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Sheet" type="Control" parent="Center"]
+custom_minimum_size = Vector2(1200, 800)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Paper" type="TextureRect" parent="Center/Sheet"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("paper")
+expand_mode = 1
+
+[node name="Canvas" type="Control" parent="Center/Sheet"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 9
+anchor_right = 0.66
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 20.0
+offset_bottom = -20.0
+script = ExtResource("canvas")
+
+[node name="Title" type="Label" parent="Center/Sheet"]
+layout_mode = 1
+offset_left = 48.0
+offset_top = 70.0
+offset_right = 420.0
+offset_bottom = 130.0
+rotation = -0.05
+theme_type_variation = &"InkTitle"
+theme_override_font_sizes/font_size = 40
+text = "Scavenging runs"
+
+[node name="Details" type="VBoxContainer" parent="Center/Sheet"]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.67
+anchor_top = 0.07
+anchor_right = 0.95
+anchor_bottom = 0.93
+theme_override_constants/separation = 6
+
+[node name="SiteName" type="Label" parent="Center/Sheet/Details"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"InkTitle"
+text = "Gas station"
+autowrap_mode = 3
+
+[node name="SiteNote" type="Label" parent="Center/Sheet/Details"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"InkLabel"
+theme_override_colors/font_color = Color(0.2, 0.13, 0.08, 0.6)
+theme_override_font_sizes/font_size = 24
+text = ""
+autowrap_mode = 3
+
+[node name="GoneLabel" type="Label" parent="Center/Sheet/Details"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"InkLabel"
+text = "Gone for 0:45"
+autowrap_mode = 3
+
+[node name="ScrapLabel" type="Label" parent="Center/Sheet/Details"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"InkLabel"
+text = "Scrap: LOW"
+
+[node name="FindsTitle" type="Label" parent="Center/Sheet/Details"]
+layout_mode = 2
+theme_type_variation = &"InkLabel"
+theme_override_colors/font_color = Color(0.62, 0.1, 0.06, 1)
+text = "Might also find:"
+
+[node name="FindsLabel" type="Label" parent="Center/Sheet/Details"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"InkLabel"
+theme_override_font_sizes/font_size = 25
+text = ""
+
+[node name="Gap" type="Control" parent="Center/Sheet/Details"]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="WhoTitle" type="Label" parent="Center/Sheet/Details"]
+layout_mode = 2
+theme_type_variation = &"InkLabel"
+theme_override_colors/font_color = Color(0.62, 0.1, 0.06, 1)
+text = "Who goes:"
+
+[node name="WhoRow" type="HFlowContainer" parent="Center/Sheet/Details"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 6
+
+[node name="SendButton" type="Button" parent="Center/Sheet/Details"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+theme_type_variation = &"InkButton"
+theme_override_font_sizes/font_size = 34
+text = "Send"
+autowrap_mode = 3
+
+[node name="StatusLabel" type="Label" parent="Center/Sheet/Details"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 10
+theme_type_variation = &"InkLabel"
+theme_override_font_sizes/font_size = 23
+theme_override_colors/font_color = Color(0.2, 0.13, 0.08, 0.7)
+text = ""
+autowrap_mode = 3
+
+[node name="CloseButton" type="Button" parent="Center/Sheet"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -190.0
+offset_top = 26.0
+offset_right = -40.0
+offset_bottom = 70.0
+focus_mode = 0
+theme_type_variation = &"InkButton"
+text = "close (M)"

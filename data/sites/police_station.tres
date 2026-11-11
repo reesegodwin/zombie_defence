@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ScavengeSite" format=3]
+
+[ext_resource type="Script" path="res://data/scavenge_site.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Police station"
+note = "armoury in back!"
+map_position = Vector2(0.66, 0.84)
+icon = "police"
+gone_seconds = 140.0
+scrap = 2
+weapon_chance = 0.3
+food_chance = 0.08
+survivor_chance = 0.08

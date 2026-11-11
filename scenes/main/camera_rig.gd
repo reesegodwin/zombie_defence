@@ -5,12 +5,12 @@ extends Node3D
 @export var pitch_degrees := -35.264
 @export var distance := 40.0
 ## Orthographic view height, in metres. Smaller is closer.
-@export var zoom := 15.0
+@export var zoom := 16.5
 @export var min_zoom := 7.0
 @export var max_zoom := 26.0
 @export var pan_speed := 14.0
 ## The rig stays within this ground rectangle (x, z, width, depth).
-@export var bounds := Rect2(0, -2, 22, 26)
+@export var bounds := Rect2(-2, -2, 26, 38)
 
 @onready var cam: Camera3D = $Camera3D
 

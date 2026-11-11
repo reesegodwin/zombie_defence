@@ -4,12 +4,11 @@
 [ext_resource type="Script" path="res://scenes/ui/field.gd" id="field"]
 [ext_resource type="Theme" path="res://scenes/ui/ui_theme.tres" id="theme"]
 [ext_resource type="PackedScene" path="res://scenes/ui/slot.tscn" id="slot"]
-[ext_resource type="PackedScene" path="res://scenes/ui/card.tscn" id="card"]
+[ext_resource type="PackedScene" path="res://scenes/ui/scavenge_map.tscn" id="map"]
 
 [node name="HUD" type="CanvasLayer"]
 script = ExtResource("hud")
 slot_scene = ExtResource("slot")
-card_scene = ExtResource("card")
 
 [node name="Root" type="Control" parent="."]
 layout_mode = 3
@@ -36,7 +35,7 @@ layout_mode = 1
 offset_left = 16.0
 offset_top = 16.0
 offset_right = 316.0
-offset_bottom = 150.0
+offset_bottom = 180.0
 mouse_filter = 2
 
 [node name="VBox" type="VBoxContainer" parent="Root/StatsPanel"]
@@ -59,19 +58,12 @@ max_value = 500.0
 value = 500.0
 show_percentage = false
 
-[node name="LevelLabel" type="Label" parent="Root/StatsPanel/VBox"]
+[node name="ResourcesLabel" type="Label" parent="Root/StatsPanel/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
-text = "Level 1"
-
-[node name="XpBar" type="ProgressBar" parent="Root/StatsPanel/VBox"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(270, 8)
-layout_mode = 2
-mouse_filter = 2
-theme_type_variation = &"XpBar"
-max_value = 10.0
-show_percentage = false
+theme_type_variation = &"HeaderLabel"
+theme_override_font_sizes/font_size = 20
+text = "Scrap 80   ·   Food 6"
 
 [node name="StatsLabel" type="Label" parent="Root/StatsPanel/VBox"]
 unique_name_in_owner = true
@@ -79,12 +71,21 @@ layout_mode = 2
 theme_type_variation = &"DimLabel"
 text = "Time 0:00   Kills 0   Threat 1   Crew 1/5"
 
+[node name="TripLabel" type="Label" parent="Root/StatsPanel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(270, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.75, 0.45, 1)
+theme_override_font_sizes/font_size = 14
+text = ""
+autowrap_mode = 3
+
 [node name="TopButtons" type="HBoxContainer" parent="Root"]
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -640.0
+offset_left = -900.0
 offset_top = 16.0
 offset_right = -16.0
 offset_bottom = 56.0
@@ -104,6 +105,18 @@ layout_mode = 2
 focus_mode = 0
 text = "Storage 0/8 (I)"
 
+[node name="WorkshopButton" type="Button" parent="Root/TopButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+text = "Workshop (B)"
+
+[node name="MapButton" type="Button" parent="Root/TopButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+text = "Scavenge (M)"
+
 [node name="PauseButton" type="Button" parent="Root/TopButtons"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -114,7 +127,7 @@ text = "Pause (P)"
 unique_name_in_owner = true
 layout_mode = 2
 focus_mode = 0
-text = "Sound: on (M)"
+text = "Sound: on (N)"
 
 [node name="Toasts" type="VBoxContainer" parent="Root"]
 unique_name_in_owner = true
@@ -284,51 +297,32 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.6, 0.48, 1)
 autowrap_mode = 3
 
-[node name="CardsOverlay" type="ColorRect" parent="Root"]
+[node name="WorkshopPanel" type="PanelContainer" parent="Root"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
+anchors_preset = 9
 anchor_bottom = 1.0
-grow_horizontal = 2
+offset_left = 16.0
+offset_top = 196.0
+offset_right = 376.0
+offset_bottom = -16.0
 grow_vertical = 2
-color = Color(0.02, 0.02, 0.04, 0.62)
 
-[node name="Center" type="CenterContainer" parent="Root/CardsOverlay"]
+[node name="Scroll" type="ScrollContainer" parent="Root/WorkshopPanel"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="ShopList" type="VBoxContainer" parent="Root/WorkshopPanel/Scroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="ScavengeMap" parent="Root" instance=ExtResource("map")]
+unique_name_in_owner = true
+visible = false
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="VBox" type="VBoxContainer" parent="Root/CardsOverlay/Center"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 18
-
-[node name="CardsTitle" type="Label" parent="Root/CardsOverlay/Center/VBox"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_type_variation = &"HeaderLabel"
-theme_override_font_sizes/font_size = 40
-text = "LEVEL 2: CHOOSE ONE"
-horizontal_alignment = 1
-
-[node name="CardRow" type="HBoxContainer" parent="Root/CardsOverlay/Center/VBox"]
-unique_name_in_owner = true
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/separation = 18
-alignment = 1
-
-[node name="CardsHint" type="Label" parent="Root/CardsOverlay/Center/VBox"]
-layout_mode = 2
-theme_type_variation = &"DimLabel"
-text = "Click a card, or press 1, 2 or 3."
-horizontal_alignment = 1
 
 [node name="GameOverOverlay" type="ColorRect" parent="Root"]
 unique_name_in_owner = true
@@ -425,12 +419,12 @@ size_flags_horizontal = 4
 layout_mode = 2
 text = "Hold the left mouse button to shoot where you point.  F toggles auto-fire.
 Your crew always fires on their own.
-Kills give experience. Each level, pick one of three cards:
-new guns, gear, traps, supplies, survivors, or a stronger wall.
-I opens base storage: drag guns and gear onto your crew,
-and drag traps onto the ground in front of the wall.
-Right-drag or WASD pans, the wheel zooms, P pauses.
-It only gets harder. A horde arrives every 70 seconds."
+M opens the map: send one survivor at a time through the mountain pass
+to scavenge scrap, and maybe guns, food or other survivors.
+B opens the workshop: spend scrap on guns, gear, traps and a stronger wall.
+I opens storage: drag guns and gear onto your crew, traps onto the ground.
+Keep food in store, or the crew goes hungry and shoots slower.
+It only gets harder. Hordes come, and they keep growing."
 
 [node name="StartButton" type="Button" parent="Root/TitleOverlay/Center/VBox"]
 unique_name_in_owner = true

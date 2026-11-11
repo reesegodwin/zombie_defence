@@ -68,13 +68,21 @@ mesh = SubResource("ring")
 surface_material_override/0 = SubResource("ringmat")
 cast_shadow = 0
 
-[node name="LegL" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.11, 0.39, 0)
+[node name="Legs" type="Node3D" parent="."]
+
+[node name="LegL" type="Node3D" parent="Legs"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.11, 0.78, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="Legs/LegL"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.39, 0)
 mesh = SubResource("leg")
 surface_material_override/0 = SubResource("pants")
 
-[node name="LegR" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.11, 0.39, 0)
+[node name="LegR" type="Node3D" parent="Legs"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.11, 0.78, 0)
+
+[node name="Mesh" type="MeshInstance3D" parent="Legs/LegR"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.39, 0)
 mesh = SubResource("leg")
 surface_material_override/0 = SubResource("pants")
 

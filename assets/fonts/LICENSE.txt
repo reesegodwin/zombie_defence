@@ -1,2 +1,4 @@
 Oswald (Oswald-SemiBold.ttf) by Vernon Adams, Kalapi Gajjar and Cyreal.
 Licensed under the SIL Open Font License, Version 1.1: https://openfontlicense.org
+Caveat (Caveat-SemiBold.ttf) by Impallari Type.
+Licensed under the SIL Open Font License, Version 1.1: https://openfontlicense.org

@@ -190,12 +190,12 @@ surface_material_override/0 = SubResource("preview_mat")
 cast_shadow = 0
 
 [node name="CameraRig" type="Node3D" parent="."]
-transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 10.2, 0, 8.8)
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 9.6, 0, 10.4)
 script = ExtResource("rig")
 
 [node name="Camera3D" type="Camera3D" parent="CameraRig"]
 projection = 1
-size = 15.0
+size = 16.5
 near = 0.5
 far = 120.0
 
