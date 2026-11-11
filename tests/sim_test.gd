@@ -87,12 +87,42 @@ func _unit_checks() -> void:
 	var n: Dictionary = g.add_survivor("Dana", "pistol", false)
 	check(g.crew.size() == 2 and n["weapon"] == "pistol", "new survivors start with pistols")
 
-	# Supplies.
+	# Repairing the wall.
+	g = Game.new()
+	g.add_survivor("Dana", "pistol", false)
 	g.wall["hp"] = 100.0
-	g.add_to_storage("repair")
-	var idx: int = g.storage["items"].size() - 1
-	g.use_supply(idx)
-	check(g.wall["hp"] == 350.0, "a repair kit restores half the wall")
+	g.scrap = 100
+	check(g.toggle_repair(1).has("ok") and g.crew[1]["repairing"], "clicking a survivor sets them repairing")
+	var rz: Dictionary = g.spawn_zombie("walker", 50.0, 0.0)
+	rz["x"] = g.crew[1]["x"]; rz["y"] = 12.0
+	g.input_auto = false
+	for i in 100:                      # 10 seconds
+		g.update_repairs(0.1)
+		g.update_crew(0.1)
+	var gained: float = g.wall["hp"] - 100.0
+	check(absf(gained - D.REPAIR_PER_SECOND * 10.0) < 1.0, "repairs take time: %d wall in 10 seconds" % int(gained))
+	check(absi((100 - g.scrap) - int(round(gained / D.WALL_PER_SCRAP))) <= 1, "repairs cost scrap: %d spent for %d wall" % [100 - g.scrap, int(gained)])
+	check(rz["hp"] >= rz["max_hp"], "a survivor who is repairing doesn't shoot")
+	g.toggle_repair(1)
+	check(not g.crew[1]["repairing"], "clicking them again stops the repairs")
+	g.toggle_repair(1)
+	g.scrap = 0
+	g._repair_debt = 0.0
+	g.update_repairs(0.1)
+	check(not g.crew[1]["repairing"], "repairs stop when the scrap runs out")
+	g.scrap = 1000
+	g.toggle_repair(1)
+	g.toggle_repair(0)
+	for i in 600:
+		g.update_repairs(0.1)
+	check(g.wall["hp"] == g.wall["max_hp"] and g.repairers() == 0, "repairs stop when the wall is whole")
+	check(not g.toggle_repair(1).has("ok"), "a whole wall can't be repaired")
+
+	# Supplies.
+	g = Game.new()
+	g.add_to_storage("wire")
+	g.use_supply(0)
+	check(g.mods["wire"] > 0 and g.storage["items"].is_empty(), "wire gets strung along the wall")
 
 	# Traps.
 	g = Game.new()

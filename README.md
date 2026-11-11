@@ -33,11 +33,12 @@ floodlight, muzzle flashes, burning fuel, explosions and blood on the ground.
 |---|---|
 | Shoot | Hold left mouse button (aim snaps to the zombie under the cursor) |
 | Auto-fire on/off | F (while on, you turn to face what you're shooting; holding the mouse button takes over) |
+| Repair the wall | Click a survivor on the walkway (you included); click again to stop. Costs scrap, takes time, and they don't shoot while repairing |
 | Scavenging map (pauses the game) | M |
 | Workshop | B |
 | Base storage and crew loadouts | I (or Tab) |
 | Move items | Drag between slots; drag traps onto the ground in front of the wall |
-| Use a supply (repair kit, wire) | Double-click it, or select it and press Use |
+| Use a supply (wire) | Double-click it, or select it and press Use |
 | Pause | P or Space |
 | Pan / zoom | Right-drag or WASD / mouse wheel; Home recentres |
 | Sound on/off | N |
@@ -62,7 +63,7 @@ floodlight, muzzle flashes, burning fuel, explosions and blood on the ground.
 | `data/zombies/*.tres` | **Zombie stats and colours**: health, speed, wall damage, size… |
 | `data/sites/*.tres` | **Scavenging sites**: time away, scrap level, odds of guns, food and survivors, map position |
 | `scripts/game.gd` | Game rules: difficulty curve, combat, traps, inventory, scavenging, food, workshop |
-| `scripts/defs.gd` | Workshop prices, scrap ranges, food per survivor, stranger timings, items, map layout |
+| `scripts/defs.gd` | Workshop prices, repair speed and cost, scrap ranges, food per survivor, stranger timings, items, map layout |
 | `scripts/sfx.gd` | Sound effects, generated in code |
 
 The simulation in `scripts/game.gd` has no nodes; the scenes read its state each

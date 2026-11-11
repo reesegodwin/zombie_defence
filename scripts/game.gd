@@ -330,6 +330,8 @@ func update_crew(dt: float) -> void:
 		if s["state"] != "wall":
 			continue
 		s["cd"] -= dt
+		if s.get("repairing", false):
+			continue
 		var w: Dictionary = D.WEAPONS[s["weapon"]]
 		var k := survivor_stats(s)
 
@@ -776,11 +778,7 @@ func use_supply(i: int) -> Dictionary:
 	if i >= items.size() or D.item_kind(items[i]["key"]) != "supply":
 		return {"msg": ""}
 	var it: Dictionary = items[i]
-	if it["key"] == "repair":
-		if wall["hp"] >= wall["max_hp"]:
-			return {"msg": "The wall is already at full strength."}
-		wall["hp"] = minf(wall["max_hp"], wall["hp"] + wall["max_hp"] * 0.5)
-	elif it["key"] == "wire":
+	if it["key"] == "wire":
 		if mods["wire"] >= D.WIRE_MAX:
 			return {"msg": "There is no room for more wire along the wall."}
 		mods["wire"] = minf(D.WIRE_MAX, mods["wire"] + 8.0)
@@ -831,7 +829,7 @@ func auto_equip() -> void:
 			if kind == "trap":
 				moved = place_trap(i, D.X0 + 1 + randf() * (D.X1 - D.X0 - 2), 6.0 + randf() * 6.0).has("ok")
 			elif kind == "supply":
-				if (key == "wire" and mods["wire"] < D.WIRE_MAX) or (key == "repair" and wall["hp"] < wall["max_hp"] * 0.7):
+				if key == "wire" and mods["wire"] < D.WIRE_MAX:
 					moved = use_supply(i).has("ok")
 			elif kind == "weapon":
 				var worst := -1
@@ -899,6 +897,7 @@ func send_scavenger(si: int, site_key: String) -> Dictionary:
 	var site: Dictionary = D.SITES[site_key]
 	var s: Dictionary = crew[si]
 	var walk := path_length(s["slot_x"]) / D.WALK_SPEED
+	s["repairing"] = false
 	s["state"] = "leaving"
 	s["path_t"] = 0.0
 	trip = {"who": s, "site": site_key, "away": maxf(5.0, site["gone"] - walk * 2.0), "t": 0.0, "walk": walk}
@@ -1043,6 +1042,68 @@ static func path_point(slot_x: float, t: float) -> Vector2:
 	return pts[-1]
 
 
+# --- Repairing the wall -----------------------------------------------------
+# Any survivor on the walkway (you included) can be set to repair the wall.
+# They stop shooting while they work, and each bit of wall costs scrap.
+var _repair_debt := 0.0         # scrap owed for repairs so far, paid a whole scrap at a time
+
+
+func repairers() -> int:
+	var n := 0
+	for s in crew:
+		if s.get("repairing", false):
+			n += 1
+	return n
+
+
+func toggle_repair(i: int) -> Dictionary:
+	if i < 0 or i >= crew.size():
+		return {"msg": ""}
+	var s: Dictionary = crew[i]
+	if s.get("repairing", false):
+		s["repairing"] = false
+		return {"ok": true, "msg": "You go back to shooting." if s["is_player"] else s["name"] + " goes back to shooting."}
+	if s["state"] != "wall":
+		return {"msg": s["name"] + " isn't on the wall right now."}
+	if wall["hp"] >= wall["max_hp"]:
+		return {"msg": "The wall doesn't need repairs."}
+	if scrap <= 0 and _repair_debt <= 0.0:
+		return {"msg": "No scrap to repair with."}
+	s["repairing"] = true
+	s["repair_fx"] = 0.0
+	sound.emit("build")
+	return {"ok": true, "msg": ("You start" if s["is_player"] else s["name"] + " starts") + " repairing the wall."}
+
+
+func update_repairs(dt: float) -> void:
+	for s in crew:
+		if not s.get("repairing", false):
+			continue
+		if s["state"] != "wall":
+			s["repairing"] = false
+			continue
+		if wall["hp"] >= wall["max_hp"]:
+			s["repairing"] = false
+			toast.emit(("You finish" if s["is_player"] else s["name"] + " finishes") + " repairing. The wall is at full strength.", "good")
+			continue
+		if scrap <= 0:
+			s["repairing"] = false
+			toast.emit("Out of scrap. Repairs have stopped.", "danger")
+			continue
+		var gain := minf(D.REPAIR_PER_SECOND * dt, wall["max_hp"] - wall["hp"])
+		wall["hp"] += gain
+		_repair_debt += gain / D.WALL_PER_SCRAP
+		while _repair_debt >= 1.0 and scrap > 0:
+			_repair_debt -= 1.0
+			scrap -= 1
+		# Sparks where they're working, and the odd hammer blow.
+		s["repair_fx"] -= dt
+		if s["repair_fx"] <= 0.0:
+			s["repair_fx"] = 0.35 + randf() * 0.2
+			burst(s["x"] + randf_range(-0.3, 0.3), D.WALL_Y + D.WALL_T, 4, {"colors": [Color("ffe08a"), Color("ffb347")], "spread": 0.8, "up": 90.0, "life": 0.35, "size": 1.6, "z": 14.0, "glow": true})
+			sound.emit("hit")
+
+
 # --- Strangers --------------------------------------------------------------
 # One survivor always finds the outpost and walks in through the pass early
 # on. After that, strangers only come down the pass if you've lost everyone:
@@ -1155,8 +1216,22 @@ func buy(id: String) -> Dictionary:
 	return {"ok": true}
 
 
+# Sets someone repairing when the wall is low. Used by the automated balance test.
+func auto_repair() -> void:
+	var busy := 0
+	for s in crew:
+		if s.get("repairing", false):
+			busy += 1
+	if wall["hp"] < wall["max_hp"] * 0.6 and busy == 0 and scrap >= 5:
+		for i in range(crew.size() - 1, -1, -1):
+			if crew[i]["state"] == "wall":
+				toggle_repair(i)
+				return
+
+
 # Spends scrap sensibly. Used by the automated balance test.
 func auto_shop() -> void:
+	auto_repair()
 	var guard := 0
 	while guard < 20:
 		guard += 1
@@ -1164,9 +1239,9 @@ func auto_shop() -> void:
 		var worst := 99
 		for c in crew:
 			worst = mini(worst, RANK[c["weapon"]])
-		if wall["hp"] < wall["max_hp"] * 0.55 and storage_free() > 0:
-			want = "repair"
-		elif worst < 2 and storage_free() > 0:
+		if wall["hp"] < wall["max_hp"] * 0.6:
+			break   # save scrap for repairs
+		if worst < 2 and storage_free() > 0:
 			want = "smg" if scrap < shop_cost("rifle") else "rifle"
 		elif wall["stage"] < 4:
 			want = "reinforce"
@@ -1256,6 +1331,7 @@ func step(dt: float) -> void:
 	update_walkers(dt)
 	update_arrivals(dt)
 	update_food(dt)
+	update_repairs(dt)
 	update_traps(dt)
 	update_zombies(dt)
 	update_crew(dt)

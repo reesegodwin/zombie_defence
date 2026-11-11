@@ -39,6 +39,7 @@ var _mouse_screen = null   # last cursor position over the battlefield
 var _panning := false
 var _press_trap := false
 var _over_handled := false
+var hover_survivor := -1
 var _clock := 0.0
 
 
@@ -154,6 +155,7 @@ func _sync_scene(dt: float) -> void:
 		n.setup(s)
 		crew_nodes.append(n)
 	for i in crew_nodes.size():
+		crew_nodes[i].hovered = i == hover_survivor
 		crew_nodes[i].sync(game.crew[i], dt)
 	# Traps.
 	var alive := {}
@@ -291,6 +293,14 @@ func field_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton:
 		match event.button_index:
 			MOUSE_BUTTON_LEFT:
+				if event.pressed and started and not game.over:
+					var who := survivor_at(event.position)
+					if who >= 0:
+						var r: Dictionary = game.toggle_repair(who)
+						if r.get("msg", "") != "":
+							hud.toast(r["msg"], "info" if r.has("ok") else "danger")
+						game.input_firing = false
+						return
 				if event.pressed:
 					var gp := _grid(event.position)
 					_press_trap = hud.inventory_open() and game.trap_at(gp.x, gp.y) != null
@@ -307,6 +317,10 @@ func field_input(event: InputEvent) -> void:
 				if event.pressed:
 					rig.zoom_by(1 / 1.1)
 	elif event is InputEventMouseMotion:
+		var hs := survivor_at(event.position)
+		if hs != hover_survivor:
+			hover_survivor = hs
+			hud.field.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if hs >= 0 else Control.CURSOR_ARROW
 		if _panning:
 			rig.drag(event.position - event.relative, event.position)
 		if hud.inventory_open():
@@ -319,6 +333,29 @@ func field_input(event: InputEvent) -> void:
 		rig.zoom_by(event.factor)
 	elif event is InputEventPanGesture:
 		rig.drag(event.position, event.position - event.delta * 20.0)
+
+
+## Index of the survivor on the walkway under a screen point, or -1.
+func survivor_at(p: Vector2) -> int:
+	var best := -1
+	var bd := 30.0
+	for i in game.crew.size():
+		var s: Dictionary = game.crew[i]
+		if s["state"] != "wall":
+			continue
+		for h in [0.5, 1.0, 1.5]:
+			var sp: Vector2 = rig.world_to_screen(Vector3(s["x"], D.DECK_H + h, s["y"]))
+			var d := sp.distance_to(p)
+			if d < bd:
+				bd = d
+				best = i
+	# A zombie closer to the cursor wins: you meant to shoot it.
+	if best >= 0:
+		for z in game.zombies:
+			var sc: float = D.ZTYPES[z["type"]]["scale"]
+			if rig.world_to_screen(Vector3(z["x"], 0.9 * sc, z["y"])).distance_to(p) < bd:
+				return -1
+	return best
 
 
 # Start dragging a placed trap (only while storage is open).

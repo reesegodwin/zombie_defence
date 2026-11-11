@@ -20,6 +20,9 @@ const D = preload("res://scripts/defs.gd")
 @onready var flash_light: OmniLight3D = $Upper/Muzzle/Light
 @onready var label: Label3D = $NameLabel
 @onready var ring: MeshInstance3D = $Ring
+@onready var arm_r: MeshInstance3D = $Upper/ArmR
+
+var hovered := false
 
 var _weapon := ""
 var _height := D.DECK_H
@@ -76,11 +79,28 @@ func sync(s: Dictionary, dt: float) -> void:
 		flash_light.light_energy = 0.0
 		# Fade out as they disappear up the pass, and in as they come back.
 		label.modulate.a = 0.8 * clampf((1.0 - s["path_t"]) * 8.0, 0.0, 1.0)
+	elif s.get("repairing", false):
+		# Turn to the wall, crouch, put the gun away and hammer.
+		_phase += dt * 11.0
+		leg_l.rotation.x = 0.5
+		leg_r.rotation.x = -0.2
+		legs.rotation.y = PI
+		upper.rotation.y = PI
+		upper.position = Vector3(0, 0.62, 0.05)
+		gun.visible = false
+		arm_r.rotation.x = -0.9 + absf(sin(_phase)) * 1.3
+		flash_mesh.visible = false
+		flash_light.light_energy = 0.0
+		label.text = s["name"] + " · repairing"
+		label.modulate = Color(1.0, 0.85, 0.45, 1.0)
 	else:
 		leg_l.rotation.x = 0.0
 		leg_r.rotation.x = 0.0
 		legs.rotation.y = 0.0
-		label.modulate.a = 0.8
+		gun.visible = true
+		arm_r.rotation.x = 0.0
+		label.text = s["name"] + ("  ·  click to repair" if hovered else "")
+		label.modulate = Color(1.0, 0.9, 0.6, 1.0) if hovered else Color(1, 1, 1, 0.8)
 		# Sim angle is in the ground plane (x, y) -> world (x, z).
 		var ang: float = s["aim"]
 		upper.rotation.y = atan2(cos(ang), sin(ang))

@@ -251,6 +251,9 @@ func update_hud() -> void:
 	wall_bar.max_value = w["max_hp"]
 	wall_bar.value = w["hp"]
 	wall_label.text = "Wall  %d / %d  ·  %s" % [ceili(w["hp"]), int(w["max_hp"]), g.wall_mat()["name"]]
+	var fixing: int = g.repairers()
+	if fixing > 0:
+		wall_label.text += "  ·  repairing +%d/s" % int(fixing * D.REPAIR_PER_SECOND)
 	resources_label.text = "Scrap %d" % g.scrap
 	# Food: stock bar, how fast it's going, how long it lasts.
 	food_bar.max_value = maxf(D.FOOD_BAR_MIN, g.food)
@@ -285,6 +288,8 @@ func update_hud() -> void:
 	if main.started:
 		if g.time < 10:
 			h = "Auto-fire is on: you shoot whatever is closest to the wall." if g.input_auto else "Hold the left mouse button to shoot. Your aim snaps to the zombie under the cursor."
+		elif g.wall["hp"] < g.wall["max_hp"] * 0.7 and g.repairers() == 0 and g.scrap > 0:
+			h = "The wall is damaged. Click a survivor on the walkway to have them repair it (costs scrap, and they stop shooting)."
 		elif not _hinted_map and g.trip == null and not g.available_scavengers().is_empty():
 			h = "You have someone who could go scavenging. Press M to open the map."
 		elif g.crew.size() == 1 and g.time < D.FIRST_STRANGER_AT:

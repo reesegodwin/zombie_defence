@@ -34,6 +34,11 @@ const FOOD_PER_MINUTE := 0.5            # eaten by each survivor (you included),
 const FOOD_BAR_MIN := 20.0              # the food bar's scale: this much, or more if you hold more
 const HUNGRY_SLOWDOWN := 1.25           # hungry crews take this much longer between shots
 
+# --- Repairing the wall -----------------------------------------------------
+# Click a survivor on the walkway to set them repairing; they stop shooting.
+const REPAIR_PER_SECOND := 12.0         # wall restored per second, per repairer
+const WALL_PER_SCRAP := 10.0            # wall restored for each scrap spent
+
 # --- Workshop: what scrap buys ---------------------------------------------
 # Items go to base storage. Shelving, wall and drill take effect at once and
 # get dearer each time.
@@ -45,7 +50,6 @@ const SHOP := {
 	"hollow": {"cost": 30, "name": "Hollow points"},
 	"trigger": {"cost": 30, "name": "Hair trigger"},
 	"molotov": {"cost": 40, "name": "Molotov crate"},
-	"repair": {"cost": 25, "name": "Repair kit"},
 	"wire": {"cost": 25, "name": "Wire coil"},
 	"spikes": {"cost": 15, "name": "Spike strip"},
 	"beartrap": {"cost": 20, "name": "Bear trap"},
@@ -59,7 +63,7 @@ const SHOP_SECTIONS := [
 	["Guns", ["smg", "shotgun", "rifle", "launcher"]],
 	["Gear", ["hollow", "trigger", "molotov"]],
 	["Traps", ["spikes", "beartrap", "mine", "slick"]],
-	["Supplies", ["repair", "wire"]],
+	["Supplies", ["wire"]],
 	["Base", ["reinforce", "shelves", "drill"]],
 ]
 
@@ -98,7 +102,6 @@ const ITEMS := {
 	"hollow": {"kind": "mod", "short": "HP", "name": "Hollow points", "desc": "Whoever carries these does 25% more damage."},
 	"trigger": {"kind": "mod", "short": "HT", "name": "Hair trigger", "desc": "Whoever carries this fires 15% faster."},
 	"molotov": {"kind": "mod", "short": "MOL", "name": "Molotov crate", "desc": "Whoever carries this throws a firebomb into the thickest crowd every 10 seconds."},
-	"repair": {"kind": "supply", "short": "FIX", "name": "Repair kit", "desc": "Use it to repair half of the wall."},
 	"wire": {"kind": "supply", "short": "WIRE", "name": "Wire coil", "desc": "Use it to string barbed wire: the dead take 8 more damage a second at the wall."},
 	"spikes": {"kind": "trap", "short": "SPK", "uses": 40.0, "name": "Spike strip", "desc": "Hurts and slows every zombie that crosses it. Wears down with use."},
 	"beartrap": {"kind": "trap", "short": "BEAR", "uses": 6.0, "name": "Bear trap", "desc": "Snaps shut on the first zombie in and holds it in place. Six snaps before it breaks."},

@@ -209,6 +209,23 @@ func _run() -> void:
 	zl["hp"] = 0.0
 	g.zombies = []
 
+	print("Repairing")
+	g.zombies = []
+	g.wall["hp"] = 200.0
+	g.scrap = 100
+	var me: Dictionary = g.crew[0]
+	var me_pos := grid_to_screen(me["x"], me["y"], D.DECK_H + 1.0)
+	await click_at(me_pos)
+	check(me.get("repairing", false), "clicking your character sets you repairing")
+	var hp_a: float = g.wall["hp"]
+	var t_a: float = g.time
+	while g.time < t_a + 2.0:
+		await frames(1)
+	check(g.wall["hp"] > hp_a + 10 and g.scrap < 100, "the wall goes up and scrap goes down while repairing")
+	await shot("09_repairing")
+	await click_at(me_pos)
+	check(not me.get("repairing", false), "clicking again stops the repairs")
+
 	if OS.get_environment("QUICK2") != "":
 		quit(0)
 		return
