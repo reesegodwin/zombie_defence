@@ -14,39 +14,31 @@ const WALL_Y := 14.0
 const WALL_T := 0.6
 const WALK_Y := 15.2
 
-# Isometric tile size in pixels.
-const TW := 64.0
-const TH := 32.0
-
 const MAX_CREW := 5
 const WIRE_MAX := 24.0
 const STORAGE_MAX := 24
 const HORDE_EVERY := 70.0
 
-const ZTYPES := {
-	"walker": {"name": "Walker", "hp": 40.0, "speed": 0.6, "dmg": 8.0, "rate": 1.0, "xp": 1, "r": 0.2, "scale": 1.0,
-		"skin": Color("8fa27a"), "shirts": [Color("4f5d6b"), Color("6b4f4a"), Color("5d5a42"), Color("3f5248")]},
-	"runner": {"name": "Runner", "hp": 24.0, "speed": 1.35, "dmg": 5.0, "rate": 0.6, "xp": 2, "r": 0.17, "scale": 0.88,
-		"skin": Color("a7b48a"), "shirts": [Color("7a3b3b"), Color("8a5a2b")]},
-	"brute": {"name": "Brute", "hp": 260.0, "speed": 0.38, "dmg": 34.0, "rate": 1.5, "xp": 8, "r": 0.32, "scale": 1.55,
-		"skin": Color("6f8a62"), "shirts": [Color("2f3a40"), Color("3b3330")]},
-}
+# Zombie types and weapons live in data/zombies/*.tres and data/weapons/*.tres
+# so they can be tuned in the Inspector. They are read into plain dictionaries
+# here, keyed by file name.
+const ZOMBIE_KEYS := ["walker", "runner", "brute"]
+const WEAPON_KEYS := ["pistol", "smg", "shotgun", "rifle", "launcher"]
+static var ZTYPES: Dictionary = _load_dir("res://data/zombies/", ZOMBIE_KEYS)
 
-const WEAPONS := {
-	"pistol": {"name": "Pistol", "dmg": 14.0, "rate": 0.34, "spread": 0.03, "range": 13.0, "pellets": 1, "pierce": 1, "knock": 0.04, "len": 9.0, "sound": "gun",
-		"desc": "Reliable and accurate. Where everyone starts."},
-	"smg": {"name": "SMG", "dmg": 7.0, "rate": 0.085, "spread": 0.09, "range": 11.0, "pellets": 1, "pierce": 1, "knock": 0.02, "len": 12.0, "sound": "smg",
-		"desc": "Sprays fast and loose. Shreds crowds of walkers."},
-	"shotgun": {"name": "Shotgun", "dmg": 10.0, "rate": 0.75, "spread": 0.3, "range": 7.5, "pellets": 7, "pierce": 1, "knock": 0.18, "len": 15.0, "sound": "shotgun",
-		"desc": "Seven pellets at close range. Knocks the dead back off the wall."},
-	"rifle": {"name": "Hunting rifle", "dmg": 55.0, "rate": 0.85, "spread": 0.004, "range": 22.0, "pellets": 1, "pierce": 4, "knock": 0.1, "len": 18.0, "sound": "rifle",
-		"desc": "One heavy round that punches through four bodies."},
-	"launcher": {"name": "Grenade launcher", "dmg": 70.0, "rate": 1.25, "spread": 0.02, "range": 16.0, "pellets": 1, "pierce": 1, "knock": 0.0, "splash": 1.7, "len": 14.0, "sound": "launch",
-		"desc": "Lobbed grenades that blow apart whole clusters."},
-}
+static var WEAPONS: Dictionary = _load_dir("res://data/weapons/", WEAPON_KEYS)
+
+
+static func _load_dir(dir: String, keys: Array) -> Dictionary:
+	var out := {}
+	for k in keys:
+		var res = load(dir + k + ".tres")
+		out[k] = res.to_dict()
+	return out
 
 const NAMES := ["Dana", "Marek", "Priya", "Hollis", "June", "Tomas", "Ada", "Kofi", "Rosa", "Lev", "Imke", "Sol"]
 const JACKETS := [Color("7a5c3a"), Color("4d5a3c"), Color("5c3f4f"), Color("3d4f5c"), Color("6b6b4a")]
+const DECK_H := 0.45     # walkway height, in metres
 const SKINS := [Color("e0b896"), Color("c49270"), Color("8d5e3e"), Color("f1cfb0"), Color("a8775a")]
 const CREW_SLOTS := [0.0, -3.0, 3.0, -5.5, 5.5]
 
@@ -102,11 +94,3 @@ static func item_desc(key: String) -> String:
 static func item_kind(key: String) -> String:
 	return ITEMS[key]["kind"]
 
-
-# Grid coordinates (tiles, continuous) -> world pixels.
-static func g2w(gx: float, gy: float) -> Vector2:
-	return Vector2((gx - gy) * TW * 0.5, (gx + gy) * TH * 0.5)
-
-
-static func w2g(p: Vector2) -> Vector2:
-	return Vector2(p.y / TH + p.x / TW, p.y / TH - p.x / TW)

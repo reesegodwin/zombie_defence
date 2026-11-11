@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://data/weapon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Grenade launcher"
+description = "Lobbed grenades that blow apart whole clusters."
+damage = 70.0
+pellets = 1
+pierce = 1
+splash_radius = 1.7
+seconds_between_shots = 1.25
+spread = 0.02
+reach = 16.0
+knockback = 0.0
+barrel_length = 0.7
+sound = "launch"
+slot_label = "GL"

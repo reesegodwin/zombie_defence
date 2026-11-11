@@ -9,6 +9,9 @@ signal toast(text: String, kind: String)
 signal sound(name: String)
 signal inv_changed
 signal leveled_up
+signal exploded(x: float, y: float, radius: float)
+signal zombie_died(x: float, y: float, type: String)
+signal wall_breached(x: float)
 
 # --- State ------------------------------------------------------------------
 var time := 0.0
@@ -41,6 +44,7 @@ var next_horde := D.HORDE_EVERY
 var horde_left := 0
 var horde_acc := 0.0
 var shake := 0.0
+var fx_id := 1                 # ids for fires, so the 3D view can track them
 
 # Player input, written by main.gd each frame (grid coordinates).
 var input_aim = null           # Vector2 or null
@@ -173,6 +177,7 @@ func hit_wall(x: float, dmg: float) -> void:
 		for k in 6:
 			burst(x + (randf() - 0.5) * 3.0, D.WALL_Y, 12, {"colors": wall_mat()["chips"], "spread": 3.0, "up": 180.0, "life": 1.0, "size": 4.0, "z": 18.0})
 		sound.emit("crash")
+		wall_breached.emit(x)
 
 
 func update_zombies(dt: float) -> void:
@@ -248,6 +253,7 @@ func damage(z: Dictionary, amt: float, quiet := false) -> void:
 		var T := ZT(z["type"])
 		xp += int(T["xp"])
 		kills += 1
+		zombie_died.emit(z["x"], z["y"], z["type"])
 		burst(z["x"], z["y"], 10 + int(round(T["scale"] * 6)), {"colors": [Color("5a2a26"), Color("7a3a2c"), T["skin"]], "spread": 2.2, "up": 130.0, "life": 0.8, "size": 2.6 * T["scale"], "z": 14.0 * T["scale"]})
 		sound.emit("die")
 
@@ -384,7 +390,7 @@ func update_shots(dt: float) -> void:
 		if sh["kind"] == "grenade":
 			explode(sh["x1"], sh["y1"], sh["dmg"], sh["splash"])
 		else:
-			fires.append({"x": sh["x1"], "y": sh["y1"], "r": 1.35, "life": 4.5, "max": 4.5})
+			_add_fire(sh["x1"], sh["y1"], 1.35, 4.5)
 			sound.emit("fire")
 	shots = shots.filter(func(s): return not s.has("done"))
 
@@ -403,6 +409,11 @@ func update_shots(dt: float) -> void:
 	fires = fires.filter(func(f): return f["life"] > 0)
 
 
+func _add_fire(x: float, y: float, r: float, life: float) -> void:
+	fires.append({"id": fx_id, "x": x, "y": y, "r": r, "life": life, "max": life})
+	fx_id += 1
+
+
 func explode(x: float, y: float, dmg: float, splash: float) -> void:
 	for z in zombies:
 		var d := Vector2(z["x"] - x, z["y"] - y).length()
@@ -413,6 +424,7 @@ func explode(x: float, y: float, dmg: float, splash: float) -> void:
 	burst(x, y, 26, {"colors": [Color("ffe08a"), Color("ffb347"), Color("ff7a2a"), Color("3a3530")], "spread": 3.2, "up": 200.0, "life": 0.6, "size": 4.0, "z": 6.0, "glow": true})
 	burst(x, y, 10, {"colors": [Color("2e2a26"), Color("4a443d")], "spread": 2.0, "up": 120.0, "life": 1.0, "size": 5.0, "z": 6.0, "grav": -20.0})
 	sound.emit("boom")
+	exploded.emit(x, y, splash)
 	shake = maxf(shake, 0.35)
 	ignite_slicks(x, y, splash)
 
@@ -553,7 +565,7 @@ func ignite_slicks(x: float, y: float, r: float) -> void:
 			continue
 		if Vector2(t["x"] - x, t["y"] - y).length() < r + D.TRAP_R["slick"] * 0.6:
 			t["uses"] = 0.0
-			fires.append({"x": t["x"], "y": t["y"], "r": 1.15, "life": 6.0, "max": 6.0})
+			_add_fire(t["x"], t["y"], 1.15, 6.0)
 			burst(t["x"], t["y"], 18, {"colors": [Color("ffe08a"), Color("ffb347"), Color("ff7a2a")], "spread": 2.0, "up": 160.0, "life": 0.7, "size": 4.0, "z": 4.0, "glow": true})
 			sound.emit("fire")
 

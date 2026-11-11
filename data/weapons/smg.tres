@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://data/weapon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "SMG"
+description = "Sprays fast and loose. Shreds crowds of walkers."
+damage = 7.0
+pellets = 1
+pierce = 1
+splash_radius = 0.0
+seconds_between_shots = 0.085
+spread = 0.09
+reach = 11.0
+knockback = 0.02
+barrel_length = 0.6
+sound = "smg"
+slot_label = "SMG"

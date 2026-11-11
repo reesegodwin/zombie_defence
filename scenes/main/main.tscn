@@ -1,0 +1,205 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/main/main.gd" id="main"]
+[ext_resource type="Script" path="res://scenes/main/camera_rig.gd" id="rig"]
+[ext_resource type="Script" path="res://scenes/main/effects.gd" id="effects"]
+[ext_resource type="Script" path="res://scripts/sfx.gd" id="sfx"]
+[ext_resource type="PackedScene" path="res://scenes/level/level.tscn" id="level"]
+[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="hud"]
+[ext_resource type="PackedScene" path="res://scenes/actors/zombie.tscn" id="zombie"]
+[ext_resource type="PackedScene" path="res://scenes/actors/survivor.tscn" id="survivor"]
+[ext_resource type="PackedScene" path="res://scenes/traps/spikes.tscn" id="t_spikes"]
+[ext_resource type="PackedScene" path="res://scenes/traps/beartrap.tscn" id="t_bear"]
+[ext_resource type="PackedScene" path="res://scenes/traps/mine.tscn" id="t_mine"]
+[ext_resource type="PackedScene" path="res://scenes/traps/slick.tscn" id="t_slick"]
+[ext_resource type="PackedScene" path="res://scenes/fx/fire.tscn" id="fire"]
+[ext_resource type="PackedScene" path="res://scenes/fx/explosion.tscn" id="explosion"]
+[ext_resource type="Texture2D" path="res://assets/textures/blood_splat_1.png" id="b1"]
+[ext_resource type="Texture2D" path="res://assets/textures/blood_splat_2.png" id="b2"]
+[ext_resource type="Texture2D" path="res://assets/textures/blood_splat_3.png" id="b3"]
+
+[sub_resource type="ProceduralSkyMaterial" id="sky_mat"]
+sky_top_color = Color(0.25, 0.22, 0.32, 1)
+sky_horizon_color = Color(0.7, 0.42, 0.32, 1)
+ground_bottom_color = Color(0.05, 0.05, 0.06, 1)
+ground_horizon_color = Color(0.7, 0.42, 0.32, 1)
+
+[sub_resource type="Sky" id="sky"]
+sky_material = SubResource("sky_mat")
+
+[sub_resource type="Environment" id="env"]
+background_mode = 2
+sky = SubResource("sky")
+ambient_light_source = 2
+ambient_light_color = Color(0.55, 0.6, 0.78, 1)
+ambient_light_energy = 0.55
+tonemap_mode = 2
+tonemap_exposure = 1.1
+ssao_enabled = true
+ssao_radius = 1.2
+ssao_intensity = 1.6
+glow_enabled = true
+glow_intensity = 0.9
+glow_bloom = 0.03
+glow_blend_mode = 1
+glow_hdr_threshold = 1.0
+fog_enabled = true
+fog_light_color = Color(0.45, 0.33, 0.3, 1)
+fog_density = 0.0035
+adjustment_enabled = true
+adjustment_saturation = 0.9
+
+[sub_resource type="BoxMesh" id="cube"]
+
+[sub_resource type="MultiMesh" id="mm_debris"]
+transform_format = 1
+use_colors = true
+instance_count = 900
+visible_instance_count = 0
+mesh = SubResource("cube")
+
+[sub_resource type="MultiMesh" id="mm_sparks"]
+transform_format = 1
+use_colors = true
+instance_count = 600
+visible_instance_count = 0
+mesh = SubResource("cube")
+
+[sub_resource type="MultiMesh" id="mm_tracers"]
+transform_format = 1
+use_colors = true
+instance_count = 300
+visible_instance_count = 0
+mesh = SubResource("cube")
+
+[sub_resource type="SphereMesh" id="ball"]
+radius = 0.5
+height = 1.0
+radial_segments = 8
+rings = 4
+
+[sub_resource type="MultiMesh" id="mm_proj"]
+transform_format = 1
+use_colors = true
+instance_count = 64
+visible_instance_count = 0
+mesh = SubResource("ball")
+
+[sub_resource type="StandardMaterial3D" id="debris_mat"]
+transparency = 1
+vertex_color_use_as_albedo = true
+roughness = 0.9
+
+[sub_resource type="Shader" id="glow_shader"]
+code = "shader_type spatial;
+render_mode unshaded, blend_add, cull_disabled, shadows_disabled;
+uniform float boost = 3.0;
+void fragment() {
+	ALBEDO = COLOR.rgb * boost;
+	ALPHA = COLOR.a;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="glow_mat"]
+shader = SubResource("glow_shader")
+shader_parameter/boost = 3.0
+
+[sub_resource type="StandardMaterial3D" id="proj_mat"]
+vertex_color_use_as_albedo = true
+emission_enabled = true
+emission = Color(0.2, 0.08, 0, 1)
+roughness = 0.6
+
+[sub_resource type="CylinderMesh" id="disc"]
+top_radius = 1.0
+bottom_radius = 1.0
+height = 0.02
+radial_segments = 32
+
+[sub_resource type="StandardMaterial3D" id="preview_mat"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(0.3, 1.6, 0.5, 0.45)
+
+[node name="Main" type="Node3D"]
+script = ExtResource("main")
+zombie_scene = ExtResource("zombie")
+survivor_scene = ExtResource("survivor")
+trap_scenes = {
+"beartrap": ExtResource("t_bear"),
+"mine": ExtResource("t_mine"),
+"slick": ExtResource("t_slick"),
+"spikes": ExtResource("t_spikes")
+}
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
+
+[node name="Moon" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.78801, 0.00000, 0.61566, 0.48515, 0.61566, -0.62096, -0.37904, 0.78801, 0.48515, 0, 12, 0)
+light_color = Color(0.85, 0.8, 0.85, 1)
+light_energy = 1.1
+shadow_enabled = true
+shadow_blur = 1.5
+directional_shadow_mode = 0
+directional_shadow_max_distance = 80.0
+
+[node name="Level" parent="." instance=ExtResource("level")]
+
+[node name="Actors" type="Node3D" parent="."]
+
+[node name="Zombies" type="Node3D" parent="Actors"]
+
+[node name="Crew" type="Node3D" parent="Actors"]
+
+[node name="Traps" type="Node3D" parent="Actors"]
+
+[node name="Effects" type="Node3D" parent="."]
+script = ExtResource("effects")
+fire_scene = ExtResource("fire")
+explosion_scene = ExtResource("explosion")
+blood_textures = Array[Texture2D]([ExtResource("b1"), ExtResource("b2"), ExtResource("b3")])
+
+[node name="Debris" type="MultiMeshInstance3D" parent="Effects"]
+material_override = SubResource("debris_mat")
+cast_shadow = 0
+multimesh = SubResource("mm_debris")
+
+[node name="Sparks" type="MultiMeshInstance3D" parent="Effects"]
+material_override = SubResource("glow_mat")
+cast_shadow = 0
+multimesh = SubResource("mm_sparks")
+
+[node name="Tracers" type="MultiMeshInstance3D" parent="Effects"]
+material_override = SubResource("glow_mat")
+cast_shadow = 0
+multimesh = SubResource("mm_tracers")
+
+[node name="Projectiles" type="MultiMeshInstance3D" parent="Effects"]
+material_override = SubResource("proj_mat")
+multimesh = SubResource("mm_proj")
+
+[node name="Blood" type="Node3D" parent="Effects"]
+
+[node name="Fires" type="Node3D" parent="Effects"]
+
+[node name="PlacePreview" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("disc")
+surface_material_override/0 = SubResource("preview_mat")
+cast_shadow = 0
+
+[node name="CameraRig" type="Node3D" parent="."]
+transform = Transform3D(1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 0.00000, 0.00000, 0.00000, 1.00000, 10.2, 0, 8.8)
+script = ExtResource("rig")
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig"]
+projection = 1
+size = 15.0
+near = 0.5
+far = 120.0
+
+[node name="Sfx" type="Node" parent="."]
+script = ExtResource("sfx")
+
+[node name="HUD" parent="." instance=ExtResource("hud")]

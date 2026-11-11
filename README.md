@@ -1,18 +1,22 @@
-# Nightfall Outpost (Godot 4)
+# Nightfall Outpost (Godot 4.7)
 
 An isometric zombie defence game. One wall, one way in, and the dead never stop
 coming. You start alone with a pistol on the walkway behind the wall. Kills give
 experience; every level you pick one of three cards (new guns, gear, traps,
-supplies, survivors, or a stronger wall). There are no levels or waves to clear:
-it is one continuous run that keeps getting harder, with a horde every 70 seconds.
+supplies, survivors, or a stronger wall). It is one continuous run that keeps
+getting harder as night falls, with a horde every 70 seconds.
+
+The game is 3D with a fixed isometric camera, so it gets real lighting:
+moonlight and shadows that change as night deepens, lanterns, a bunker
+floodlight, muzzle flashes, burning fuel, explosions and blood on the ground.
 
 ## Open and play
 
-1. Open Godot (4.3 or newer).
-2. In the Project Manager click **Import**, pick the `project.godot` file in this
-   folder, and click **Import & Edit**. If Godot asks to upgrade the project to
-   your version, click OK.
-3. Press **F5** (or the ▶ Play button, top right) to play.
+1. Open Godot 4.7 (the standard edition is fine).
+2. In the Project Manager click **Import**, choose `project.godot` in this folder,
+   then **Import & Edit**.
+3. The first import takes a moment while Godot processes textures and the font.
+4. Press **F5** (or ▶ at the top right) to play.
 
 ## Controls
 
@@ -29,21 +33,29 @@ it is one continuous run that keeps getting harder, with a horde every 70 second
 | Sound on/off | M |
 | Play again after the wall falls | R |
 
-## Project layout
+## Where things are (and what to tweak in the editor)
 
-| File | What it does |
+| Path | What it is |
 |---|---|
-| `scripts/defs.gd` | All tunable data: zombie types, weapons, items, traps, map layout |
-| `scripts/game.gd` | The simulation: director, zombies, crew, combat, traps, inventory, cards |
-| `scripts/world.gd` | Isometric drawing (vector shapes; swap in sprites here later) |
-| `scripts/hud.gd` | Interface: stats, cards, storage, title, pause and game-over screens |
-| `scripts/slot.gd` | One inventory slot with drag and drop |
-| `scripts/field.gd` | Mouse input over the battlefield |
-| `scripts/sfx.gd` | Sound effects generated in code (no audio files) |
-| `scripts/main.gd` | Glue: camera, input, game loop |
+| `scenes/main/main.tscn` | The main scene: environment (sky, fog, glow), moon, camera, effects, HUD |
+| `scenes/level/level.tscn` | The compound: ground, lane, walkway, bunker and floodlight, huts, lanterns |
+| `scenes/level/wall.tscn` | The wall; its timber, stone and steel materials are in the Inspector |
+| `scenes/level/forest.gd` | The woods; change **Seed Value** or **Density** in the Inspector to re-roll |
+| `scenes/actors/zombie.tscn` | Zombie model (one scene, coloured per type) and its animation script |
+| `scenes/actors/survivor.tscn` | Survivor model, gun, muzzle flash light and name label |
+| `scenes/traps/*.tscn` | Spike strip, bear trap, landmine and fuel slick |
+| `scenes/fx/fire.tscn`, `explosion.tscn` | Particle effects with lights |
+| `scenes/ui/hud.tscn`, `ui_theme.tres` | Interface layout and its look |
+| `data/weapons/*.tres` | **Weapon stats**: open one and edit damage, fire rate, range… in the Inspector |
+| `data/zombies/*.tres` | **Zombie stats and colours**: health, speed, wall damage, size… |
+| `scripts/game.gd` | Game rules: spawning and difficulty curve, combat, traps, inventory, cards |
+| `scripts/defs.gd` | Item list, map layout and other constants |
+| `scripts/sfx.gd` | Sound effects, generated in code |
 
-The game logic lives in `game.gd` with no nodes, so balance changes are mostly
-edits to numbers in `defs.gd` and `game.gd`.
+The simulation in `scripts/game.gd` has no nodes; the scenes read its state each
+frame. So you can restyle anything in the editor without touching game rules,
+and replacing the block models with real art later only means editing the
+actor scenes.
 
 ## Tests
 
@@ -53,12 +65,17 @@ From this folder, with `godot` being your Godot executable:
 godot --headless --path . --script res://tests/sim_test.gd
 ```
 
-Runs logic checks plus six simulated games with auto-fire and random card
-picks, and prints how long each survived.
+Logic checks plus six simulated games, printing how long each survived.
 
 ```bash
 godot --path . --script res://tests/visual_test.gd -- shots
 ```
 
-Opens the real game, drives it with simulated mouse drags and clicks
-(equipping, placing and moving traps, shooting), and saves screenshots.
+Opens the real game, drives it with mouse drags and clicks (equipping,
+placing and moving traps, shooting, cards, game over, restart) and saves
+screenshots to `shots/`.
+
+## Credits
+
+Oswald font by Vernon Adams and others, SIL Open Font License
+(`assets/fonts/LICENSE.txt`). Everything else was made for this project.

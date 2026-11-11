@@ -1,0 +1,61 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scenes/level/wall.gd" id="1"]
+
+[sub_resource type="FastNoiseLite" id="grain"]
+frequency = 0.05
+fractal_octaves = 3
+
+[sub_resource type="Gradient" id="wood_ramp"]
+colors = PackedColorArray(0.3, 0.2, 0.12, 1, 0.52, 0.38, 0.24, 1)
+
+[sub_resource type="NoiseTexture2D" id="wood_tex"]
+width = 256
+height = 256
+seamless = true
+color_ramp = SubResource("wood_ramp")
+noise = SubResource("grain")
+
+[sub_resource type="StandardMaterial3D" id="timber"]
+albedo_texture = SubResource("wood_tex")
+roughness = 0.9
+uv1_scale = Vector3(1, 6, 1)
+uv1_triplanar = true
+
+[sub_resource type="FastNoiseLite" id="stone_noise"]
+noise_type = 2
+frequency = 0.08
+cellular_return_type = 2
+
+[sub_resource type="Gradient" id="stone_ramp"]
+colors = PackedColorArray(0.32, 0.32, 0.3, 1, 0.62, 0.61, 0.57, 1)
+
+[sub_resource type="NoiseTexture2D" id="stone_tex"]
+width = 256
+height = 256
+seamless = true
+color_ramp = SubResource("stone_ramp")
+noise = SubResource("stone_noise")
+
+[sub_resource type="StandardMaterial3D" id="stone"]
+albedo_texture = SubResource("stone_tex")
+roughness = 0.95
+uv1_triplanar = true
+uv1_scale = Vector3(0.6, 0.6, 0.6)
+
+[sub_resource type="StandardMaterial3D" id="steel"]
+albedo_color = Color(0.5, 0.56, 0.6, 1)
+metallic = 0.75
+roughness = 0.38
+
+[sub_resource type="StandardMaterial3D" id="wire"]
+albedo_color = Color(0.6, 0.62, 0.64, 1)
+metallic = 0.8
+roughness = 0.35
+
+[node name="Wall" type="Node3D"]
+script = ExtResource("1")
+timber_material = SubResource("timber")
+stone_material = SubResource("stone")
+steel_material = SubResource("steel")
+wire_material = SubResource("wire")

@@ -1,0 +1,113 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/traps/trap.gd" id="1"]
+
+[sub_resource type="StandardMaterial3D" id="metal"]
+albedo_color = Color(0.55, 0.57, 0.6, 1)
+metallic = 0.85
+roughness = 0.35
+
+[sub_resource type="StandardMaterial3D" id="darkmetal"]
+albedo_color = Color(0.15, 0.16, 0.15, 1)
+metallic = 0.5
+roughness = 0.6
+
+[sub_resource type="QuadMesh" id="bar"]
+size = Vector2(0.6, 0.06)
+
+[sub_resource type="StandardMaterial3D" id="bar_bg"]
+shading_mode = 0
+albedo_color = Color(0, 0, 0, 0.6)
+transparency = 1
+no_depth_test = true
+render_priority = 1
+
+[sub_resource type="StandardMaterial3D" id="bar_fill"]
+shading_mode = 0
+albedo_color = Color(0.88, 0.7, 0.29, 1)
+no_depth_test = true
+render_priority = 2
+
+[sub_resource type="TorusMesh" id="ring"]
+inner_radius = 0.62
+outer_radius = 0.7
+rings = 32
+ring_segments = 4
+
+[sub_resource type="StandardMaterial3D" id="ringmat"]
+shading_mode = 0
+albedo_color = Color(2, 1.7, 0.6, 1)
+
+[sub_resource type="CylinderMesh" id="disc"]
+top_radius = 0.22
+bottom_radius = 0.27
+height = 0.09
+radial_segments = 16
+
+[sub_resource type="CylinderMesh" id="cap"]
+top_radius = 0.08
+bottom_radius = 0.1
+height = 0.04
+radial_segments = 12
+
+[sub_resource type="StandardMaterial3D" id="olive"]
+albedo_color = Color(0.24, 0.28, 0.18, 1)
+metallic = 0.4
+roughness = 0.6
+
+[sub_resource type="SphereMesh" id="bulb"]
+radius = 0.025
+height = 0.05
+radial_segments = 6
+rings = 3
+
+[sub_resource type="StandardMaterial3D" id="red"]
+shading_mode = 0
+albedo_color = Color(5, 0.5, 0.3, 1)
+
+[node name="Landmine" type="Node3D"]
+script = ExtResource("1")
+kind = "mine"
+
+[node name="Disc" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04, 0)
+mesh = SubResource("disc")
+surface_material_override/0 = SubResource("olive")
+
+[node name="Cap" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
+mesh = SubResource("cap")
+surface_material_override/0 = SubResource("darkmetal")
+
+[node name="Bulb" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.13, 0.1, 0)
+mesh = SubResource("bulb")
+surface_material_override/0 = SubResource("red")
+cast_shadow = 0
+
+[node name="Blink" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.13, 0.2, 0)
+light_color = Color(1, 0.15, 0.1, 1)
+light_energy = 0.0
+omni_range = 1.2
+
+[node name="Highlight" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.55, 0, 0, 0, 0.3, 0, 0, 0, 0.55, 0, 0.03, 0)
+visible = false
+mesh = SubResource("ring")
+surface_material_override/0 = SubResource("ringmat")
+cast_shadow = 0
+
+[node name="WearBar" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+
+[node name="Bg" type="MeshInstance3D" parent="WearBar"]
+mesh = SubResource("bar")
+surface_material_override/0 = SubResource("bar_bg")
+cast_shadow = 0
+
+[node name="Fill" type="MeshInstance3D" parent="WearBar"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.001)
+mesh = SubResource("bar")
+surface_material_override/0 = SubResource("bar_fill")
+cast_shadow = 0

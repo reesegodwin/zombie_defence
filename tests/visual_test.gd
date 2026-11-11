@@ -19,7 +19,7 @@ func _initialize() -> void:
 	if args.size() > 0:
 		out_dir = args[0]
 	DirAccess.make_dir_recursive_absolute(out_dir)
-	main = load("res://main.tscn").instantiate()
+	main = load("res://scenes/main/main.tscn").instantiate()
 	root.add_child(main)
 	_run.call_deferred()
 
@@ -61,6 +61,9 @@ func mouse_move(pos: Vector2, held: bool) -> void:
 
 
 func drag(a: Vector2, b: Vector2) -> void:
+	# Godot 4.7 reads the drop point from the real cursor, so move it too.
+	Input.warp_mouse(a)
+	await frames(3)
 	mouse_move(a, false)
 	await frames(2)
 	mouse_button(a, true)
@@ -68,7 +71,10 @@ func drag(a: Vector2, b: Vector2) -> void:
 	for i in range(1, 13):
 		mouse_move(a.lerp(b, i / 12.0), true)
 		await frames(1)
-	await frames(2)
+	Input.warp_mouse(b)
+	await frames(3)
+	mouse_move(b, true)
+	await frames(1)
 	mouse_button(b, false)
 	await frames(4)
 
@@ -85,9 +91,8 @@ func fast_forward(seconds: float) -> void:
 		t += 1.0 / 30.0
 
 
-func grid_to_screen(gx: float, gy: float) -> Vector2:
-	var D = load("res://scripts/defs.gd")
-	return root.get_canvas_transform() * main.world.get_global_transform() * D.g2w(gx, gy)
+func grid_to_screen(gx: float, gy: float, h := 0.0) -> Vector2:
+	return main.rig.world_to_screen(Vector3(gx, h, gy))
 
 
 func _run() -> void:
@@ -133,8 +138,11 @@ func _run() -> void:
 		await drag(grid_to_screen(9.0, 9.0), grid_to_screen(12.0, 7.0))
 		check(absf(g.traps[0]["x"] - 12.0) < 0.3, "a placed trap can be dragged to a new spot")
 	await shot("03_inventory")
+	if OS.get_environment("QUICK") != "":
+		quit(0)
+		return
 	main.paused = false
-	main.hud.toggle_inventory()
+	main.hud.close_inventory()
 
 	print("Manual shooting")
 	g.input_auto = false
@@ -145,7 +153,9 @@ func _run() -> void:
 	target_z["x"] = 11.0
 	target_z["y"] = 9.0
 	target_z["spd"] = 0.0
-	var zp := grid_to_screen(11.0, 9.0) - Vector2(0, 14)
+	var zp := grid_to_screen(11.0, 9.0, 0.9)
+	Input.warp_mouse(zp)
+	await frames(3)
 	mouse_move(zp, false)
 	await frames(2)
 	mouse_button(zp, true)
@@ -157,6 +167,20 @@ func _run() -> void:
 	fast_forward(110.0)
 	await frames(30)
 	await shot("04_two_minutes")
+	g.add_to_storage("slick")
+	g.place_trap(g.storage["items"].size() - 1, 11.0, 10.0)
+	g.explode(11.0, 10.0, 70.0, 1.7)
+	await frames(4)
+	await shot("04b_explosion")
+	fast_forward(60.0)
+	await frames(20)
+	await shot("04c_night")
+	if g.over:
+		main.restart()
+		g = main.game
+		await frames(5)
+	if not g.cards.is_empty():
+		main.choose_card(0)
 	g.xp = g.xp_next
 	await frames(10)
 	check(main.hud.cards_overlay.visible, "the level-up cards appear")

@@ -1,5 +1,5 @@
 # One inventory slot: base storage, a survivor's weapon slot, or a gear slot.
-# Items move by drag and drop (Godot's built-in drag system).
+# Items move with Godot's built-in drag and drop.
 extends Control
 
 const D = preload("res://scripts/defs.gd")
@@ -10,20 +10,13 @@ var _drag_ok := false
 var _dragging := false
 
 
-func _init() -> void:
-	custom_minimum_size = Vector2(54, 54)
-	mouse_filter = Control.MOUSE_FILTER_STOP
-
-
 func game():
 	return hud.main.game
 
 
 func _process(_dt: float) -> void:
 	var dragging := get_viewport().gui_is_dragging()
-	var ok := false
-	if dragging:
-		ok = _accepts(get_viewport().gui_get_drag_data())
+	var ok := dragging and _accepts(get_viewport().gui_get_drag_data())
 	if dragging != _dragging or ok != _drag_ok:
 		_dragging = dragging
 		_drag_ok = ok
@@ -39,37 +32,53 @@ func refresh() -> void:
 	queue_redraw()
 
 
+func _short(key: String) -> String:
+	if D.WEAPONS.has(key):
+		return D.WEAPONS[key]["short"]
+	return D.ITEMS[key]["short"]
+
+
 func _draw() -> void:
 	var r := Rect2(Vector2.ZERO, size)
 	var it = game().item_at(loc)
-	var bg := Color(0.1, 0.11, 0.12, 0.9)
+	var bg := Color(0.09, 0.1, 0.11, 0.92)
 	if loc["where"] == "weapon":
-		bg = Color(0.16, 0.13, 0.08, 0.9)
+		bg = Color(0.15, 0.12, 0.07, 0.92)
 	elif loc["where"] == "gear":
-		bg = Color(0.08, 0.12, 0.16, 0.9)
-	draw_rect(r, bg)
-	var border := Color(1, 1, 1, 0.12)
+		bg = Color(0.07, 0.11, 0.15, 0.92)
+	draw_style_box(_box(bg), r)
+	var border := Color(1, 1, 1, 0.1)
 	if it != null:
 		border = D.KIND_COLORS[D.item_kind(it["key"])]
 	if hud.selected != null and game().same_loc(hud.selected, loc):
 		border = Color(1, 0.95, 0.6)
 	if _dragging and _drag_ok:
-		draw_rect(r, Color(0.3, 0.9, 0.4, 0.22))
-		border = Color(0.4, 1.0, 0.5)
-	draw_rect(r.grow(-1), border, false, 2.0)
+		draw_style_box(_box(Color(0.3, 0.9, 0.4, 0.22)), r)
+		border = Color(0.45, 1.0, 0.55)
+	var outline := _box(Color(0, 0, 0, 0))
+	outline.border_color = border
+	outline.set_border_width_all(2)
+	draw_style_box(outline, r)
 	var font := get_theme_default_font()
 	if it == null:
 		var hint: String = {"weapon": "GUN", "gear": "GEAR", "storage": ""}[loc["where"]]
-		draw_string(font, Vector2(0, size.y / 2 + 4), hint, HORIZONTAL_ALIGNMENT_CENTER, size.x, 10, Color(1, 1, 1, 0.2))
+		draw_string(font, Vector2(0, size.y / 2 + 4), hint, HORIZONTAL_ALIGNMENT_CENTER, size.x, 11, Color(1, 1, 1, 0.22))
 		return
 	var key: String = it["key"]
 	var col: Color = D.KIND_COLORS[D.item_kind(key)]
-	draw_rect(Rect2(Vector2(6, 6), Vector2(size.x - 12, 4)), Color(col, 0.6))
-	draw_string(font, Vector2(0, size.y / 2 + 6), D.ITEMS[key]["short"], HORIZONTAL_ALIGNMENT_CENTER, size.x, 15, Color(1, 1, 1, 0.95))
+	draw_rect(Rect2(Vector2(8, 7), Vector2(size.x - 16, 3)), Color(col, 0.8))
+	draw_string(font, Vector2(0, size.y / 2 + 7), _short(key), HORIZONTAL_ALIGNMENT_CENTER, size.x, 16, Color(1, 1, 1, 0.95))
 	if it.has("uses") and D.ITEMS[key].has("uses"):
 		var frac: float = clampf(it["uses"] / float(D.ITEMS[key]["uses"]), 0.0, 1.0)
-		draw_rect(Rect2(Vector2(6, size.y - 9), Vector2(size.x - 12, 3)), Color(0, 0, 0, 0.6))
-		draw_rect(Rect2(Vector2(6, size.y - 9), Vector2((size.x - 12) * frac, 3)), Color("e0b44a"))
+		draw_rect(Rect2(Vector2(8, size.y - 10), Vector2(size.x - 16, 3)), Color(0, 0, 0, 0.6))
+		draw_rect(Rect2(Vector2(8, size.y - 10), Vector2((size.x - 16) * frac, 3)), Color("e0b44a"))
+
+
+func _box(c: Color) -> StyleBoxFlat:
+	var b := StyleBoxFlat.new()
+	b.bg_color = c
+	b.set_corner_radius_all(6)
+	return b
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -84,15 +93,7 @@ func _get_drag_data(_pos: Vector2) -> Variant:
 	var it = game().item_at(loc)
 	if it == null:
 		return null
-	var p := Label.new()
-	p.text = " " + D.item_name(it["key"]) + " "
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.1, 0.1, 0.1, 0.9)
-	sb.border_color = D.KIND_COLORS[D.item_kind(it["key"])]
-	sb.set_border_width_all(2)
-	sb.set_content_margin_all(6)
-	p.add_theme_stylebox_override("normal", sb)
-	set_drag_preview(p)
+	hud.set_drag_label(D.item_name(it["key"]), it["key"], self)
 	hud.select(loc)
 	return {"loc": loc.duplicate(), "key": it["key"]}
 

@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://data/weapon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Pistol"
+description = "Reliable and accurate. Where everyone starts."
+damage = 14.0
+pellets = 1
+pierce = 1
+splash_radius = 0.0
+seconds_between_shots = 0.34
+spread = 0.03
+reach = 13.0
+knockback = 0.04
+barrel_length = 0.45
+sound = "gun"
+slot_label = "PST"
