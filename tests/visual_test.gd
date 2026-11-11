@@ -173,6 +173,42 @@ func _run() -> void:
 	mouse_button(zp, false)
 	check(target_z["hp"] <= 0, "holding the mouse on a zombie shoots it dead")
 	g.input_auto = true
+	print("Aiming")
+	g.input_auto = false
+	for z in g.zombies:
+		z["hp"] = 0.0
+	g.zombies = []
+	main.paused = true
+	var p_in := grid_to_screen(14.0, 6.0)
+	Input.warp_mouse(p_in)
+	await frames(3)
+	mouse_move(p_in, false)
+	await frames(6)
+	check(main.aim_guide.visible and main.aim_guide.label.visible, "the range arc shows while you play")
+	await shot("08_aim_in_range")
+	var p_out := grid_to_screen(16.5, 0.6)
+	Input.warp_mouse(p_out)
+	await frames(3)
+	mouse_move(p_out, false)
+	await frames(6)
+	await shot("08b_aim_out_of_range")
+	main.paused = false
+	g.input_auto = true
+	var zl: Dictionary = g.spawn_zombie("walker", 20.0, 0.0)
+	zl["x"] = 6.0
+	zl["y"] = 9.0
+	await frames(20)
+	var you: Dictionary = g.crew[0]
+	var want := atan2(zl["y"] - you["y"], zl["x"] - you["x"])
+	check(absf(angle_difference(you["aim"], want)) < 0.15, "with auto-fire on you face the zombie you're shooting, not the cursor")
+	var upper: Node3D = main.crew_nodes[0].upper
+	check(absf(angle_difference(upper.rotation.y, atan2(cos(you["aim"]), sin(you["aim"])))) < 0.05, "the character model turns the same way")
+	main.paused = true
+	await shot("08c_aim_auto")
+	main.paused = false
+	zl["hp"] = 0.0
+	g.zombies = []
+
 	if OS.get_environment("QUICK2") != "":
 		quit(0)
 		return

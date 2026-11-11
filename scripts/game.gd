@@ -347,18 +347,25 @@ func update_crew(dt: float) -> void:
 					s["mol_cd"] = 1.0
 
 		if s["is_player"]:
-			if input_aim != null:
+			# Holding the mouse aims at the cursor. Otherwise, with auto-fire on,
+			# you face whatever auto-fire is shooting at; with it off, the cursor.
+			var manual: bool = input_firing and input_aim != null
+			var target = null
+			if not manual and input_auto:
+				target = auto_target(s, w["range"])
+				if target != null:
+					s["aim"] = atan2(target["y"] - s["y"], target["x"] - s["x"])
+			elif input_aim != null:
 				s["aim"] = atan2(input_aim.y - s["y"], input_aim.x - s["x"])
+			s["auto_target"] = target["id"] if target != null else -1
 			if s["cd"] > 0:
 				continue
-			if input_firing and input_aim != null:
+			if manual:
 				fire(s, input_aim.x, input_aim.y, k["dmg"])
 				s["cd"] = k["interval"]
-			elif input_auto:
-				var z = auto_target(s, w["range"])
-				if z != null:
-					fire(s, z["x"], z["y"], k["dmg"])
-					s["cd"] = k["interval"]
+			elif target != null:
+				fire(s, target["x"], target["y"], k["dmg"])
+				s["cd"] = k["interval"]
 		else:
 			var z = auto_target(s, w["range"])
 			if z == null:

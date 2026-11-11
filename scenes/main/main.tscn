@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://scenes/main/main.gd" id="main"]
 [ext_resource type="Script" path="res://scenes/main/camera_rig.gd" id="rig"]
 [ext_resource type="Script" path="res://scenes/main/effects.gd" id="effects"]
+[ext_resource type="Script" path="res://scenes/main/aim_guide.gd" id="aim_guide"]
 [ext_resource type="Script" path="res://scripts/sfx.gd" id="sfx"]
 [ext_resource type="PackedScene" path="res://scenes/level/level.tscn" id="level"]
 [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="hud"]
@@ -110,6 +111,12 @@ emission_enabled = true
 emission = Color(0.2, 0.08, 0, 1)
 roughness = 0.6
 
+[sub_resource type="StandardMaterial3D" id="guide_mat"]
+transparency = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+render_priority = 1
+
 [sub_resource type="CylinderMesh" id="disc"]
 top_radius = 1.0
 bottom_radius = 1.0
@@ -182,6 +189,21 @@ multimesh = SubResource("mm_proj")
 [node name="Blood" type="Node3D" parent="Effects"]
 
 [node name="Fires" type="Node3D" parent="Effects"]
+
+[node name="AimGuide" type="MeshInstance3D" parent="."]
+material_override = SubResource("guide_mat")
+script = ExtResource("aim_guide")
+
+[node name="RangeLabel" type="Label3D" parent="AimGuide"]
+billboard = 1
+no_depth_test = true
+pixel_size = 0.008
+render_priority = 3
+outline_render_priority = 2
+modulate = Color(1, 0.85, 0.5, 0.95)
+text = "pistol range"
+font_size = 48
+outline_size = 12
 
 [node name="PlacePreview" type="MeshInstance3D" parent="."]
 visible = false

@@ -23,6 +23,7 @@ const Game = preload("res://scripts/game.gd")
 @onready var traps_root: Node3D = $Actors/Traps
 @onready var effects: Node3D = $Effects
 @onready var preview: MeshInstance3D = $PlacePreview
+@onready var aim_guide: MeshInstance3D = $AimGuide
 @onready var hud: CanvasLayer = $HUD
 @onready var sfx: Node = $Sfx
 
@@ -179,6 +180,9 @@ func _sync_scene(dt: float) -> void:
 	RenderingServer.global_shader_parameter_set("walker_a", walkers[0] if walkers.size() > 0 else none)
 	RenderingServer.global_shader_parameter_set("walker_b", walkers[1] if walkers.size() > 1 else none)
 	wall.sync(game, _clock)
+	var cursor = rig.screen_to_ground(_mouse_screen) if _mouse_screen != null else null
+	var manual: bool = game.input_firing or not game.input_auto
+	aim_guide.sync(game, cursor, manual, started and not game.over)
 	effects.sync(game)
 	level.set_darkness(_darkness(), dt)
 

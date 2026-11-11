@@ -44,6 +44,25 @@ func _unit_checks() -> void:
 	check(z["hp"] <= 0, "five pistol shots kill a walker")
 	check(g.kills == 1, "kills are counted")
 
+	# With auto-fire on you face what you're shooting, not the cursor.
+	g = Game.new()
+	g.input_auto = true
+	var you: Dictionary = g.crew[0]
+	var za: Dictionary = g.spawn_zombie("walker", 1.0, 0.0)
+	za["x"] = 6.0; za["y"] = 10.0
+	g.input_aim = Vector2(16.0, 9.0)          # cursor off to the right
+	g.update_crew(0.016)
+	var want := atan2(za["y"] - you["y"], za["x"] - you["x"])
+	check(absf(angle_difference(you["aim"], want)) < 0.01, "with auto-fire on you aim at your target, not the cursor")
+	g.input_firing = true
+	g.update_crew(0.016)
+	var cur := atan2(9.0 - you["y"], 16.0 - you["x"])
+	check(absf(angle_difference(you["aim"], cur)) < 0.01, "holding the mouse button aims at the cursor even with auto-fire on")
+	g.input_firing = false
+	g.input_auto = false
+	g.update_crew(0.016)
+	check(absf(angle_difference(you["aim"], cur)) < 0.01, "with auto-fire off you aim at the cursor")
+
 	# Zombies reach the wall and damage it.
 	g = Game.new()
 	var z2: Dictionary = g.spawn_zombie("brute", 1.0, 1.0)

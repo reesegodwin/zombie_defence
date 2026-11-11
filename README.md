@@ -28,7 +28,7 @@ floodlight, muzzle flashes, burning fuel, explosions and blood on the ground.
 | Action | Input |
 |---|---|
 | Shoot | Hold left mouse button (aim snaps to the zombie under the cursor) |
-| Auto-fire on/off | F |
+| Auto-fire on/off | F (while on, you turn to face what you're shooting; holding the mouse button takes over) |
 | Scavenging map (pauses the game) | M |
 | Workshop | B |
 | Base storage and crew loadouts | I (or Tab) |
