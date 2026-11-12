@@ -871,6 +871,9 @@ func update_zombies(dt: float) -> void:
 			uv.y += step
 		else:
 			uv.y = front
+			if z.has("tu"):   # at the wall: done fanning out, face it square
+				z.erase("tu")
+				z.erase("face")
 			z["cd"] -= dt
 			if z["cd"] <= 0:
 				z["cd"] = T["rate"]

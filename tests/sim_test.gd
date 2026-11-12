@@ -414,7 +414,7 @@ func _unit_checks() -> void:
 		near_pipe = near_pipe or absf(puv.x - pu) < 0.6
 	check(near_pipe and absf(puv.y - D.PIPE_SPAWN_V) < 0.01, "new zombies step out of a sewer pipe")
 	var want_u: float = piped["tu"]
-	for i in 600:   # 30 s: well short of the ~38 s walk to the wall
+	for i in 800:   # 40 s: the furthest spot (8.6 m aside) takes ~31 s on the slant
 		g.update_zombies(0.05)
 	puv = Game.lane_uv(0, Vector2(piped["x"], piped["y"]))
 	check(not piped.has("tu") and absf(puv.x - want_u) < 0.6, "and spread out across the lane as they come")
