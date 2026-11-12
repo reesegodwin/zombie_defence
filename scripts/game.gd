@@ -5,6 +5,7 @@
 extends RefCounted
 
 const D = preload("res://scripts/defs.gd")
+const Terrain = preload("res://scripts/terrain.gd")
 
 signal toast(text: String, kind: String)
 signal sound(name: String)
@@ -1142,11 +1143,14 @@ func fire(s: Dictionary, tx: float, ty: float, dmg_mul: float, w = null) -> void
 		return
 	# Real bullets: out of the barrel, flying on until they hit (see update_bullets).
 	# They drop from the muzzle toward a body's chest height at the aimed distance.
-	var drop := (BULLET_AIM_H - mz.y) / maxf(dist, 1.0)
+	# Heights are world heights (not over the ground below), so a bullet flies
+	# dead straight over the lanes' rolls instead of bobbing along them.
+	var h0 := mz.y + Terrain.sample(s["x"], s["y"])
+	var drop := (BULLET_AIM_H + Terrain.sample(tx, ty) - h0) / maxf(dist, 1.0)
 	var width: float = 1.0 if w["pellets"] > 1 else (2.4 if s.get("weapon", "") == "rifle" else 1.6)
 	for p in int(w["pellets"]):
 		var a: float = ang + (randf() * 2.0 - 1.0) * w["spread"] * wide
-		bullets.append({"x": mz.x, "y": mz.z, "h": mz.y, "drop": drop, "dx": cos(a), "dy": sin(a),
+		bullets.append({"x": mz.x, "y": mz.z, "h": h0, "drop": drop, "dx": cos(a), "dy": sin(a),
 			"speed": w.get("bullet_speed", BULLET_SPEED) * randf_range(0.95, 1.05), "flown": 0.0,
 			"dmg": w["dmg"] * dmg_mul, "pierce": int(w["pierce"]), "knock": w["knock"], "hit": {}, "w": width})
 	if bullets.size() > BULLETS_MAX:
@@ -1203,7 +1207,7 @@ func update_bullets(dt: float) -> void:
 		b["x"] += dx * moved
 		b["y"] += dy * moved
 		b["flown"] += moved
-		b["h"] = maxf(0.15, b["h"] + b["drop"] * moved)
+		b["h"] += b["drop"] * moved
 		if b["flown"] >= SHOT_MAX:
 			b["done"] = true
 	bullets = bullets.filter(func(b): return not b.has("done"))

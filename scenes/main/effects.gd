@@ -85,13 +85,12 @@ func _sync_tracers(list: Array) -> void:
 		var tail: float = minf(STREAK, b["flown"])
 		if tail < 0.05:
 			tail = 0.05
-		var head := Vector3(b["x"], b["h"] + Terrain.sample(b["x"], b["y"]), b["y"])
-		var bx: float = b["x"] - b["dx"] * tail
-		var by: float = b["y"] - b["dy"] * tail
-		var back := Vector3(bx, b["h"] - b["drop"] * tail + Terrain.sample(bx, by), by)
+		# A straight line in the world: no terrain under it to follow.
+		var head := Vector3(b["x"], b["h"], b["y"])
+		var back := Vector3(b["x"] - b["dx"] * tail, b["h"] - b["drop"] * tail, b["y"] - b["dy"] * tail)
 		var dir := head - back
 		var length := dir.length()
-		var w: float = b["w"] * 0.045
+		var w: float = b["w"] * 0.02
 		var basis := Basis.looking_at(dir / length, Vector3.UP) * Basis.from_scale(Vector3(w, w, length))
 		mm.set_instance_transform(n, Transform3D(basis, (head + back) * 0.5))
 		mm.set_instance_color(n, Color(1.0, 0.78, 0.38, 1.0))
@@ -99,7 +98,7 @@ func _sync_tracers(list: Array) -> void:
 	mm.visible_instance_count = n
 
 
-const STREAK := 1.2   # metres of glowing streak behind each bullet
+const STREAK := 0.6   # metres of glowing streak behind each bullet
 
 
 func _sync_projectiles(shots: Array) -> void:
