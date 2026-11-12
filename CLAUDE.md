@@ -9,3 +9,5 @@
 - Commit as `reesegodwin <224442274+reesegodwin@users.noreply.github.com>`
   (set it with `-c user.name=... -c user.email=...`), and don't add
   `Co-Authored-By` or `Claude-Session` lines to commit messages.
+- End every reply to the user with a next step or suggestion for the game's
+  development (what to build, fix or playtest next, and why).
