@@ -76,6 +76,23 @@ func _unit_checks() -> void:
 		gb.fire(bt_sh, bt_tz["x"], bt_tz["y"], 1.0)
 		_fly(gb)
 	check(bt_tz["hp"] < bt_hp_b and gb.bullets.is_empty(), "then it lands")
+	# A miss ends in the dirt, with a little puff where it lands.
+	var gpf = Game.new()
+	gpf.fire(gpf.crew[0], gpf.crew[0]["x"], gpf.crew[0]["y"] - 6.0, 1.0)
+	var parts0: int = gpf.parts.size()
+	var flew := 0
+	while not gpf.bullets.is_empty() and flew < 200:
+		gpf.update_bullets(0.02)
+		flew += 1
+	check(gpf.parts.size() > parts0 and flew < 100, "a bullet that misses hits the ground (after %d steps) and kicks up a puff" % flew)
+	# The ranger cabin: someone radioed for help, and they're always there.
+	var gcab = Game.new()
+	var always := true
+	for i in 30:
+		if gcab._roll_loot("ranger_cabin", gcab.crew[0])["survivor"] == "":
+			always = false
+	check(D.SITES.has("ranger_cabin") and always, "the ranger cabin always has the survivor who radioed for help")
+
 	# A rifle round passes through several, and never hits the same one twice.
 	gb.crew[0]["weapon"] = "rifle"
 	gb.zombies.clear()

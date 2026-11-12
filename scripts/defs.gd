@@ -112,7 +112,7 @@ const WALK_SPEED := 2.2                 # tiles per second, walking to and from 
 const PLAYER_SPEED := 3.4               # you, walking with WASD (tiles per second)
 # The route from the back of the base up through the mountain pass (x, y).
 const PASS_PATH := [Vector2(11.2, 22.5), Vector2(11.2, 29.0), Vector2(11.7, 32.5), Vector2(12.5, 36.0), Vector2(12.6, 40.0), Vector2(12.1, 44.0)]
-const SCRAP_TIERS := [[12, 24], [24, 42], [45, 80]]   # low, medium, high: min and max scrap
+const SCRAP_TIERS := [[20, 36], [38, 64], [70, 120]]   # low, medium, high: min and max scrap
 const SCRAP_NAMES := ["Low", "Medium", "High"]
 # --- When a wall breaks -------------------------------------------------------
 # A broken wall lets that lane's dead into the base, where they go for the
@@ -309,7 +309,7 @@ const WEAPON_KEYS := ["pistol", "smg", "shotgun", "rifle", "launcher"]
 static var ZTYPES: Dictionary = _load_dir("res://data/zombies/", ZOMBIE_KEYS)
 
 static var WEAPONS: Dictionary = _load_dir("res://data/weapons/", WEAPON_KEYS)
-const SITE_KEYS := ["gas_station", "farmhouse", "hardware_store", "trailer_park", "radio_tower", "police_station", "rail_yard"]
+const SITE_KEYS := ["gas_station", "farmhouse", "hardware_store", "trailer_park", "radio_tower", "police_station", "rail_yard", "ranger_cabin"]
 static var SITES: Dictionary = _load_dir("res://data/sites/", SITE_KEYS)
 
 

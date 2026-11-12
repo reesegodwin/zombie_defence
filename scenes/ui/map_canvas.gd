@@ -233,6 +233,17 @@ func _draw_site(key: String) -> void:
 			for k in 2:
 				var q := p + Vector2(-26 + k * 26, -2)
 				wpath([q, q + Vector2(0, -14), q + Vector2(22, -14), q + Vector2(22, 0)], col, 1.8, sd + k)
+		"sos":
+			# A log cabin with an aerial, and radio waves coming off it.
+			wpath([p + Vector2(-14, 0), p + Vector2(-14, -14), p + Vector2(0, -24), p + Vector2(14, -14), p + Vector2(14, 0), p + Vector2(-14, 0)], col, 2.0, sd)
+			wline(p + Vector2(-14, -7), p + Vector2(14, -7), col, 1.2, sd + 1)
+			wline(p + Vector2(8, -18), p + Vector2(8, -40), col, 1.6, sd + 2)
+			for k in 3:
+				var r := 7.0 + k * 6.0
+				wline(p + Vector2(8 + r * 0.7, -40 - r * 0.7), p + Vector2(8 + r, -40), RED, 1.5, sd + 3 + k)
+				wline(p + Vector2(8 - r * 0.7, -40 - r * 0.7), p + Vector2(8 - r, -40), RED, 1.5, sd + 6 + k)
+			if not main.game.looted.has(key):
+				ink_text(p + Vector2(0, -60), "SOS", 22, RED)
 		_:
 			wpath([p + Vector2(-14, 0), p + Vector2(-14, -16), p + Vector2(0, -26), p + Vector2(14, -16), p + Vector2(14, 0), p + Vector2(-14, 0)], col, 2.0, sd)
 	if on:

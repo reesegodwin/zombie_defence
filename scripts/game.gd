@@ -1146,7 +1146,15 @@ func fire(s: Dictionary, tx: float, ty: float, dmg_mul: float, w = null) -> void
 	# Heights are world heights (not over the ground below), so a bullet flies
 	# dead straight over the lanes' rolls instead of bobbing along them.
 	var h0 := mz.y + Terrain.sample(s["x"], s["y"])
-	var drop := (BULLET_AIM_H + Terrain.sample(tx, ty) - h0) / maxf(dist, 1.0)
+	# At a zombie: its chest. At bare ground: the ground itself, so a miss
+	# kicks up dirt right where you aimed.
+	var at_body := false
+	for z in zombies:
+		if z["hp"] > 0 and Vector2(z["x"] - tx, z["y"] - ty).length() < ZT(z["type"])["r"] + 0.45:
+			at_body = true
+			break
+	var aim_h := (BULLET_AIM_H if at_body else 0.0) + Terrain.sample(tx, ty)
+	var drop := (aim_h - h0) / maxf(dist, 0.5)
 	var width: float = 1.0 if w["pellets"] > 1 else (2.4 if s.get("weapon", "") == "rifle" else 1.6)
 	for p in int(w["pellets"]):
 		var a: float = ang + (randf() * 2.0 - 1.0) * w["spread"] * wide
@@ -1155,6 +1163,12 @@ func fire(s: Dictionary, tx: float, ty: float, dmg_mul: float, w = null) -> void
 			"dmg": w["dmg"] * dmg_mul, "pierce": int(w["pierce"]), "knock": w["knock"], "hit": {}, "w": width})
 	if bullets.size() > BULLETS_MAX:
 		bullets = bullets.slice(bullets.size() - BULLETS_MAX)
+
+
+## A bullet striking the ground: a small kick of dirt and grit.
+func _ground_puff(x: float, y: float) -> void:
+	burst(x, y, 6, {"colors": [Color("6b5a44"), Color("8a7458"), Color("4f4232")], "spread": 0.9, "up": 70.0, "life": 0.5, "size": 2.2, "z": 1.0, "grav": 260.0})
+	burst(x, y, 3, {"colors": [Color(0.5, 0.45, 0.37), Color(0.44, 0.4, 0.33)], "spread": 0.4, "up": 26.0, "life": 0.8, "size": 4.2, "z": 1.0, "grav": 10.0})
 
 
 ## Where a shot leaves the gun (x, height, y in metres): the end of the
@@ -1208,7 +1222,11 @@ func update_bullets(dt: float) -> void:
 		b["y"] += dy * moved
 		b["flown"] += moved
 		b["h"] += b["drop"] * moved
-		if b["flown"] >= SHOT_MAX:
+		if not b.has("done") and b["h"] <= Terrain.sample(b["x"], b["y"]):
+			# Into the dirt: a little puff where it lands.
+			b["done"] = true
+			_ground_puff(b["x"], b["y"])
+		elif b["flown"] >= SHOT_MAX:
 			b["done"] = true
 	bullets = bullets.filter(func(b): return not b.has("done"))
 
@@ -2003,8 +2021,8 @@ func _roll_loot(site_key: String, who = null) -> Dictionary:
 		r["food"] = int(round(randi_range(2, 5) * sqrt(forage) * research_mul("food_yield")))
 	elif researched.has("foraging"):
 		r["food"] = int(round(1 * research_mul("food_yield")))   # foraging: never empty-handed
-	if randf() < site["survivor_chance"] * luck:
-		r["survivor"] = free_name()
+	if site["survivor_chance"] >= 1.0 or randf() < site["survivor_chance"] * luck:
+		r["survivor"] = free_name()   # (a site at 1 has someone waiting: they radioed for help)
 	return r
 
 

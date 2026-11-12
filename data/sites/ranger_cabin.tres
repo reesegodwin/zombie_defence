@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ScavengeSite" format=3]
+
+[ext_resource type="Script" path="res://data/scavenge_site.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Ranger cabin"
+note = "someone radioed for help!"
+map_position = Vector2(0.12, 0.47)
+icon = "sos"
+gone_seconds = 75.0
+scrap = 0
+weapon_chance = 0.05
+food_chance = 0.25
+survivor_chance = 1.0
+throwable_chance = 0.15

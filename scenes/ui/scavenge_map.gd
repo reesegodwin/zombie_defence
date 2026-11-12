@@ -53,6 +53,8 @@ func _on_site(key: String) -> void:
 
 
 func _chance(p: float) -> String:
+	if p >= 1.0:
+		return "someone's waiting there"
 	if p >= 0.28:
 		return "decent chance"
 	if p >= 0.12:
