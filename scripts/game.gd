@@ -588,16 +588,21 @@ func start_reload(s: Dictionary) -> bool:
 	return true
 
 
+const RACK_LEAD := 0.105   # seconds from the start of the reload sound to its slam
+
 ## Ticks a reload along; true while they're still busy reloading.
 func _tick_reload(s: Dictionary, dt: float) -> bool:
 	if not is_reloading(s):
 		return false
+	var before: float = s["reload"]
 	s["reload"] -= dt
+	# The rack-and-slam starts just early enough for the slam to land as
+	# the gun's ready (Sfx's RACK_SLAM).
+	if s["is_player"] and before > RACK_LEAD and s["reload"] <= RACK_LEAD:
+		sound.emit("reloaded")
 	if s["reload"] <= 0.0:
 		s["reload"] = 0.0
 		s["ammo"] = int(D.WEAPONS[s["weapon"]]["mag"])
-		if s["is_player"]:
-			sound.emit("reloaded")
 		return false
 	return true
 

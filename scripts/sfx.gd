@@ -56,8 +56,9 @@ func make_basic() -> void:
 	streams["horn"] = _horn()
 	# Reloading: the magazine release clicks and the empty one slides out...
 	streams["reload"] = _mech([[0.0, "click", 0.7], [0.025, "slide", 0.5], [0.11, "click", 0.35]])
-	# ...then a fresh one is seated and the slide racked back and slammed home.
-	streams["reloaded"] = _mech([[0.0, "clack", 0.8], [0.17, "slide", 0.55], [0.245, "clack", 1.0]])
+	# ...then a fresh one is seated and the slide racked and slammed home
+	# (modelled on a recording of a pistol being reloaded: see _rack).
+	streams["reloaded"] = _rack()
 
 
 func _exit_tree() -> void:
@@ -251,6 +252,55 @@ func _mech(events: Array) -> AudioStreamWAV:
 					v = (bright * 0.6 + lp * 0.4) * e2 * 0.5
 					v += sin(TAU * (900.0 + 1400.0 * t / 0.1) * t) * e2 * 0.08
 			out[i] += v * vol * 0.55
+	return _make(out)
+
+
+## A pistol reload, timed and voiced like a real one: the magazine latch
+## clicks (a dull ring near 900 Hz), a light bright tick, then the slide
+## slams home with a hard metallic ring (around 3.3 kHz, with a low ring
+## under it), and a last small clack as the gun settles. About 0.3 s.
+## The slam is at SLAM seconds in.
+const RACK_SLAM := 0.105
+
+func _rack() -> AudioStreamWAV:
+	var dur := 0.36
+	var n := int(dur * RATE)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	# [start, ring frequencies, ring decay (1/s), noise decay, noise centre Hz, volume, low thump Hz]
+	var hits := [
+		[0.004, [896.0, 1830.0, 3600.0, 520.0], 260.0, 1100.0, 3800.0, 0.3, 0.0],     # the latch
+		[0.08, [3480.0, 5200.0], 170.0, 900.0, 3500.0, 0.2, 0.0],                     # a light tick
+		[RACK_SLAM, [3280.0, 4120.0, 2460.0, 7200.0, 6100.0], 85.0, 330.0, 3600.0, 1.0, 0.0],   # the slam
+		[RACK_SLAM + 0.006, [885.0], 30.0, 0.0, 0.0, 0.045, 0.0],                     # its low ring
+		[0.235, [3300.0, 4800.0], 150.0, 600.0, 3300.0, 0.11, 102.0],                 # settling
+	]
+	for h in hits:
+		var start := int(h[0] * RATE)
+		var rings: Array = h[1]
+		# Noise through a resonator: a burst of grit centred on the given pitch.
+		var w := TAU * maxf(h[4], 1.0) / RATE
+		var rr := 0.9
+		var c1 := 2.0 * rr * cos(w)
+		var y1 := 0.0
+		var y2 := 0.0
+		var phase_off := randf() * TAU
+		for k in n - start:
+			var t := float(k) / RATE
+			if t > 0.25:
+				break
+			var v := 0.0
+			for j in rings.size():
+				v += sin(TAU * rings[j] * t + phase_off * j) * exp(-t * h[2] * (1.0 + j * 0.35)) / (1.0 + j * 0.6)
+			if h[3] > 0.0:
+				var y := randf_range(-1.0, 1.0) * (1.0 - rr) + c1 * y1 - rr * rr * y2
+				y2 = y1
+				y1 = y
+				v += y * 9.0 * exp(-t * h[3])
+			if h[6] > 0.0:
+				v += sin(TAU * h[6] * t) * exp(-t * 40.0) * 0.3
+			var attack := minf(1.0, t / 0.0008)
+			out[start + k] += v * h[5] * attack * 0.42
 	return _make(out)
 
 
