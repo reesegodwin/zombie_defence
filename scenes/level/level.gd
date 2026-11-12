@@ -38,8 +38,9 @@ var _lenses: Array = []          # per lane: the glowing lens material
 var _lit := [false, false, false]
 var _on_t := [0.0, 0.0, 0.0]     # seconds since each lane's lights came on
 var _night := 0.0
-const SPOT_DAY := 1.5            # a walkway spotlight's strength by day ...
-const SPOT_NIGHT := 5.0          # ... and at night (the bunker floodlight: 4 -> 12)
+const SPOT_DAY := 3.0            # a floodlight's strength by day ...
+const SPOT_NIGHT := 8.0          # ... and at night
+const MAST_H := 2.95             # floodlight mast height above the walkway (light ~3.4 m up)
 const SPOT_REACH := 10.0         # how far beyond the wall each one is aimed, metres
 var _holders := [[], [], []]     # per side lane: the lamp posts (hidden where it's never used)
 
@@ -52,22 +53,26 @@ func _build_spotlights() -> void:
 		m.emission = Color(1.0, 0.93, 0.75)
 		m.emission_energy_multiplier = 0.0
 		_lenses.append(m)
-	# The front walkway's lamp posts become spotlights over the front lane.
+	# Two floodlight masts on each walkway, each throwing its own pool down the
+	# lane. They replace the front walkway's old lamp posts and the floodlight
+	# that used to sit on the bunker.
 	for l in lanterns.get_children():
-		l.get_node("Light").visible = false
-		l.get_node("Bulb").visible = false
-		_add_spot(0, l, Vector3(0, 1.42, 0), Vector3(l.position.x, 0.0, D.WALL_Y - SPOT_REACH))
-	# And spotlights on posts along the west and east walkways.
+		l.visible = false
+	floodlight.visible = false
+	for n in ["Mast", "Lamp"]:
+		var b := get_node_or_null("Bunker/" + n)
+		if b:
+			b.visible = false
 	var post := CylinderMesh.new()
-	post.top_radius = 0.04
-	post.bottom_radius = 0.05
-	post.height = 1.4
+	post.top_radius = 0.05
+	post.bottom_radius = 0.07
+	post.height = MAST_H
 	var metal := StandardMaterial3D.new()
 	metal.albedo_color = Color(0.15, 0.15, 0.16)
-	for side in [1, 2]:
+	for side in 3:
 		var L: Dictionary = D.LANES[side]
-		for f in [0.2, 0.5, 0.8]:
-			var u: float = lerpf(L["u0"], L["u1"], f)
+		var us: Array = D.PIPES[0] if side == 0 else [lerpf(L["u0"], L["u1"], 0.3), lerpf(L["u0"], L["u1"], 0.7)]
+		for u in us:
 			var p: Vector2 = Vector2(L["o"]) + L["t"] * u + L["n"] * (D.WALK_Y + 0.55)
 			var holder := Node3D.new()
 			holder.position = Vector3(p.x, D.DECK_H, p.y)
@@ -75,13 +80,12 @@ func _build_spotlights() -> void:
 			var pm := MeshInstance3D.new()
 			pm.mesh = post
 			pm.material_override = metal
-			pm.position.y = 0.7
+			pm.position.y = MAST_H / 2.0
 			holder.add_child(pm)
-			_holders[side].append(holder)
+			if side > 0:
+				_holders[side].append(holder)
 			var aim: Vector2 = Vector2(L["o"]) + L["t"] * u + L["n"] * (D.WALL_Y - SPOT_REACH)
-			_add_spot(side, holder, Vector3(0, 1.42, 0), Vector3(aim.x, 0.0, aim.y))
-	# The bunker's floodlight lights the front lane too.
-	_spots[0].append(floodlight)
+			_add_spot(side, holder, Vector3(0, MAST_H + 0.05, 0), Vector3(aim.x, 0.0, aim.y))
 
 
 ## A lamp housing and its beam on parent at pos, aimed at target (world).
@@ -112,8 +116,8 @@ func _add_spot(side: int, parent: Node3D, pos: Vector3, target: Vector3) -> void
 	# Like the bunker's floodlight: a wide, long, cool-white pool on the ground,
 	# starting at the wall and running out down the lane.
 	sp.light_color = Color(0.85, 0.92, 1.0)
-	sp.spot_range = 30.0
-	sp.spot_angle = 30.0
+	sp.spot_range = 34.0
+	sp.spot_angle = 34.0
 	sp.spot_attenuation = 0.4
 	sp.light_energy = 0.0
 	sp.position.z = -0.15
@@ -122,13 +126,12 @@ func _add_spot(side: int, parent: Node3D, pos: Vector3, target: Vector3) -> void
 
 
 
-## Low graphics: just the bunker floodlight and the middle lamp on each walkway
-## light up; the rest of the lamps stay dark (their beams cost the most).
+## Graphics: the floodlights cast shadows on High only.
 func spot_detail(full: bool) -> void:
+	# Both lamps stay lit on every setting; only High casts their shadows.
 	for side in 3:
-		var list: Array = _spots[side].filter(func(sp): return sp != floodlight)
-		for k in list.size():
-			list[k].visible = full or k == list.size() / 2
+		for sp in _spots[side]:
+			sp.shadow_enabled = full
 
 
 ## Shows or hides every spotlight beam (for the performance check).
