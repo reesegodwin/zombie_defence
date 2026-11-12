@@ -1133,7 +1133,7 @@ func fire(s: Dictionary, tx: float, ty: float, dmg_mul: float, w = null) -> void
 	var dist := Vector2(tx - mz.x, ty - mz.z).length()
 	if dist > 0.3:
 		ang = atan2(ty - mz.z, tx - mz.x)   # from the barrel's end, so a true shot meets the mark
-	var wide := spread_mul(w, dist) * (2.0 - D.skill_fx(s, "aim"))
+	var wide := spread_mul(w, dist) * (2.0 - D.skill_fx(s, "aim"))   # (as aim_spread)
 	if w.has("splash"):
 		# Lobbed: further out it lands wider of the mark, and long or short.
 		var ga: float = ang + (randf() * 2.0 - 1.0) * w["spread"] * wide
@@ -1163,6 +1163,14 @@ func fire(s: Dictionary, tx: float, ty: float, dmg_mul: float, w = null) -> void
 			"dmg": w["dmg"] * dmg_mul, "pierce": int(w["pierce"]), "knock": w["knock"], "hit": {}, "w": width})
 	if bullets.size() > BULLETS_MAX:
 		bullets = bullets.slice(bullets.size() - BULLETS_MAX)
+
+
+## How far off (radians, either side) a shot from s at a point dist away
+## can stray: the gun's spread, worse with distance, better with aim skill.
+## (The reticle's ticks show this.)
+static func aim_spread(s: Dictionary, dist: float) -> float:
+	var w: Dictionary = D.WEAPONS[s["weapon"]]
+	return w["spread"] * spread_mul(w, dist) * (2.0 - D.skill_fx(s, "aim"))
 
 
 ## A bullet striking the ground: a small kick of dirt and grit.

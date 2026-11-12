@@ -11,6 +11,7 @@ const Progress = preload("res://scripts/progress.gd")
 const Terrain = preload("res://scripts/terrain.gd")
 const Saves = preload("res://scripts/saves.gd")
 const Truck = preload("res://scenes/actors/truck.gd")
+const Reticle = preload("res://scenes/ui/reticle.gd")
 
 @export var zombie_scene: PackedScene
 @export var survivor_scene: PackedScene
@@ -493,52 +494,18 @@ func _update_aim() -> void:
 	game.input_aim = aim
 
 
-## Over the battlefield the cursor is a crosshair reticle: a black ring
-## crossed by four ticks, with a dot in the middle where you're aiming. A thin
-## light edge keeps it visible on dark ground at night. (Menus and buttons keep
-## the normal arrow.)
+## Over the battlefield the system cursor is hidden and the aiming reticle
+## (scenes/ui/reticle.gd) is drawn in its place. Menus and buttons keep the
+## normal arrow, survivors the pointing hand.
 func _bullseye_cursor() -> void:
-	var img := reticle_image(32)
-	Input.set_custom_mouse_cursor(ImageTexture.create_from_image(img), Input.CURSOR_CROSS, Vector2(16, 16))
+	var blank := Image.create(2, 2, false, Image.FORMAT_RGBA8)
+	blank.fill(Color(0, 0, 0, 0))
+	Input.set_custom_mouse_cursor(ImageTexture.create_from_image(blank), Input.CURSOR_CROSS, Vector2(1, 1))
 	hud.field.mouse_default_cursor_shape = Control.CURSOR_CROSS
-
-
-## Distance (pixels) from p to the reticle's shape, negative inside it;
-## size 32 with the centre at (16, 16).
-static func _reticle_sdf(p: Vector2) -> float:
-	var r := p.length()
-	var d := absf(r - 9.5) - 1.75                     # the ring
-	d = minf(d, r - 2.2)                               # the centre dot
-	for axis in [Vector2(1, 0), Vector2(0, 1)]:        # ticks across the ring, on both axes
-		var along := absf(p.dot(axis))
-		var across := absf(p.dot(Vector2(axis.y, axis.x)))
-		var box := Vector2(absf(along - 10.0) - 4.5, across - 1.6)   # from 5.5 to 14.5 out, 3.2 wide
-		d = minf(d, minf(maxf(box.x, box.y), 0.0) + Vector2(maxf(box.x, 0.0), maxf(box.y, 0.0)).length())
-	return d
-
-
-static func reticle_image(size: int) -> Image:
-	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
-	var scale := 32.0 / size
-	for y in size:
-		for x in size:
-			# 4x4 samples a pixel, for smooth edges.
-			var ink := 0.0
-			var halo := 0.0
-			for sy in 4:
-				for sx in 4:
-					var p := (Vector2(x + (sx + 0.5) / 4.0, y + (sy + 0.5) / 4.0) * scale) - Vector2(16, 16)
-					var d := _reticle_sdf(p)
-					if d <= 0.0:
-						ink += 1.0
-					elif d <= 1.1:
-						halo += 1.0
-			ink /= 16.0
-			halo /= 16.0
-			var a := clampf(ink + halo * 0.75, 0.0, 1.0)
-			var shade := 0.0 if a <= 0.0 else (halo * 0.75 * 0.95) / a   # black ink, a pale edge
-			img.set_pixel(x, y, Color(shade, shade, shade, a))
-	return img
+	var r := Reticle.new()
+	r.main = self
+	r.name = "Reticle"
+	hud.add_child(r)
 
 
 ## WASD (or the arrows): you walk, up the screen for W. Once you've fallen,
