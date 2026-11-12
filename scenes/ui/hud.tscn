@@ -109,12 +109,6 @@ grow_horizontal = 0
 alignment = 2
 theme_override_constants/separation = 8
 
-[node name="AutoButton" type="Button" parent="Root/TopButtons"]
-unique_name_in_owner = true
-layout_mode = 2
-focus_mode = 0
-text = "Auto-fire: on (F)"
-
 [node name="StorageButton" type="Button" parent="Root/TopButtons"]
 unique_name_in_owner = true
 layout_mode = 2
@@ -437,7 +431,7 @@ layout_mode = 2
 text = "Hold out 5 nights and an army truck takes you on to the next level.
 By day the dead drift in; at night the horde comes, bigger every night.
 
-Hold the left mouse button to shoot (F: auto-fire). Your crew shoots on its own.
+Hold the left mouse button to shoot. Your crew shoots on its own.
 Click a survivor, then a walkway, to move them; click them again to repair.
 T: research   B: workshop   I: storage   M: send someone scavenging
 Keep food in store, or the crew goes hungry and shoots slower.

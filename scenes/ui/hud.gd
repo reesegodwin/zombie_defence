@@ -23,7 +23,6 @@ var slots: Array = []
 @onready var stats_label: Label = %StatsLabel
 @onready var hint: Label = %Hint
 @onready var toasts: VBoxContainer = %Toasts
-@onready var btn_auto: Button = %AutoButton
 @onready var btn_storage: Button = %StorageButton
 @onready var btn_pause: Button = %PauseButton
 @onready var btn_sound: Button = %SoundButton
@@ -83,7 +82,6 @@ var _btn_board: Button     # "Everyone in the truck", while it waits in the yard
 
 func _ready() -> void:
 	field.main = main
-	btn_auto.pressed.connect(func(): main.toggle_auto())
 	btn_storage.pressed.connect(toggle_inventory)
 	btn_pause.pressed.connect(func(): main.toggle_pause())
 	btn_sound.pressed.connect(func(): main.toggle_sound())
@@ -655,7 +653,6 @@ func update_hud() -> void:
 			phase += "  ·  the %s opens soon" % D.LANES[side]["name"].to_lower()
 	stats_label.text = phase
 	_sync_board(g)
-	btn_auto.text = "Auto-fire: %s (F)" % ("on" if g.input_auto else "off")
 	btn_storage.text = "Storage %d/%d (I)" % [g.storage["items"].size(), g.storage["cap"]]
 	btn_pause.text = "Resume (P)" if main.paused else "Pause (P)"
 	btn_sound.text = "Sound: %s (N)" % ("off" if main.sfx.muted else "on")
@@ -666,7 +663,7 @@ func update_hud() -> void:
 	var h := ""
 	if main.started:
 		if g.time < 10:
-			h = "Auto-fire is on: you shoot whatever is closest to the wall." if g.input_auto else "Hold the left mouse button to shoot. Your aim snaps to the zombie under the cursor."
+			h = "Hold the left mouse button to shoot. Your aim snaps to the zombie under the cursor."
 		elif g.any_breach() and g.evac_go < 0.0:
 			h = "A wall is down and they're getting in. Repair it to a quarter of its strength to close the gap. If everyone in the base falls, the run is over."
 		elif main.throwing >= 0:

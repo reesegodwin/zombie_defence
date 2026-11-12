@@ -79,14 +79,12 @@ func _ready() -> void:
 ## A fresh run (from the camp's upgrades), or, given a saved run's data, that
 ## run picked up where it was.
 func _new_game(saved := {}) -> void:
-	var auto: bool = game.input_auto if game != null else true
 	game = Game.new()
 	if saved.is_empty():
 		game.apply_meta(progress.meta())
 		game.spawn_opening()
 	else:
 		game.from_save(saved)
-	game.input_auto = auto
 	game.toast.connect(func(t, k): hud.toast(t, k))
 	game.sound.connect(func(n): sfx.play(n))
 	game.inv_changed.connect(func(): hud.on_inv_changed())
@@ -308,10 +306,6 @@ static func on_truck(p: Vector2) -> bool:
 	return absf(p.x - Game.TRUCK_STOP.x) < 1.4 and p.y > Game.TRUCK_BOARD.y - 0.6 and p.y < Game.TRUCK_STOP.y + 3.2
 
 
-func toggle_auto() -> void:
-	game.input_auto = not game.input_auto
-
-
 func toggle_sound() -> void:
 	sfx.muted = not sfx.muted
 
@@ -433,7 +427,6 @@ func _sync_scene(dt: float) -> void:
 	for w in walls:
 		w.sync(game, _clock)
 	var cursor = rig.screen_to_ground(_mouse_screen) if _mouse_screen != null else null
-	var manual: bool = game.input_firing or not game.input_auto
 	aim_guide.visible = false   # no targeting circle on the ground
 	effects.sync(game)
 	level.set_darkness(_darkness(), dt)
@@ -521,8 +514,6 @@ func _unhandled_input(event: InputEvent) -> void:
 				hud.toggle_camp()
 		KEY_C:
 			hud.toggle_camp()
-		KEY_F:
-			toggle_auto()
 		KEY_G:
 			board_all()
 		KEY_I, KEY_TAB:

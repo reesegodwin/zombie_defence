@@ -145,7 +145,6 @@ floodlight, muzzle flashes, burning fuel, explosions and blood on the ground.
 |---|---|
 | Shoot | Hold left mouse button (aim snaps to the zombie under the cursor) |
 | Reload | R (everyone also reloads by themselves when the magazine runs dry, and tops up when there's nothing to shoot) |
-| Auto-fire on/off | F (while on, you turn to face what you're shooting; holding the mouse button takes over) |
 | Move a survivor | Click them (you included) to pick them, then click a spot on any walkway or anywhere in the base; they walk there. Right-click or Esc to cancel |
 | Repair a wall | Pick a survivor on a walkway, then click them again; click once more to stop. They repair the wall they're on. Costs scrap, takes time, and they don't shoot while repairing |
 | Build a turret | Buy it in the workshop, then click in the base where it should go (green means clear) |

@@ -93,7 +93,7 @@ var research_count := 0        # projects finished this run (blueprints don't co
 # Player input, written by main.gd each frame (grid coordinates).
 var input_aim = null           # Vector2 or null
 var input_firing := false
-var input_auto := false
+var input_auto := false          # a stand-in player for the tests and balance bots: you shoot whatever is nearest the wall (not in the game)
 
 
 func _init() -> void:
@@ -1076,8 +1076,8 @@ func update_crew(dt: float) -> void:
 		s["idle"] = s.get("idle", 0.0) + dt
 
 		if s["is_player"]:
-			# Holding the mouse aims at the cursor. Otherwise, with auto-fire on,
-			# you face whatever auto-fire is shooting at; with it off, the cursor.
+			# Holding the mouse aims at the cursor; otherwise you face the cursor.
+			# (input_auto is the test bots' stand-in: it shoots on its own.)
 			var manual: bool = input_firing and input_aim != null
 			var target = null
 			var lined_up := false
@@ -1090,7 +1090,7 @@ func update_crew(dt: float) -> void:
 			s["auto_target"] = target["id"] if target != null else -1
 			if manual or target != null:
 				s["idle"] = 0.0
-			elif input_auto and s["idle"] > TOP_UP_AFTER:
+			elif s["idle"] > TOP_UP_AFTER:
 				start_reload(s)   # nothing to shoot: top the magazine up
 			if s["cd"] > 0 or not lined_up:
 				continue
