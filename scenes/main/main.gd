@@ -493,28 +493,52 @@ func _update_aim() -> void:
 	game.input_aim = aim
 
 
-## Over the battlefield the cursor is a bullseye: red and white rings with
-## a dark edge so it shows on snow and on dirt, and a dot in the middle where
-## you're aiming. (Menus and buttons keep the normal arrow.)
+## Over the battlefield the cursor is a crosshair reticle: a black ring
+## crossed by four ticks, with a dot in the middle where you're aiming. A thin
+## light edge keeps it visible on dark ground at night. (Menus and buttons keep
+## the normal arrow.)
 func _bullseye_cursor() -> void:
-	var size := 32
+	var img := reticle_image(32)
+	Input.set_custom_mouse_cursor(ImageTexture.create_from_image(img), Input.CURSOR_CROSS, Vector2(16, 16))
+	hud.field.mouse_default_cursor_shape = Control.CURSOR_CROSS
+
+
+## Distance (pixels) from p to the reticle's shape, negative inside it;
+## size 32 with the centre at (16, 16).
+static func _reticle_sdf(p: Vector2) -> float:
+	var r := p.length()
+	var d := absf(r - 9.5) - 1.75                     # the ring
+	d = minf(d, r - 2.2)                               # the centre dot
+	for axis in [Vector2(1, 0), Vector2(0, 1)]:        # ticks across the ring, on both axes
+		var along := absf(p.dot(axis))
+		var across := absf(p.dot(Vector2(axis.y, axis.x)))
+		var box := Vector2(absf(along - 10.0) - 4.5, across - 1.6)   # from 5.5 to 14.5 out, 3.2 wide
+		d = minf(d, minf(maxf(box.x, box.y), 0.0) + Vector2(maxf(box.x, 0.0), maxf(box.y, 0.0)).length())
+	return d
+
+
+static func reticle_image(size: int) -> Image:
 	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
-	var c := (size - 1) / 2.0
-	# Rings from the outside in: [outer radius, colour].
-	var rings := [[15.0, Color(0.1, 0.05, 0.05)], [13.8, Color(0.86, 0.12, 0.1)], [10.6, Color(0.97, 0.95, 0.9)],
-		[8.0, Color(0.86, 0.12, 0.1)], [5.0, Color(0.97, 0.95, 0.9)], [2.6, Color(0.86, 0.12, 0.1)]]
+	var scale := 32.0 / size
 	for y in size:
 		for x in size:
-			var d := Vector2(x - c, y - c).length()
-			var col := Color(0, 0, 0, 0)
-			for r in rings:
-				# Soft edges: blend each ring in over its last pixel.
-				var k := clampf(r[0] + 0.5 - d, 0.0, 1.0)
-				if k > 0.0:
-					col = col.lerp(r[1], k) if col.a > 0.0 else Color(r[1].r, r[1].g, r[1].b, k)
-			img.set_pixel(x, y, col)
-	Input.set_custom_mouse_cursor(ImageTexture.create_from_image(img), Input.CURSOR_CROSS, Vector2(c, c))
-	hud.field.mouse_default_cursor_shape = Control.CURSOR_CROSS
+			# 4x4 samples a pixel, for smooth edges.
+			var ink := 0.0
+			var halo := 0.0
+			for sy in 4:
+				for sx in 4:
+					var p := (Vector2(x + (sx + 0.5) / 4.0, y + (sy + 0.5) / 4.0) * scale) - Vector2(16, 16)
+					var d := _reticle_sdf(p)
+					if d <= 0.0:
+						ink += 1.0
+					elif d <= 1.1:
+						halo += 1.0
+			ink /= 16.0
+			halo /= 16.0
+			var a := clampf(ink + halo * 0.75, 0.0, 1.0)
+			var shade := 0.0 if a <= 0.0 else (halo * 0.75 * 0.95) / a   # black ink, a pale edge
+			img.set_pixel(x, y, Color(shade, shade, shade, a))
+	return img
 
 
 ## WASD (or the arrows): you walk, up the screen for W. Once you've fallen,
