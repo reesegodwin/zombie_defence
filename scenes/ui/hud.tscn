@@ -434,7 +434,7 @@ size_flags_horizontal = 4
 
 [node name="HowTo" type="Label" parent="Root/TitleOverlay/Center/VBox/Panel"]
 layout_mode = 2
-text = "Hold out 5 nights and the rescue convoy comes for you.
+text = "Hold out 5 nights and an army truck takes you on to the next level.
 By day the dead drift in; at night the horde comes, bigger every night.
 
 Hold the left mouse button to shoot (F: auto-fire). Your crew shoots on its own.

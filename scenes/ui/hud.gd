@@ -3,6 +3,7 @@
 extends CanvasLayer
 
 const D = preload("res://scripts/defs.gd")
+const Pips = preload("res://scenes/ui/pips.gd")
 const ResearchTree = preload("res://scenes/ui/research_tree.gd")
 const Settings = preload("res://scripts/settings.gd")
 
@@ -1053,7 +1054,7 @@ func _build_camp() -> void:
 	_camp_result.visible = false
 	box.add_child(_camp_result)
 	var goal := Label.new()
-	goal.text = "Hold out %d nights and the rescue convoy comes. Every run pays Grit, win or lose: more for each night, kill, research and survivor." % D.WIN_NIGHTS
+	goal.text = "Hold out %d nights and an army truck takes you on to the next level. Every run pays Grit, win or lose: more for each night, kill, research and survivor." % D.WIN_NIGHTS
 	goal.theme_type_variation = &"DimLabel"
 	box.add_child(goal)
 	var cols := HBoxContainer.new()
@@ -1081,9 +1082,8 @@ func _build_camp() -> void:
 			nm.mouse_filter = Control.MOUSE_FILTER_PASS
 			nm.tooltip_text = D.META[id]["desc"]
 			row.add_child(nm)
-			var pips := Label.new()
-			pips.add_theme_color_override("font_color", Color(0.88, 0.7, 0.29))
-			pips.custom_minimum_size = Vector2(48, 0)
+			var pips := Pips.new()
+			pips.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			row.add_child(pips)
 			var b := Button.new()
 			b.custom_minimum_size = Vector2(86, 0)
@@ -1186,7 +1186,8 @@ func _refresh_camp() -> void:
 		var r: Dictionary = _camp_rows[id]
 		var lv: int = pr.level(id)
 		var mx: int = pr.max_level(id)
-		r["pips"].text = "●".repeat(lv) + "○".repeat(mx - lv)
+		r["pips"].max_level = mx
+		r["pips"].level = lv
 		var b: Button = r["button"]
 		var cost: int = pr.next_cost(id)
 		var chk: Dictionary = pr.can_buy(id)
