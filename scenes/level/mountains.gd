@@ -14,7 +14,6 @@ const Terrain = preload("res://scripts/terrain.gd")
 		if is_inside_tree():
 			_build()
 @export var rock_material: Material
-@export var snow_material: Material
 @export var path_material: Material
 ## How wide the pass stays clear, in metres either side of the path.
 @export var pass_half_width := 2.0
@@ -87,7 +86,7 @@ func _build() -> void:
 		y += rng.randf_range(1.6, 2.6) * (1.0 + far * 1.2)
 
 	var cone := CylinderMesh.new()
-	cone.top_radius = 0.0      # a sharp peak (a flat top caught the light as a white dot)
+	cone.top_radius = 0.0      # a sharp peak
 	cone.bottom_radius = 1.0
 	cone.height = 1.0
 	cone.radial_segments = 6
@@ -96,7 +95,6 @@ func _build() -> void:
 	# Mountains don't cast shadows: on their own big, steep faces that showed
 	# as wavy stripes, and it saves drawing them all again for the sun.
 	rocks.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var snowy: Array = []
 	for i in peaks.size():
 		var p: Vector3 = peaks[i][0]
 		var r: float = peaks[i][1]
@@ -105,23 +103,7 @@ func _build() -> void:
 		rocks.multimesh.set_instance_transform(i, Transform3D(basis, p + Vector3(0, h * 0.5, 0)))
 		var c := Color(0.27, 0.24, 0.21).lerp(Color(0.4, 0.35, 0.3), rng.randf())
 		rocks.multimesh.set_instance_color(i, c)
-		if h > 6.0:
-			snowy.append(i)
-	var snow := _multimesh(cone, snow_material, snowy.size(), true)
-	snow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	for k in snowy.size():
-		var i: int = snowy[k]
-		var p: Vector3 = peaks[i][0]
-		var r: float = peaks[i][1]
-		var h: float = peaks[i][2]
-		# The top of the same cone, a touch bigger so it sits on the rock
-		# (same squash and turn as the peak, so no edges poke out).
-		var cap := 0.24
-		var grow := 1.04
-		var basis := Basis(Vector3.UP, peaks[i][3]).scaled(Vector3(r * cap * grow, h * cap * grow, r * peaks[i][4] * cap * grow))
-		var apex := p.y + h + 0.03
-		snow.multimesh.set_instance_transform(k, Transform3D(basis, Vector3(p.x, apex - h * cap * grow * 0.5, p.z)))
-		snow.multimesh.set_instance_color(k, Color.WHITE)
+	# (The snow on the high peaks is painted on by the rock shader: see snow_line.)
 
 	# Boulders and cliff faces lining the pass make it feel narrow.
 	var boulder := SphereMesh.new()

@@ -10,12 +10,18 @@ uniform vec4 tint : source_color = vec4(1.0);
 uniform sampler2D grain : hint_default_white, repeat_enable, filter_linear_mipmap;
 uniform float grain_scale = 0.12;
 uniform float roughness_value = 1.0;
-uniform float strata_amount = 0.05;   // faint rock layers; 0 for snow
+uniform float strata_amount = 0.05;   // faint rock layers
+// Snow painted on the rock above this height (world metres), fading out on
+// the steepest faces. Part of the same faces, so it's lit like the rock.
+uniform float snow_line = 1000.0;
+uniform float snow_soft = 1.0;
+uniform vec4 snow_color : source_color = vec4(0.82, 0.85, 0.9, 1.0);
 uniform float radius = 2.6;        // metres around the walker, across the screen
 uniform float softness = 1.2;
 
 varying vec4 vcolor;
 varying vec3 wpos;
+varying vec3 wnorm;
 
 float bayer4(vec2 p) {
 	int x = int(mod(p.x, 4.0));
@@ -41,13 +47,19 @@ float cover(vec3 walker, vec3 view_pos, mat4 view) {
 void vertex() {
 	vcolor = COLOR;
 	wpos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	wnorm = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
 }
 
 void fragment() {
 	float g = texture(grain, wpos.xz * grain_scale + vec2(wpos.y * 0.08)).r;
 	float strata = 1.0 - strata_amount + strata_amount * sin(wpos.y * 2.5 + g * 6.0);
-	ALBEDO = vcolor.rgb * tint.rgb * mix(0.7, 1.2, g) * strata;
-	ROUGHNESS = roughness_value;
+	vec3 rock = vcolor.rgb * tint.rgb * mix(0.7, 1.2, g) * strata;
+	float snow = smoothstep(snow_line - snow_soft, snow_line + snow_soft, wpos.y + (g - 0.5) * 2.5);
+	snow *= smoothstep(0.05, 0.35, normalize(wnorm).y);
+	// Each peak's snow a touch different (from its rock colour), so they don't merge.
+	float shade = mix(0.84, 1.0, clamp((vcolor.r - 0.27) / 0.13, 0.0, 1.0));
+	ALBEDO = mix(rock, snow_color.rgb * shade * mix(0.94, 1.0, g), snow);
+	ROUGHNESS = mix(roughness_value, 0.85, snow);
 	float fade = max(cover(walker_a, VERTEX, VIEW_MATRIX), cover(walker_b, VERTEX, VIEW_MATRIX));
 	if (fade * 0.85 > bayer4(FRAGCOORD.xy)) {
 		discard;

@@ -139,12 +139,8 @@ shader = ExtResource("see_through")
 shader_parameter/tint = Color(1, 0.96, 0.9, 1)
 shader_parameter/roughness_value = 1.0
 shader_parameter/grain = SubResource("t_dirt")
-
-[sub_resource type="ShaderMaterial" id="m_snow"]
-shader = ExtResource("see_through")
-shader_parameter/tint = Color(0.66, 0.68, 0.72, 1)
-shader_parameter/roughness_value = 0.9
-shader_parameter/strata_amount = 0.0
+shader_parameter/snow_line = 10.0
+shader_parameter/snow_soft = 0.3
 
 [sub_resource type="StandardMaterial3D" id="m_trail"]
 albedo_texture = SubResource("t_dirt")
@@ -272,7 +268,6 @@ needle_material = SubResource("m_needles")
 [node name="Mountains" type="Node3D" parent="."]
 script = ExtResource("mountains")
 rock_material = SubResource("m_mrock")
-snow_material = SubResource("m_snow")
 path_material = SubResource("m_trail")
 
 [node name="Gate" type="Node3D" parent="."]
