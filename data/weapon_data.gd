@@ -14,7 +14,8 @@ extends Resource
 @export_group("Handling")
 @export var seconds_between_shots := 0.34
 @export var spread := 0.03               ## Random aim error, in radians.
-@export var reach := 13.0                ## Range, in tiles.
+@export var reach := 13.0                ## Effective range, in tiles. Bullets fly on as far as they go, but past half of this the aim gets worse.
+@export var accuracy_falloff := 1.0      ## How quickly aim worsens with distance (0: holds its aim at any distance).
 @export var knockback := 0.04            ## How far a hit shoves the zombie back.
 @export var magazine := 15               ## Shots before a reload.
 @export var reload_seconds := 1.2        ## How long a reload takes.
@@ -29,7 +30,7 @@ func to_dict() -> Dictionary:
 		"name": display_name, "desc": description, "dmg": damage, "rate": seconds_between_shots,
 		"spread": spread, "range": reach, "pellets": pellets, "pierce": pierce, "knock": knockback,
 		"len": barrel_length, "sound": sound, "short": slot_label,
-		"mag": magazine, "reload": reload_seconds,
+		"mag": magazine, "reload": reload_seconds, "falloff": accuracy_falloff,
 	}
 	if splash_radius > 0.0:
 		d["splash"] = splash_radius

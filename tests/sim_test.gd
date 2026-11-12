@@ -44,6 +44,31 @@ func _unit_checks() -> void:
 	check(z["hp"] <= 0, "five pistol shots kill a walker")
 	check(g.kills == 1, "kills are counted")
 
+	# No range cap: a bullet carries on past a gun's reach. Aim gets worse with
+	# distance, except with the hunting rifle.
+	var pw: Dictionary = D.WEAPONS["pistol"]
+	var rw: Dictionary = D.WEAPONS["rifle"]
+	check(Game.spread_mul(pw, pw["range"] * 0.4) == 1.0 and Game.spread_mul(pw, pw["range"] * 3.0) > 2.0, "the pistol is accurate close in and much worse far out")
+	check(Game.spread_mul(rw, rw["range"] * 4.0) == 1.0, "the hunting rifle holds its aim at any distance")
+	var gr = Game.new()
+	gr.crew[0]["weapon"] = "rifle"
+	var farz: Dictionary = gr.spawn_zombie("walker", 1.0, 1.0)
+	farz["x"] = gr.crew[0]["x"]; farz["y"] = gr.crew[0]["y"] - rw["range"] * 2.5
+	for i in 6:
+		gr.fire(gr.crew[0], farz["x"], farz["y"], 1.0)
+	check(farz["hp"] <= 0, "a rifle shot kills a walker well past its listed reach")
+	var gp = Game.new()
+	var hits := 0
+	for i in 200:
+		var pz: Dictionary = gp.spawn_zombie("walker", 100.0, 0.0)
+		pz["x"] = gp.crew[0]["x"]; pz["y"] = gp.crew[0]["y"] - pw["range"] * 4.0
+		var hp0: float = pz["hp"]
+		gp.fire(gp.crew[0], pz["x"], pz["y"], 1.0)
+		if pz["hp"] < hp0:
+			hits += 1
+		gp.zombies.clear()
+	check(hits > 0 and hits < 160, "pistol shots far past its reach sometimes land, often miss (%d/200)" % hits)
+
 	# With auto-fire on you face what you're shooting, not the cursor; turning
 	# onto it takes a moment, and you don't fire till you're lined up.
 	g = Game.new()

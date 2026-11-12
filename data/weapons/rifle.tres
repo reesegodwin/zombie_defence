@@ -13,6 +13,7 @@ splash_radius = 0.0
 seconds_between_shots = 0.85
 spread = 0.004
 reach = 13.5
+accuracy_falloff = 0.0
 knockback = 0.1
 magazine = 8
 reload_seconds = 1.8

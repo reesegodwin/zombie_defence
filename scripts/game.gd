@@ -988,6 +988,20 @@ func auto_target(s: Dictionary, rng: float) -> Variant:
 
 
 const MUZZLE_H := 29.0  # pixels above the ground: walkway plus shoulder height
+const SHOT_MAX := 90.0  # how far a bullet flies (the whole map: no range cap)
+const AUTO_REACH := 1.5 # auto-fire takes on targets out to this many times a gun's reach
+const AUTO_REACH_STEADY := 3.0   # (or this, for a gun that holds its aim, like the rifle)
+
+
+## How much wider a gun's spread is at distance d: no worse up to half its
+## reach, then steadily worse (not at all for a gun with no falloff).
+static func spread_mul(w: Dictionary, d: float) -> float:
+	return 1.0 + w.get("falloff", 1.0) * maxf(0.0, d / w["range"] - 0.5)
+
+
+## How far auto-fire (crew, not turrets) will reach out with gun w.
+static func auto_reach(w: Dictionary) -> float:
+	return w["range"] * (AUTO_REACH_STEADY if w.get("falloff", 1.0) <= 0.0 else AUTO_REACH)
 
 
 func fire(s: Dictionary, tx: float, ty: float, dmg_mul: float, w = null) -> void:
@@ -998,13 +1012,17 @@ func fire(s: Dictionary, tx: float, ty: float, dmg_mul: float, w = null) -> void
 	s["flash"] = 0.06
 	s["recoil"] = 0.1
 	sound.emit(w["sound"])
+	var dist := Vector2(tx - s["x"], ty - s["y"]).length()
+	var wide := spread_mul(w, dist) * (2.0 - D.skill_fx(s, "aim"))
 	if w.has("splash"):
-		var d := minf(w["range"], Vector2(tx - s["x"], ty - s["y"]).length())
-		shots.append({"kind": "grenade", "x0": s["x"], "y0": s["y"], "x1": s["x"] + cos(ang) * d, "y1": s["y"] + sin(ang) * d,
+		# Lobbed: further out it lands wider of the mark, and long or short.
+		var ga: float = ang + (randf() * 2.0 - 1.0) * w["spread"] * wide
+		var d := dist * (1.0 + (randf() * 2.0 - 1.0) * 0.06 * (wide - 1.0))
+		shots.append({"kind": "grenade", "x0": s["x"], "y0": s["y"], "x1": s["x"] + cos(ga) * d, "y1": s["y"] + sin(ga) * d,
 			"t": 0.0, "dur": 0.25 + d / 12.0, "dmg": w["dmg"] * dmg_mul, "splash": w["splash"]})
 		return
 	for p in int(w["pellets"]):
-		var a: float = ang + (randf() * 2.0 - 1.0) * w["spread"] * (2.0 - D.skill_fx(s, "aim"))
+		var a: float = ang + (randf() * 2.0 - 1.0) * w["spread"] * wide
 		var dx := cos(a)
 		var dy := sin(a)
 		var hits: Array = []
@@ -1014,7 +1032,7 @@ func fire(s: Dictionary, tx: float, ty: float, dmg_mul: float, w = null) -> void
 			var rx: float = z["x"] - s["x"]
 			var ry: float = z["y"] - s["y"]
 			var t := rx * dx + ry * dy
-			if t <= 0 or t > w["range"]:
+			if t <= 0 or t > SHOT_MAX:
 				continue
 			if absf(rx * dy - ry * dx) < ZT(z["type"])["r"] + 0.1:
 				hits.append([t, z])
@@ -1026,7 +1044,7 @@ func fire(s: Dictionary, tx: float, ty: float, dmg_mul: float, w = null) -> void
 			if z["type"] != "brute":
 				knock_back(z, w["knock"])
 			burst(z["x"], z["y"], 2, {"colors": [Color("6a2a22"), Color("8a3a2c")], "spread": 1.0, "up": 60.0, "life": 0.35, "size": 2.0, "z": 16.0})
-		var ln: float = hit[-1][0] if hit.size() > 0 else w["range"]
+		var ln: float = hit[-1][0] if hit.size() > 0 else maxf(dist + 4.0, w["range"])
 		var h2: float = 17.0 * ZT(hit[-1][1]["type"])["scale"] if hit.size() > 0 else 0.0
 		tracers.append({"x1": s["x"], "y1": s["y"], "h1": MUZZLE_H, "x2": s["x"] + dx * ln, "y2": s["y"] + dy * ln, "h2": h2,
 			"life": 0.07, "w": 1.0 if w["pellets"] > 1 else (2.4 if s.get("weapon", "") == "rifle" else 1.6)})
@@ -1064,7 +1082,7 @@ func update_crew(dt: float) -> void:
 			var target = null
 			var lined_up := false
 			if not manual and input_auto:
-				target = auto_target(s, w["range"])
+				target = auto_target(s, auto_reach(w))
 				if target != null:
 					lined_up = swivel(s, atan2(target["y"] - s["y"], target["x"] - s["x"]), D.TURN_RATE, dt)
 			elif input_aim != null:
@@ -1081,7 +1099,7 @@ func update_crew(dt: float) -> void:
 			elif target != null:
 				_shoot(s, target["x"], target["y"], k)
 		else:
-			var z = auto_target(s, w["range"])
+			var z = auto_target(s, auto_reach(w))
 			if z == null:
 				if s["idle"] > TOP_UP_AFTER:
 					start_reload(s)   # nothing to shoot: top the magazine up
