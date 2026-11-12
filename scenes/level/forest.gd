@@ -6,6 +6,7 @@ extends Node3D
 
 const D = preload("res://scripts/defs.gd")
 const Terrain = preload("res://scripts/terrain.gd")
+const Mountains = preload("res://scenes/level/mountains.gd")
 
 ## Where the trees go (the whole ground), and the part round the lanes and
 ## the base where they grow thick.
@@ -40,7 +41,7 @@ func _build() -> void:
 	for y in range(int(AREA.position.y), int(AREA.end.y)):
 		for x in range(int(AREA.position.x), int(AREA.end.x)):
 			var cp := Vector2(x + 0.5, y + 0.5)
-			if x >= -17 and x <= 41 and y > D.BASE_Y1 + 1 and y < 60:
+			if y > Mountains.start_z(cp.x) + 2.5:
 				continue  # the mountains behind the base
 			# Out past where the game is played: fewer, bigger trees, all the way
 			# to the edge of the map.

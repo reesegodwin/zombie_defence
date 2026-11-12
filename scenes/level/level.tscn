@@ -142,8 +142,9 @@ shader_parameter/grain = SubResource("t_dirt")
 
 [sub_resource type="ShaderMaterial" id="m_snow"]
 shader = ExtResource("see_through")
-shader_parameter/tint = Color(0.86, 0.88, 0.92, 1)
-shader_parameter/roughness_value = 0.8
+shader_parameter/tint = Color(0.66, 0.68, 0.72, 1)
+shader_parameter/roughness_value = 0.9
+shader_parameter/strata_amount = 0.0
 
 [sub_resource type="StandardMaterial3D" id="m_trail"]
 albedo_texture = SubResource("t_dirt")

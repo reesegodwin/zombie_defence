@@ -10,6 +10,7 @@ uniform vec4 tint : source_color = vec4(1.0);
 uniform sampler2D grain : hint_default_white, repeat_enable, filter_linear_mipmap;
 uniform float grain_scale = 0.12;
 uniform float roughness_value = 1.0;
+uniform float strata_amount = 0.05;   // faint rock layers; 0 for snow
 uniform float radius = 2.6;        // metres around the walker, across the screen
 uniform float softness = 1.2;
 
@@ -44,7 +45,7 @@ void vertex() {
 
 void fragment() {
 	float g = texture(grain, wpos.xz * grain_scale + vec2(wpos.y * 0.08)).r;
-	float strata = 0.92 + 0.08 * sin(wpos.y * 6.0 + g * 4.0);
+	float strata = 1.0 - strata_amount + strata_amount * sin(wpos.y * 2.5 + g * 6.0);
 	ALBEDO = vcolor.rgb * tint.rgb * mix(0.7, 1.2, g) * strata;
 	ROUGHNESS = roughness_value;
 	float fade = max(cover(walker_a, VERTEX, VIEW_MATRIX), cover(walker_b, VERTEX, VIEW_MATRIX));
