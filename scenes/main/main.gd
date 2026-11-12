@@ -445,11 +445,11 @@ func _darkness() -> float:
 
 
 # Day, dusk and night each have their own light; the cycle blends between them.
-const DAY_MOOD := {"sun": 1.9, "sun_col": Color(1.0, 0.96, 0.88), "amb": 1.05, "fog": Color(0.62, 0.68, 0.74),
+const DAY_MOOD := {"sun": 0.82, "sun_col": Color(1.0, 0.93, 0.82), "amb": 0.58, "fog": Color(0.62, 0.68, 0.74),
 	"top": Color(0.32, 0.52, 0.85), "horizon": Color(0.72, 0.8, 0.88)}
-const DUSK_MOOD := {"sun": 1.5, "sun_col": Color(1.0, 0.72, 0.5), "amb": 0.75, "fog": Color(0.45, 0.34, 0.36),
+const DUSK_MOOD := {"sun": 0.8, "sun_col": Color(1.0, 0.7, 0.48), "amb": 0.52, "fog": Color(0.45, 0.34, 0.36),
 	"top": Color(0.25, 0.22, 0.34), "horizon": Color(0.78, 0.42, 0.3)}
-const NIGHT_MOOD := {"sun": 0.8, "sun_col": Color(0.62, 0.72, 1.0), "amb": 0.42, "fog": Color(0.17, 0.21, 0.3),
+const NIGHT_MOOD := {"sun": 0.42, "sun_col": Color(0.62, 0.72, 1.0), "amb": 0.32, "fog": Color(0.17, 0.21, 0.3),
 	"top": Color(0.02, 0.03, 0.08), "horizon": Color(0.08, 0.1, 0.17)}
 
 
