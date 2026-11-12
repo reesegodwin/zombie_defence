@@ -211,6 +211,12 @@ const BLOCKERS := [
 	Rect2(12.3, 19.7, 1.0, 1.0),   # fire barrel
 	Rect2(7.9, 19.8, 2.0, 2.2),    # tent and barrel
 	Rect2(10.2, 21.4, 2.0, 7.0),   # the path to the gate
+	Rect2(3.6, 26.1, 1.4, 1.0),    # generator
+	Rect2(5.2, 25.4, 0.4, 0.4),    # its work lamp
+	Rect2(16.1, 26.6, 1.8, 0.9),   # workbench
+	Rect2(13.4, 26.8, 1.6, 0.8),   # woodpile
+	Rect2(7.8, 24.3, 0.4, 0.4),    # lamp post
+	Rect2(14.3, 24.3, 0.4, 0.4),   # lamp post
 ]
 const TURRET_SPOTS := [Vector2(2.9, 15.0), Vector2(19.1, 15.0), Vector2(6.8, 22.0), Vector2(15.8, 22.6)]
 const TURRET := {"dmg": 9.0, "rate": 0.55, "range": 9.0, "spread": 0.05, "pellets": 1, "pierce": 1, "knock": 0.03, "sound": "smg"}

@@ -111,9 +111,18 @@ static func sample(x: float, z: float) -> float:
 	return lerpf(a, b, tz)
 
 
+const BAKED := "res://assets/baked/terrain.res"
+
+
 static func _build_grid() -> void:
 	_gw = int(GRID_AREA.size.x / GRID_STEP) + 1
 	_gh = int(GRID_AREA.size.y / GRID_STEP) + 1
+	# A build made by the CI has the grid worked out already (tools/bake.gd).
+	if ResourceLoader.exists(BAKED):
+		var r = load(BAKED)
+		if r != null and r.has_meta("grid") and r.get_meta("grid").size() == _gw * _gh:
+			_grid = r.get_meta("grid")
+			return
 	_grid.resize(_gw * _gh)
 	for j in _gh:
 		for i in _gw:

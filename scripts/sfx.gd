@@ -19,6 +19,27 @@ func _ready() -> void:
 		var p := AudioStreamPlayer.new()
 		add_child(p)
 		players.append(p)
+	# A build made by the CI has every sound worked out already (tools/bake.gd),
+	# which saves seconds at startup, above all in a browser.
+	if ResourceLoader.exists(BAKED):
+		var bank = load(BAKED)
+		if bank != null and bank.has_meta("streams"):
+			streams = bank.get_meta("streams")
+			return
+	make_basic()
+	# Zombie voices: built in the background (see _build_voices). A web build
+	# has no threads, so there they're built a moment after startup instead.
+	if OS.has_feature("web"):
+		_build_voices.call_deferred()
+	else:
+		_voice_task = WorkerThreadPool.add_task(_build_voices)
+
+
+const BAKED := "res://assets/baked/sounds.res"
+
+
+## Every sound but the zombie voices.
+func make_basic() -> void:
 	streams["gun"] = _shot(0.12, 0.55, 900.0)
 	streams["smg"] = _shot(0.07, 0.35, 1400.0)
 	streams["shotgun"] = _shot(0.28, 0.8, 500.0)
@@ -37,12 +58,6 @@ func _ready() -> void:
 	streams["reload"] = _mech([[0.0, "click", 0.7], [0.025, "slide", 0.5], [0.11, "click", 0.35]])
 	# ...then a fresh one is seated and the slide racked back and slammed home.
 	streams["reloaded"] = _mech([[0.0, "clack", 0.8], [0.17, "slide", 0.55], [0.245, "clack", 1.0]])
-	# Zombie voices: built in the background (see _build_voices). A web build
-	# has no threads, so there they're built a moment after startup instead.
-	if OS.has_feature("web"):
-		_build_voices.call_deferred()
-	else:
-		_voice_task = WorkerThreadPool.add_task(_build_voices)
 
 
 func _exit_tree() -> void:
@@ -255,6 +270,11 @@ const AA := [720.0, 1300.0, 2800.0]
 
 
 func _build_voices() -> void:
+	_voices_ready.call_deferred(make_voices())
+
+
+## The zombie voices: {name: [takes]}.
+func make_voices() -> Dictionary:
 	var v := {}
 	# Walkers: long shambling moans, a grunt, an anguished cry, a gurgle.
 	v["groan_walker"] = [
@@ -297,7 +317,7 @@ func _build_voices() -> void:
 		parts.append([_moan_samples({"dur": 1.6 + k * 0.15, "f0": 82.0 + k * 13.0, "rise": 1.3, "fall": 0.85, "hum": 0.2,
 			"to": [UH, OH, AA][k % 3], "rough": 0.4, "fry_at": 0.6, "fry_len": 0.3, "seed": 51 + k}), starts[k], 0.6])
 	v["groan"] = [_make(_lowpass(_mix(parts), 0.25))]
-	_voices_ready.call_deferred(v)
+	return v
 
 
 func _voices_ready(v: Dictionary) -> void:

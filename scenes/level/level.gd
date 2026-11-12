@@ -11,6 +11,7 @@ const Guns = preload("res://scenes/actors/guns.gd")
 
 var ground_fog: Node3D
 var culverts: Array = []
+var _yard_lights: Array = []     # the lamps in the yard (base_props.gd)
 
 
 ## Bricks up the pipes of lanes that never open on this level (open_at INF).
@@ -21,6 +22,10 @@ func set_level(open_at: Array) -> void:
 		culverts[side].visible = not unused
 		if side > 0:
 			$Forest.set_wooded(side, unused)
+	# No lamps on a wall whose lane never brings the dead.
+	for side in [1, 2]:
+		for h in _holders[side]:
+			h.visible = open_at[side] != INF
 	for side in _lit.size():   # a new base: every spotlight dark again
 		_lit[side] = false
 		_on_t[side] = 0.0
@@ -33,6 +38,9 @@ var _lenses: Array = []          # per lane: the glowing lens material
 var _lit := [false, false, false]
 var _on_t := [0.0, 0.0, 0.0]     # seconds since each lane's lights came on
 var _night := 0.0
+var _holders := [[], [], []]     # per side lane: the lamp posts (hidden where it's never used)
+var _beams := [[], [], []]       # per lane: the visible beams' materials
+const BEAM := preload("res://assets/shaders/light_beam.gdshader")
 
 
 func _build_spotlights() -> void:
@@ -68,6 +76,7 @@ func _build_spotlights() -> void:
 			pm.material_override = metal
 			pm.position.y = 0.7
 			holder.add_child(pm)
+			_holders[side].append(holder)
 			var aim: Vector2 = Vector2(L["o"]) + L["t"] * u + L["n"] * (D.WALL_Y - 7.0)
 			_add_spot(side, holder, Vector3(0, 1.42, 0), Vector3(aim.x, 0.0, aim.y))
 	# The bunker's floodlight lights the front lane too.
@@ -107,6 +116,25 @@ func _add_spot(side: int, parent: Node3D, pos: Vector3, target: Vector3) -> void
 	sp.position.z = -0.15
 	pivot.add_child(sp)
 	_spots[side].append(sp)
+	# The light you can see coming out of it: a long, soft cone.
+	var cone := CylinderMesh.new()
+	cone.top_radius = 0.12
+	cone.bottom_radius = 1.9
+	cone.height = 8.0
+	cone.radial_segments = 16
+	cone.rings = 1
+	cone.cap_top = false
+	cone.cap_bottom = false
+	var bm := ShaderMaterial.new()
+	bm.shader = BEAM
+	var beam := MeshInstance3D.new()
+	beam.mesh = cone
+	beam.material_override = bm
+	beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	beam.rotation.x = PI / 2       # the cone's +y (narrow end) back toward the lamp, the wide end out along -z
+	beam.position.z = -4.1
+	sp.add_child(beam)             # hidden with the light (Low graphics)
+	_beams[side].append(bm)
 
 
 ## Low graphics: just the bunker floodlight and the middle lamp on each walkway
@@ -149,6 +177,8 @@ func _apply_spots(_dt: float) -> void:
 			sp.light_energy = full * b
 		if side < _lenses.size():
 			_lenses[side].emission_energy_multiplier = 3.0 * b
+		for bm in _beams[side]:
+			bm.set_shader_parameter("strength", b * lerpf(0.35, 1.0, _night))
 
 @onready var beacon: OmniLight3D = $Bunker/Beacon
 @onready var beacon_bulb: MeshInstance3D = $Bunker/BeaconBulb
@@ -163,7 +193,7 @@ func _ready() -> void:
 	floodlight.look_at(Vector3(11.5, 0.0, 7.0))
 	_build_spotlights()
 	# The base's buildings and clutter, in full detail.
-	BaseProps.dress(self)
+	_yard_lights = BaseProps.dress(self)
 	# Fog lying low on the ground, round the dead's shins.
 	ground_fog = GroundFog.new()
 	add_child(ground_fog)
@@ -183,3 +213,5 @@ func set_darkness(k: float, dt: float) -> void:
 	beacon.light_energy = 3.0 if on else 0.0
 	beacon_bulb.visible = on
 	_night = k
+	for l in _yard_lights:
+		l.light_energy = lerpf(0.5, 3.2, k) * (0.96 + 0.04 * sin(_t * 7.0 + l.position.x))

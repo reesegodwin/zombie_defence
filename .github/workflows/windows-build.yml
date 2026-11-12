@@ -61,6 +61,12 @@ jobs:
           ~/godot/godot --headless --path . --script res://tests/gait_check.gd | tee gait.log
           grep -q "RESULT: OK" gait.log
 
+      - name: Bake the sounds and terrain (faster start-up)
+        run: |
+          ~/godot/godot --headless --path . --script res://tools/bake.gd
+          test -s assets/baked/sounds.res && test -s assets/baked/terrain.res
+          ~/godot/godot --headless --path . --import || true
+
       - name: Export the Windows exe
         run: |
           mkdir -p export

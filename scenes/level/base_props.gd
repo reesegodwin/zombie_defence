@@ -23,8 +23,9 @@ const LOG := Color(0.33, 0.24, 0.17)
 const DRUMS := [Color(0.48, 0.17, 0.12), Color(0.2, 0.3, 0.45), Color(0.34, 0.37, 0.22), Color(0.55, 0.45, 0.15)]
 
 
-## Swaps the level's placeholder boxes for the detailed props.
-static func dress(level: Node3D) -> void:
+## Swaps the level's placeholder boxes for the detailed props, and adds the
+## yard's clutter and lights. Returns the yard lights (level.gd dims them by day).
+static func dress(level: Node3D) -> Array:
 	_replace(level, "Bunker", ["Block", "Top", "Door"], _bunker())
 	for h in ["Hut1", "Hut2"]:
 		_replace(level, h, ["Walls", "Roof"], _hut(h == "Hut1"))
@@ -46,6 +47,110 @@ static func dress(level: Node3D) -> void:
 	var deck := level.get_node_or_null("Walkway")
 	if deck:
 		_swap(deck, _walkway())
+	return _yard(level)
+
+
+## The yard's own things, so it isn't dark and bare at night: a generator with
+## a work lamp, two lamp posts by the path, a workbench under a hanging bulb,
+## a woodpile. (Their footprints are in defs.gd BLOCKERS.)
+static func _yard(level: Node3D) -> Array:
+	var lights: Array = []
+	var add := func(mesh: Mesh, pos: Vector3, yaw := 0.0) -> void:
+		var mi := MeshInstance3D.new()
+		mi.mesh = mesh
+		mi.material_override = Culvert._material()
+		mi.position = pos
+		mi.rotation.y = yaw
+		level.add_child(mi)
+	var lamp := func(pos: Vector3, rng: float, col: Color) -> void:
+		var l := OmniLight3D.new()
+		l.position = pos
+		l.light_color = col
+		l.omni_range = rng
+		l.omni_attenuation = 1.3
+		l.shadow_enabled = false
+		level.add_child(l)
+		lights.append(l)
+	add.call(_generator(), Vector3(4.3, 0.0, 26.6))
+	add.call(_lamp_post(true), Vector3(5.4, 0.0, 25.6), PI * 0.75)
+	lamp.call(Vector3(5.0, 2.1, 25.2), 8.0, Color(1.0, 0.85, 0.6))
+	for x in [8.0, 14.5]:
+		add.call(_lamp_post(false), Vector3(x, 0.0, 24.5))
+		lamp.call(Vector3(x, 2.25, 24.5), 8.5, Color(1.0, 0.75, 0.45))
+	add.call(_workbench(), Vector3(17.0, 0.0, 27.05))
+	lamp.call(Vector3(17.0, 1.75, 26.9), 6.0, Color(1.0, 0.8, 0.5))
+	add.call(_woodpile(), Vector3(14.2, 0.0, 27.2))
+	return lights
+
+
+static func _bulb(k: Guns.Kit, p: Vector3) -> void:
+	k.cyl(p, 0.07, 0.12, Color(1.0, 0.9, 0.6) * 2.0, 8, Vector3(PI / 2, 0, 0))
+
+
+## A rusty generator on skids, with an exhaust and a fuel can.
+static func _generator() -> ArrayMesh:
+	var k := _kit(0.6, 81)
+	k.stain = RUST
+	for z in [-0.3, 0.3]:
+		k.box(Vector3(0, 0.05, z), Vector3(1.3, 0.1, 0.1), LOG.darkened(0.3))
+	k.box(Vector3(0, 0.42, 0), Vector3(1.1, 0.62, 0.7), Color(0.55, 0.42, 0.12))
+	k.box(Vector3(0.1, 0.42, 0.36), Vector3(0.6, 0.4, 0.02), Color(0.2, 0.2, 0.2))   # grille
+	k.box(Vector3(-0.38, 0.6, 0.36), Vector3(0.16, 0.12, 0.03), Color(0.15, 0.5, 0.2) * 1.4)   # running light
+	k.cyl(Vector3(0.42, 0.95, -0.15), 0.05, 0.45, STEEL.darkened(0.3), 8, Vector3(PI / 2, 0, 0))
+	k.box(Vector3(-0.8, 0.22, 0.2), Vector3(0.24, 0.4, 0.16), Color(0.6, 0.12, 0.1))   # fuel can
+	for i in 6:   # cable snaking off toward the lamp
+		k.box(Vector3(0.62 + i * 0.12, 0.02, 0.4 - i * 0.09), Vector3(0.14, 0.03, 0.03), Color(0.08, 0.08, 0.08), Vector3(0, 0.6, 0))
+	return k.mesh()
+
+
+## A lamp post: a pole with a shaded lamp on an arm (work = a tripod work lamp).
+static func _lamp_post(work: bool) -> ArrayMesh:
+	var k := _kit(0.3, 91)
+	var up := Vector3(PI / 2, 0, 0)
+	if work:
+		for i in 3:
+			var a := TAU * i / 3.0
+			k.box(Vector3(cos(a) * 0.18, 0.55, sin(a) * 0.18), Vector3(0.03, 1.15, 0.03), STEEL, Vector3(sin(a) * 0.25, 0, -cos(a) * 0.25))
+		k.box(Vector3(0, 1.85, 0), Vector3(0.05, 0.8, 0.05), STEEL)
+		k.box(Vector3(0, 2.2, 0.22), Vector3(0.4, 0.3, 0.12), Color(0.85, 0.65, 0.12))
+		k.box(Vector3(0, 2.2, 0.29), Vector3(0.34, 0.24, 0.02), Color(1.0, 0.95, 0.75) * 2.0)
+	else:
+		k.cyl(Vector3(0, 1.15, 0), 0.06, 2.3, LOG, 8, up)
+		k.box(Vector3(0.15, 2.32, 0), Vector3(0.36, 0.05, 0.05), LOG)
+		k.cyl(Vector3(0.0, 2.32, 0), 0.16, 0.08, STEEL.darkened(0.3), 10, up, 0.05)
+		_bulb(k, Vector3(0.0, 2.24, 0))
+	return k.mesh()
+
+
+## A workbench with a vice, tools and a bulb hanging over it.
+static func _workbench() -> ArrayMesh:
+	var k := _kit(0.4, 95)
+	k.box(Vector3(0, 0.82, 0), Vector3(1.6, 0.08, 0.7), PLANK.lightened(0.05))
+	for sx in [-0.72, 0.72]:
+		for sz in [-0.28, 0.28]:
+			k.box(Vector3(sx, 0.4, sz), Vector3(0.08, 0.8, 0.08), PLANK.darkened(0.2))
+	k.box(Vector3(0, 0.25, 0), Vector3(1.5, 0.04, 0.6), PLANK.darkened(0.1))   # shelf
+	k.box(Vector3(-0.55, 0.92, 0.25), Vector3(0.18, 0.14, 0.14), STEEL)       # vice
+	k.box(Vector3(0.2, 0.88, 0.05), Vector3(0.4, 0.04, 0.05), STEEL, Vector3(0, 0.4, 0))   # wrench
+	k.box(Vector3(0.45, 0.89, -0.1), Vector3(0.28, 0.06, 0.04), Color(0.6, 0.15, 0.1), Vector3(0, -0.3, 0))   # hammer
+	k.box(Vector3(0.0, 1.7, -0.3), Vector3(1.8, 0.06, 0.06), LOG)            # beam for the bulb
+	for sx in [-0.85, 0.85]:
+		k.box(Vector3(sx, 0.85, -0.32), Vector3(0.07, 1.7, 0.07), LOG)
+	k.box(Vector3(0, 1.58, -0.2), Vector3(0.01, 0.22, 0.01), Color(0.05, 0.05, 0.05))
+	_bulb(k, Vector3(0, 1.43, -0.2))
+	return k.mesh()
+
+
+## Split logs stacked between two stakes.
+static func _woodpile() -> ArrayMesh:
+	var k := _kit(0.2, 97)
+	for row in 3:
+		for i in 5 - row:
+			var c := LOG.lerp(PLANK, k.rng.randf_range(0.0, 0.5))
+			k.cyl(Vector3(-0.5 + i * 0.24 + row * 0.12, 0.12 + row * 0.21, 0), 0.11, 0.7, c, 7, Vector3.ZERO)
+	for sx in [-0.7, 0.7]:
+		k.box(Vector3(sx, 0.4, 0), Vector3(0.06, 0.8, 0.06), LOG.darkened(0.2))
+	return k.mesh()
 
 
 static func _replace(level: Node3D, at: String, hide: Array, mesh: Mesh) -> void:

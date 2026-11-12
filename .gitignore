@@ -3,3 +3,6 @@
 /android/
 export/
 shots/
+
+# Worked out by tools/bake.gd (the CI does it before exporting)
+assets/baked/
