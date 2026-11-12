@@ -38,9 +38,10 @@ var _lenses: Array = []          # per lane: the glowing lens material
 var _lit := [false, false, false]
 var _on_t := [0.0, 0.0, 0.0]     # seconds since each lane's lights came on
 var _night := 0.0
+const SPOT_DAY := 1.5            # a walkway spotlight's strength by day ...
+const SPOT_NIGHT := 5.0          # ... and at night (the bunker floodlight: 4 -> 12)
+const SPOT_REACH := 10.0         # how far beyond the wall each one is aimed, metres
 var _holders := [[], [], []]     # per side lane: the lamp posts (hidden where it's never used)
-var _beams := [[], [], []]       # per lane: the visible beams' materials
-const BEAM := preload("res://assets/shaders/light_beam.gdshader")
 
 
 func _build_spotlights() -> void:
@@ -55,7 +56,7 @@ func _build_spotlights() -> void:
 	for l in lanterns.get_children():
 		l.get_node("Light").visible = false
 		l.get_node("Bulb").visible = false
-		_add_spot(0, l, Vector3(0, 1.42, 0), Vector3(l.position.x, 0.0, D.WALL_Y - 7.0))
+		_add_spot(0, l, Vector3(0, 1.42, 0), Vector3(l.position.x, 0.0, D.WALL_Y - SPOT_REACH))
 	# And spotlights on posts along the west and east walkways.
 	var post := CylinderMesh.new()
 	post.top_radius = 0.04
@@ -77,7 +78,7 @@ func _build_spotlights() -> void:
 			pm.position.y = 0.7
 			holder.add_child(pm)
 			_holders[side].append(holder)
-			var aim: Vector2 = Vector2(L["o"]) + L["t"] * u + L["n"] * (D.WALL_Y - 7.0)
+			var aim: Vector2 = Vector2(L["o"]) + L["t"] * u + L["n"] * (D.WALL_Y - SPOT_REACH)
 			_add_spot(side, holder, Vector3(0, 1.42, 0), Vector3(aim.x, 0.0, aim.y))
 	# The bunker's floodlight lights the front lane too.
 	_spots[0].append(floodlight)
@@ -108,33 +109,17 @@ func _add_spot(side: int, parent: Node3D, pos: Vector3, target: Vector3) -> void
 	lens.material_override = _lenses[side]
 	pivot.add_child(lens)
 	var sp := SpotLight3D.new()
-	sp.light_color = Color(1.0, 0.93, 0.78)
-	sp.spot_range = 17.0
-	sp.spot_angle = 22.0
-	sp.spot_attenuation = 0.7
+	# Like the bunker's floodlight: a wide, long, cool-white pool on the ground,
+	# starting at the wall and running out down the lane.
+	sp.light_color = Color(0.85, 0.92, 1.0)
+	sp.spot_range = 30.0
+	sp.spot_angle = 30.0
+	sp.spot_attenuation = 0.4
 	sp.light_energy = 0.0
 	sp.position.z = -0.15
 	pivot.add_child(sp)
 	_spots[side].append(sp)
-	# The light you can see coming out of it: a long, soft cone.
-	var cone := CylinderMesh.new()
-	cone.top_radius = 0.12
-	cone.bottom_radius = 1.9
-	cone.height = 8.0
-	cone.radial_segments = 16
-	cone.rings = 1
-	cone.cap_top = false
-	cone.cap_bottom = false
-	var bm := ShaderMaterial.new()
-	bm.shader = BEAM
-	var beam := MeshInstance3D.new()
-	beam.mesh = cone
-	beam.material_override = bm
-	beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	beam.rotation.x = PI / 2       # the cone's +y (narrow end) back toward the lamp, the wide end out along -z
-	beam.position.z = -4.1
-	sp.add_child(beam)             # hidden with the light (Low graphics)
-	_beams[side].append(bm)
+
 
 
 ## Low graphics: just the bunker floodlight and the middle lamp on each walkway
@@ -173,12 +158,11 @@ func _apply_spots(_dt: float) -> void:
 			var t: float = _on_t[side]
 			b = 1.0 if t > 1.1 else (1.0 if fmod(t * 7.3, 1.0) > 0.45 else 0.15)
 		for sp in _spots[side]:
-			var full := lerpf(4.0, 12.0, _night) if sp == floodlight else lerpf(2.5, 7.0, _night)
+			var full := lerpf(4.0, 12.0, _night) if sp == floodlight else lerpf(SPOT_DAY, SPOT_NIGHT, _night)
 			sp.light_energy = full * b
 		if side < _lenses.size():
 			_lenses[side].emission_energy_multiplier = 3.0 * b
-		for bm in _beams[side]:
-			bm.set_shader_parameter("strength", b * lerpf(0.35, 1.0, _night))
+
 
 @onready var beacon: OmniLight3D = $Bunker/Beacon
 @onready var beacon_bulb: MeshInstance3D = $Bunker/BeaconBulb
