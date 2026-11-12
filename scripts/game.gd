@@ -787,7 +787,9 @@ func update_health(dt: float) -> void:
 				break
 		if clear:
 			s["hp"] = minf(s["max_hp"], s["hp"] + D.HEAL_PER_SECOND * dt)
-	if not over and defenders().is_empty() and (any_breach() or crew[0]["state"] == "dead"):
+	# (Anyone already in the army truck is safe: it'll drive off with them.)
+	var aboard := crew.any(func(c): return c["state"] == "aboard")
+	if not over and not aboard and defenders().is_empty() and (any_breach() or crew[0]["state"] == "dead"):
 		over = true
 		shake = 1.0
 		sound.emit("crash")

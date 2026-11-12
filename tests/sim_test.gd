@@ -376,6 +376,15 @@ func _unit_checks() -> void:
 		g.zombies.clear()   # (nobody's shooting in this test)
 	check(g.crew[bea]["state"] == "aboard" and g.level == 1 and g.evac_go < 0.0, "they climb in; the truck waits for the rest")
 	check(g.board_all().has("ok"), "then everyone's sent")
+	for i in 200:
+		g.step(0.1)
+		g.zombies.clear()
+		if g.evac_go >= 0.0:
+			break
+	g.walls[0]["hp"] = 0.0
+	g.walls[0]["breached"] = true
+	g.step(0.1)
+	check(not g.over, "a wall falling once everyone's in the truck doesn't end the run")
 	for i in 400:
 		g.step(0.1)
 		g.zombies.clear()   # (nobody's shooting in this test)
