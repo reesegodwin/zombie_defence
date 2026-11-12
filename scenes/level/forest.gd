@@ -7,6 +7,11 @@ extends Node3D
 const D = preload("res://scripts/defs.gd")
 const Terrain = preload("res://scripts/terrain.gd")
 
+## Where the trees go (the whole ground), and the part round the lanes and
+## the base where they grow thick.
+const AREA := Rect2(-96, -96, 232, 217)
+const NEAR := Rect2(-25, -22, 72, 53)
+
 @export var seed_value := 1337:
 	set(v):
 		seed_value = v
@@ -32,9 +37,16 @@ func _build() -> void:
 	rng.seed = seed_value
 	var spots: Array = []
 	var side_spots := {1: [], 2: []}   # woods over a side lane, for levels that never use it
-	for y in range(int(D.LANE_START) - 14, int(D.BASE_Y1) + 3):
-		for x in range(-17 + int(D.LANE_START), D.N + 18 - int(D.LANE_START)):
+	for y in range(int(AREA.position.y), int(AREA.end.y)):
+		for x in range(int(AREA.position.x), int(AREA.end.x)):
 			var cp := Vector2(x + 0.5, y + 0.5)
+			if x >= -17 and x <= 41 and y > D.BASE_Y1 + 1 and y < 60:
+				continue  # the mountains behind the base
+			# Out past where the game is played: fewer, bigger trees, all the way
+			# to the edge of the map.
+			var far := maxf(maxf(NEAR.position.x - cp.x, cp.x - NEAR.end.x), maxf(NEAR.position.y - cp.y, cp.y - NEAR.end.y))
+			if far > 0.0 and rng.randf() > lerpf(0.55, 0.3, clampf(far / 40.0, 0.0, 1.0)):
+				continue
 			var lane := _side_lane_of(cp)
 			if lane < 0:
 				lane = _culvert_of(cp)
@@ -55,15 +67,26 @@ func _build() -> void:
 				continue  # the base and a strip of cleared ground round its fence
 			var near := x == D.X0 - 2 or x == D.X1 + 1 or x == D.X0 - 1 or x == D.X1
 			var p := (0.9 if near else 0.6) if y <= D.WALL_Y else (0.45 if near else 0.3)
+			if far > 0.0:
+				p = 0.85
 			if rng.randf() < p * density:
 				var tx := x + 0.5 + rng.randf_range(-0.3, 0.3)
 				var tz := y + 0.5 + rng.randf_range(-0.3, 0.3)
 				var th := Terrain.sample(tx, tz)
-				# Bald hilltops and open glades, so the lie of the land shows.
-				if rng.randf() < smoothstep(1.6, 3.6, th) * 0.85:
+				# Bald hilltops and open glades, so the lie of the land shows (only
+				# the very tops of the bigger hills further out).
+				var bald := smoothstep(1.6, 3.6, th) * 0.85 if far <= 0.0 else smoothstep(5.0, 8.5, th) * 0.6
+				if rng.randf() < bald:
 					continue
-				spots.append(Vector3(tx, th, tz))
-	_plant(self, spots, rng)
+				spots.append(Vector3(tx, th, tz) if far <= 0.0 else Vector4(tx, th, tz, 1.0 + minf(far / 35.0, 0.7)))
+	# The far woods: simpler trees that cast no shadows (too far to notice).
+	var near_spots := spots.filter(func(sp): return sp is Vector3)
+	var far_spots := spots.filter(func(sp): return sp is Vector4)
+	_plant(self, near_spots, rng)
+	var far_node := Node3D.new()
+	far_node.name = "FarWoods"
+	add_child(far_node)
+	_plant(far_node, far_spots, rng, true)
 	for side in [1, 2]:
 		var woods := Node3D.new()
 		woods.name = "SideWoods%d" % side
@@ -79,7 +102,7 @@ func set_wooded(side: int, on: bool) -> void:
 		n.visible = on
 
 
-func _plant(parent: Node3D, spots: Array, rng: RandomNumberGenerator) -> void:
+func _plant(parent: Node3D, spots: Array, rng: RandomNumberGenerator, far := false) -> void:
 	if spots.is_empty():
 		return
 	var trunk := CylinderMesh.new()
@@ -91,11 +114,21 @@ func _plant(parent: Node3D, spots: Array, rng: RandomNumberGenerator) -> void:
 	cone.top_radius = 0.0
 	cone.bottom_radius = 0.7
 	cone.height = 1.1
-	cone.radial_segments = 7
+	cone.radial_segments = 5 if far else 7
+	cone.rings = 1
+	cone.cap_bottom = not far
+	if far:
+		trunk.radial_segments = 4
 	var trunks := _multimesh(trunk, trunk_material, spots.size(), false, parent)
 	var cones := _multimesh(cone, needle_material, spots.size() * 3, true, parent)
+	if far:
+		trunks.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		cones.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	for i in spots.size():
 		var s := rng.randf_range(0.8, 1.35)
+		if spots[i] is Vector4:   # a far tree: bigger
+			s *= spots[i].w
+			spots[i] = Vector3(spots[i].x, spots[i].y, spots[i].z)
 		var yaw := rng.randf() * TAU
 		var base := Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * s), spots[i])
 		trunks.multimesh.set_instance_transform(i, base.translated_local(Vector3(0, 0.4, 0)))

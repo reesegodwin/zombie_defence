@@ -16,6 +16,7 @@ var _yard_lights: Array = []     # the lamps in the yard (base_props.gd)
 
 ## Bricks up the pipes of lanes that never open on this level (open_at INF).
 func set_level(open_at: Array) -> void:
+	$Ground.set_lanes([open_at[0] != INF, open_at[1] != INF, open_at[2] != INF])
 	# A lane that's never used here: no sewer at its end, just woods.
 	for side in culverts.size():
 		var unused: bool = open_at[side] == INF
@@ -127,11 +128,12 @@ func _add_spot(side: int, parent: Node3D, pos: Vector3, target: Vector3) -> void
 
 
 ## Graphics: the floodlights cast shadows on High only.
-func spot_detail(full: bool) -> void:
-	# Both lamps stay lit on every setting; only High casts their shadows.
+func spot_detail(_full: bool) -> void:
+	# Both lamps stay lit on every setting, without shadows: six shadowed
+	# floodlights would each draw the whole scene again.
 	for side in 3:
 		for sp in _spots[side]:
-			sp.shadow_enabled = full
+			sp.shadow_enabled = false
 
 
 ## Shows or hides every spotlight beam (for the performance check).

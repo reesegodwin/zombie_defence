@@ -15,7 +15,7 @@ const FAR_GAIN := 0.035   # hills get this much taller per metre further out (up
 const LANE_ROLL := 0.35   # how far the lanes rise and dip, in metres
 const WALL_FLAT := 2.5    # the lanes stay level this close to their wall
 # Heights are worked out once on a grid and read back from it (see sample()).
-const GRID_AREA := Rect2(-42, -42, 106, 106)
+const GRID_AREA := Rect2(-100, -100, 240, 225)
 const GRID_STEP := 0.5
 
 static var _big: FastNoiseLite
