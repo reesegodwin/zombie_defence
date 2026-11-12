@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://data/weapon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Shotgun"
+description = "Seven pellets at close range. Knocks the dead back off the wall."
+damage = 10.0
+pellets = 7
+pierce = 1
+splash_radius = 0.0
+seconds_between_shots = 0.75
+spread = 0.3
+reach = 4.5
+knockback = 0.18
+magazine = 8
+reload_seconds = 2.0
+barrel_length = 0.75
+sound = "shotgun"
+slot_label = "SHT"

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ScavengeSite" format=3]
+
+[ext_resource type="Script" path="res://data/scavenge_site.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Radio tower"
+note = "long climb"
+map_position = Vector2(0.38, 0.86)
+icon = "tower"
+gone_seconds = 120.0
+scrap = 2
+weapon_chance = 0.1
+food_chance = 0.06
+survivor_chance = 0.18

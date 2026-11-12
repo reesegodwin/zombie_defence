@@ -1,0 +1,16 @@
+Nightfall Outpost (Windows)
+
+Double-click NightfallOutpost.exe to play. Nothing to install.
+
+If Windows says Smart App Control blocked it, play in your browser
+instead: https://reesegodwin.github.io/zombie_defence/
+
+The first time, Windows may show "Windows protected your PC" because the game
+isn't signed by a known publisher. Click "More info", then "Run anyway".
+
+Your Grit, camp upgrades and settings are saved in
+%APPDATA%\Godot\app_userdata\Nightfall Outpost
+
+Keys: left mouse to shoot, F auto-fire, I storage, B workshop, T research,
+M scavenge, C camp, P pause, O options, N sound, R reload.
+F5 quick save, F9 quick load (it also autosaves every dawn).

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ZombieType" format=3]
+
+[ext_resource type="Script" path="res://data/zombie_type.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Brute"
+health = 260.0
+speed = 0.38
+wall_damage = 34.0
+seconds_between_hits = 1.5
+radius = 0.32
+model_scale = 1.55
+skin_color = Color(0.435, 0.541, 0.384, 1)
+shirt_colors = PackedColorArray(0.30, 0.36, 0.20, 1, 0.24, 0.30, 0.16, 1)
+eye_color = Color(1.000, 0.353, 0.165, 1)

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ZombieType" format=3]
+
+[ext_resource type="Script" path="res://data/zombie_type.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Runner"
+health = 24.0
+speed = 1.35
+wall_damage = 5.0
+seconds_between_hits = 0.6
+radius = 0.17
+model_scale = 0.88
+skin_color = Color(0.655, 0.706, 0.541, 1)
+shirt_colors = PackedColorArray(0.62, 0.20, 0.16, 1, 0.70, 0.30, 0.12, 1, 0.56, 0.16, 0.20, 1)
+eye_color = Color(1.000, 0.847, 0.290, 1)

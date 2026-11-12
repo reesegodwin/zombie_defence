@@ -1,0 +1,231 @@
+[gd_resource type="Theme" format=3]
+
+[ext_resource type="FontFile" path="res://assets/fonts/Oswald-SemiBold.ttf" id="oswald"]
+[ext_resource type="FontFile" path="res://assets/fonts/Caveat-SemiBold.ttf" id="caveat"]
+
+[sub_resource type="StyleBoxFlat" id="panel"]
+content_margin_left = 14.0
+content_margin_top = 12.0
+content_margin_right = 14.0
+content_margin_bottom = 12.0
+bg_color = Color(0.05, 0.055, 0.065, 0.82)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.07)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0, 0, 0.35)
+shadow_size = 8
+
+[sub_resource type="StyleBoxFlat" id="btn"]
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 12.0
+content_margin_bottom = 8.0
+bg_color = Color(0.11, 0.12, 0.13, 0.9)
+border_width_bottom = 2
+border_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="btn_hover"]
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 12.0
+content_margin_bottom = 8.0
+bg_color = Color(0.19, 0.2, 0.21, 0.95)
+border_width_bottom = 2
+border_color = Color(0.88, 0.7, 0.29, 0.6)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="btn_pressed"]
+content_margin_left = 12.0
+content_margin_top = 8.0
+content_margin_right = 12.0
+content_margin_bottom = 8.0
+bg_color = Color(0.3, 0.24, 0.12, 0.95)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxEmpty" id="empty"]
+
+[sub_resource type="StyleBoxFlat" id="bar_bg"]
+bg_color = Color(0, 0, 0, 0.55)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="bar_wall"]
+bg_color = Color(0.85, 0.66, 0.28, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="bar_xp"]
+bg_color = Color(0.4, 0.66, 0.85, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="bar_food"]
+bg_color = Color(0.45, 0.72, 0.36, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="card"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0.08, 0.085, 0.095, 0.95)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_color = Color(0, 0, 0, 0.5)
+shadow_size = 12
+
+[sub_resource type="StyleBoxFlat" id="card_hover"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0.12, 0.12, 0.13, 0.97)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.88, 0.7, 0.29, 0.9)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_color = Color(0.88, 0.7, 0.29, 0.25)
+shadow_size = 16
+
+[sub_resource type="StyleBoxFlat" id="ink_btn"]
+content_margin_left = 10.0
+content_margin_top = 2.0
+content_margin_right = 10.0
+content_margin_bottom = 2.0
+bg_color = Color(0.4, 0.27, 0.15, 0.08)
+border_width_bottom = 2
+border_color = Color(0.2, 0.13, 0.08, 0.6)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+
+[sub_resource type="StyleBoxFlat" id="ink_btn_hover"]
+content_margin_left = 10.0
+content_margin_top = 2.0
+content_margin_right = 10.0
+content_margin_bottom = 2.0
+bg_color = Color(0.62, 0.1, 0.06, 0.1)
+border_width_bottom = 2
+border_color = Color(0.62, 0.1, 0.06, 0.9)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+
+[sub_resource type="StyleBoxFlat" id="ink_btn_on"]
+content_margin_left = 10.0
+content_margin_top = 2.0
+content_margin_right = 10.0
+content_margin_bottom = 2.0
+bg_color = Color(0.62, 0.1, 0.06, 0.16)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.62, 0.1, 0.06, 0.95)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[resource]
+default_font_size = 16
+Button/colors/font_color = Color(0.92, 0.92, 0.9, 1)
+Button/colors/font_hover_color = Color(1, 1, 1, 1)
+Button/styles/normal = SubResource("btn")
+Button/styles/hover = SubResource("btn_hover")
+Button/styles/pressed = SubResource("btn_pressed")
+Button/styles/focus = SubResource("empty")
+Button/styles/disabled = SubResource("btn")
+CardButton/base_type = &"Button"
+CardButton/styles/normal = SubResource("card")
+CardButton/styles/hover = SubResource("card_hover")
+CardButton/styles/pressed = SubResource("card_hover")
+CardButton/styles/focus = SubResource("empty")
+Label/colors/font_color = Color(0.93, 0.92, 0.9, 1)
+Label/colors/font_shadow_color = Color(0, 0, 0, 0.6)
+Label/constants/shadow_offset_x = 1
+Label/constants/shadow_offset_y = 1
+HeaderLabel/base_type = &"Label"
+HeaderLabel/colors/font_color = Color(0.88, 0.7, 0.29, 1)
+HeaderLabel/font_sizes/font_size = 22
+HeaderLabel/fonts/font = ExtResource("oswald")
+TitleLabel/base_type = &"Label"
+TitleLabel/colors/font_color = Color(0.92, 0.72, 0.3, 1)
+TitleLabel/colors/font_shadow_color = Color(0, 0, 0, 0.8)
+TitleLabel/constants/shadow_offset_x = 3
+TitleLabel/constants/shadow_offset_y = 3
+TitleLabel/font_sizes/font_size = 64
+TitleLabel/fonts/font = ExtResource("oswald")
+DimLabel/base_type = &"Label"
+DimLabel/colors/font_color = Color(1, 1, 1, 0.62)
+DimLabel/font_sizes/font_size = 14
+PanelContainer/styles/panel = SubResource("panel")
+ProgressBar/styles/background = SubResource("bar_bg")
+WallBar/base_type = &"ProgressBar"
+WallBar/styles/background = SubResource("bar_bg")
+WallBar/styles/fill = SubResource("bar_wall")
+FoodBar/base_type = &"ProgressBar"
+FoodBar/styles/background = SubResource("bar_bg")
+FoodBar/styles/fill = SubResource("bar_food")
+XpBar/base_type = &"ProgressBar"
+XpBar/styles/background = SubResource("bar_bg")
+XpBar/styles/fill = SubResource("bar_xp")
+InkLabel/base_type = &"Label"
+InkLabel/colors/font_color = Color(0.2, 0.13, 0.08, 0.95)
+InkLabel/colors/font_shadow_color = Color(0, 0, 0, 0)
+InkLabel/font_sizes/font_size = 28
+InkLabel/fonts/font = ExtResource("caveat")
+InkTitle/base_type = &"Label"
+InkTitle/colors/font_color = Color(0.62, 0.1, 0.06, 1)
+InkTitle/colors/font_shadow_color = Color(0, 0, 0, 0)
+InkTitle/font_sizes/font_size = 52
+InkTitle/fonts/font = ExtResource("caveat")
+InkButton/base_type = &"Button"
+InkButton/colors/font_color = Color(0.2, 0.13, 0.08, 1)
+InkButton/colors/font_hover_color = Color(0.62, 0.1, 0.06, 1)
+InkButton/colors/font_pressed_color = Color(0.62, 0.1, 0.06, 1)
+InkButton/colors/font_hover_pressed_color = Color(0.62, 0.1, 0.06, 1)
+InkButton/colors/font_disabled_color = Color(0.2, 0.13, 0.08, 0.35)
+InkButton/font_sizes/font_size = 30
+InkButton/fonts/font = ExtResource("caveat")
+InkButton/styles/normal = SubResource("ink_btn")
+InkButton/styles/hover = SubResource("ink_btn_hover")
+InkButton/styles/pressed = SubResource("ink_btn_on")
+InkButton/styles/hover_pressed = SubResource("ink_btn_on")
+InkButton/styles/disabled = SubResource("ink_btn")
+InkButton/styles/focus = SubResource("empty")

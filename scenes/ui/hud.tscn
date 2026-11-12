@@ -1,0 +1,455 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/hud.gd" id="hud"]
+[ext_resource type="Script" path="res://scenes/ui/field.gd" id="field"]
+[ext_resource type="Theme" path="res://scenes/ui/ui_theme.tres" id="theme"]
+[ext_resource type="PackedScene" path="res://scenes/ui/slot.tscn" id="slot"]
+[ext_resource type="PackedScene" path="res://scenes/ui/scavenge_map.tscn" id="map"]
+
+[node name="HUD" type="CanvasLayer"]
+script = ExtResource("hud")
+slot_scene = ExtResource("slot")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("theme")
+
+[node name="Field" type="Control" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("field")
+
+[node name="StatsPanel" type="PanelContainer" parent="Root"]
+layout_mode = 1
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 316.0
+offset_bottom = 200.0
+mouse_filter = 2
+
+[node name="VBox" type="VBoxContainer" parent="Root/StatsPanel"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 5
+
+[node name="WallLabel" type="Label" parent="Root/StatsPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Wall  500 / 500  ·  Timber"
+
+[node name="WallBar" type="ProgressBar" parent="Root/StatsPanel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(270, 14)
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"WallBar"
+max_value = 500.0
+value = 500.0
+show_percentage = false
+
+[node name="ResourcesLabel" type="Label" parent="Root/StatsPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+theme_override_font_sizes/font_size = 20
+text = "Scrap 80"
+
+[node name="FoodLabel" type="Label" parent="Root/StatsPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Food 6.0   ·   −0.5/min   ·   lasts 12:00"
+
+[node name="FoodBar" type="ProgressBar" parent="Root/StatsPanel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(270, 10)
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"FoodBar"
+max_value = 20.0
+value = 6.0
+show_percentage = false
+
+[node name="StatsLabel" type="Label" parent="Root/StatsPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"DimLabel"
+text = "Time 0:00   Kills 0   Threat 1   Crew 1/5"
+
+[node name="TripLabel" type="Label" parent="Root/StatsPanel/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(270, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.75, 0.45, 1)
+theme_override_font_sizes/font_size = 14
+text = ""
+autowrap_mode = 3
+
+[node name="TopButtons" type="HBoxContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -900.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = 56.0
+grow_horizontal = 0
+alignment = 2
+theme_override_constants/separation = 8
+
+[node name="AutoButton" type="Button" parent="Root/TopButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+text = "Auto-fire: on (F)"
+
+[node name="StorageButton" type="Button" parent="Root/TopButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+text = "Storage 0/8 (I)"
+
+[node name="WorkshopButton" type="Button" parent="Root/TopButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+text = "Workshop (B)"
+
+[node name="MapButton" type="Button" parent="Root/TopButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+text = "Scavenge (M)"
+
+[node name="PauseButton" type="Button" parent="Root/TopButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+text = "Pause (P)"
+
+[node name="SoundButton" type="Button" parent="Root/TopButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+text = "Sound: on (N)"
+
+[node name="Toasts" type="VBoxContainer" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -300.0
+offset_top = 80.0
+offset_right = 300.0
+offset_bottom = 80.0
+grow_horizontal = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="Hint" type="Label" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -500.0
+offset_top = -52.0
+offset_right = 500.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="PauseOverlay" type="ColorRect" parent="Root"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0.35)
+
+[node name="Center" type="CenterContainer" parent="Root/PauseOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Panel" type="PanelContainer" parent="Root/PauseOverlay/Center"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="VBox" type="VBoxContainer" parent="Root/PauseOverlay/Center/Panel"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Title" type="Label" parent="Root/PauseOverlay/Center/Panel/VBox"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+theme_override_font_sizes/font_size = 36
+text = "PAUSED"
+horizontal_alignment = 1
+
+[node name="Body" type="Label" parent="Root/PauseOverlay/Center/Panel/VBox"]
+layout_mode = 2
+theme_type_variation = &"DimLabel"
+text = "Press P or Space to resume.
+You can still rearrange storage while paused.
+Press O for display options."
+horizontal_alignment = 1
+
+[node name="InventoryPanel" type="PanelContainer" parent="Root"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 11
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -430.0
+offset_top = 72.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 0
+grow_vertical = 2
+
+[node name="Scroll" type="ScrollContainer" parent="Root/InventoryPanel"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="InvBox" type="VBoxContainer" parent="Root/InventoryPanel/Scroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="StorageTitle" type="Label" parent="Root/InventoryPanel/Scroll/InvBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = "BASE STORAGE  0 / 8"
+
+[node name="Help" type="Label" parent="Root/InventoryPanel/Scroll/InvBox"]
+custom_minimum_size = Vector2(370, 0)
+layout_mode = 2
+theme_type_variation = &"DimLabel"
+text = "Drag items between slots. Drag traps onto the ground in front of the wall, and placed traps back here."
+autowrap_mode = 3
+
+[node name="StorageGrid" type="GridContainer" parent="Root/InventoryPanel/Scroll/InvBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 6
+columns = 6
+
+[node name="Sep1" type="HSeparator" parent="Root/InventoryPanel/Scroll/InvBox"]
+layout_mode = 2
+
+[node name="CrewTitle" type="Label" parent="Root/InventoryPanel/Scroll/InvBox"]
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+text = "CREW ON THE WALL"
+
+[node name="CrewList" type="VBoxContainer" parent="Root/InventoryPanel/Scroll/InvBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Sep2" type="HSeparator" parent="Root/InventoryPanel/Scroll/InvBox"]
+layout_mode = 2
+
+[node name="InfoLabel" type="Label" parent="Root/InventoryPanel/Scroll/InvBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(370, 0)
+layout_mode = 2
+text = "Select an item to see what it does."
+autowrap_mode = 3
+
+[node name="Actions" type="HBoxContainer" parent="Root/InventoryPanel/Scroll/InvBox"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="UseButton" type="Button" parent="Root/InventoryPanel/Scroll/InvBox/Actions"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+focus_mode = 0
+text = "Use"
+
+[node name="DropButton" type="Button" parent="Root/InventoryPanel/Scroll/InvBox/Actions"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+focus_mode = 0
+text = "Drop"
+
+[node name="InvMessage" type="Label" parent="Root/InventoryPanel/Scroll/InvBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(370, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.6, 0.48, 1)
+autowrap_mode = 3
+
+[node name="WorkshopPanel" type="PanelContainer" parent="Root"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 9
+anchor_bottom = 1.0
+offset_left = 16.0
+offset_top = 250.0
+offset_right = 376.0
+offset_bottom = -16.0
+grow_vertical = 2
+
+[node name="Scroll" type="ScrollContainer" parent="Root/WorkshopPanel"]
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="ShopList" type="VBoxContainer" parent="Root/WorkshopPanel/Scroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="ScavengeMap" parent="Root" instance=ExtResource("map")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
+[node name="GameOverOverlay" type="ColorRect" parent="Root"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.0, 0.0, 0.6)
+
+[node name="Center" type="CenterContainer" parent="Root/GameOverOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Panel" type="PanelContainer" parent="Root/GameOverOverlay/Center"]
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="Root/GameOverOverlay/Center/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Root/GameOverOverlay/Center/Panel/VBox"]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+theme_override_colors/font_color = Color(1, 0.45, 0.35, 1)
+theme_override_font_sizes/font_size = 48
+text = "THE WALL HAS FALLEN"
+horizontal_alignment = 1
+
+[node name="GameOverStats" type="Label" parent="Root/GameOverOverlay/Center/Panel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = ""
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="PlayAgainButton" type="Button" parent="Root/GameOverOverlay/Center/Panel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+focus_mode = 0
+theme_override_font_sizes/font_size = 20
+text = "Play again  (R)"
+
+[node name="TitleOverlay" type="ColorRect" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.02, 0.04, 0.5)
+
+[node name="Center" type="CenterContainer" parent="Root/TitleOverlay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="VBox" type="VBoxContainer" parent="Root/TitleOverlay/Center"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="GameTitle" type="Label" parent="Root/TitleOverlay/Center/VBox"]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+theme_override_font_sizes/font_size = 84
+text = "NIGHTFALL OUTPOST"
+horizontal_alignment = 1
+
+[node name="Tagline" type="Label" parent="Root/TitleOverlay/Center/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(1, 1, 1, 0.8)
+text = "Five nights. The dead never stop coming."
+horizontal_alignment = 1
+
+[node name="Panel" type="PanelContainer" parent="Root/TitleOverlay/Center/VBox"]
+layout_mode = 2
+size_flags_horizontal = 4
+
+[node name="HowTo" type="Label" parent="Root/TitleOverlay/Center/VBox/Panel"]
+layout_mode = 2
+text = "Hold out 5 nights and the rescue convoy comes for you.
+By day the dead drift in; at night the horde comes, bigger every night.
+
+Hold the left mouse button to shoot (F: auto-fire). Your crew shoots on its own.
+Click a survivor, then a walkway, to move them; click them again to repair.
+T: research   B: workshop   I: storage   M: send someone scavenging
+Keep food in store, or the crew goes hungry and shoots slower.
+
+Win or lose, every run earns Grit to spend at the camp (C) on upgrades
+that last: your skills, a better start, blueprints and a stronger base."
+
+[node name="StartButton" type="Button" parent="Root/TitleOverlay/Center/VBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(320, 56)
+layout_mode = 2
+size_flags_horizontal = 4
+focus_mode = 0
+theme_override_font_sizes/font_size = 22
+text = "HOLD THE WALL  (Enter)"

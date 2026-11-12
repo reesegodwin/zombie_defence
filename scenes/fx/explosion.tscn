@@ -1,0 +1,132 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/fx/explosion.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/textures/soft_particle.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/textures/scorch.png" id="3"]
+
+[sub_resource type="Gradient" id="spark_ramp"]
+offsets = PackedFloat32Array(0, 0.5, 1)
+colors = PackedColorArray(4, 3, 1.5, 1, 3, 1.2, 0.3, 1, 0.5, 0.1, 0.05, 0)
+
+[sub_resource type="GradientTexture1D" id="spark_ramp_tex"]
+gradient = SubResource("spark_ramp")
+
+[sub_resource type="ParticleProcessMaterial" id="spark_pm"]
+emission_shape = 1
+emission_sphere_radius = 0.3
+direction = Vector3(0, 1, 0)
+spread = 80.0
+initial_velocity_min = 3.0
+initial_velocity_max = 8.0
+gravity = Vector3(0, -12, 0)
+damping_min = 1.0
+damping_max = 3.0
+scale_min = 0.4
+scale_max = 1.0
+color_ramp = SubResource("spark_ramp_tex")
+
+[sub_resource type="StandardMaterial3D" id="spark_mat"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("2")
+billboard_mode = 3
+billboard_keep_scale = true
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="spark_quad"]
+material = SubResource("spark_mat")
+size = Vector2(0.18, 0.18)
+
+[sub_resource type="Gradient" id="smoke_ramp"]
+offsets = PackedFloat32Array(0, 0.2, 1)
+colors = PackedColorArray(0.3, 0.2, 0.12, 0.9, 0.12, 0.11, 0.1, 0.7, 0.1, 0.1, 0.1, 0)
+
+[sub_resource type="GradientTexture1D" id="smoke_ramp_tex"]
+gradient = SubResource("smoke_ramp")
+
+[sub_resource type="ParticleProcessMaterial" id="smoke_pm"]
+emission_shape = 1
+emission_sphere_radius = 0.6
+direction = Vector3(0, 1, 0)
+spread = 60.0
+initial_velocity_min = 0.8
+initial_velocity_max = 2.0
+gravity = Vector3(0, 0.6, 0)
+damping_min = 1.0
+damping_max = 2.0
+scale_min = 1.5
+scale_max = 3.0
+color_ramp = SubResource("smoke_ramp_tex")
+
+[sub_resource type="StandardMaterial3D" id="smoke_mat"]
+transparency = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("2")
+billboard_mode = 3
+billboard_keep_scale = true
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
+
+[sub_resource type="QuadMesh" id="smoke_quad"]
+material = SubResource("smoke_mat")
+size = Vector2(1, 1)
+
+[sub_resource type="SphereMesh" id="ball"]
+radius = 0.6
+height = 1.2
+radial_segments = 16
+rings = 8
+
+[sub_resource type="StandardMaterial3D" id="ball_mat"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(4, 2.2, 0.8, 0.9)
+
+[node name="Explosion" type="Node3D"]
+script = ExtResource("1")
+
+[node name="Light" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+light_color = Color(1, 0.65, 0.3, 1)
+light_energy = 14.0
+omni_range = 9.0
+
+[node name="Fireball" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("ball")
+surface_material_override/0 = SubResource("ball_mat")
+cast_shadow = 0
+
+[node name="Sparks" type="GPUParticles3D" parent="."]
+emitting = false
+amount = 48
+lifetime = 0.9
+one_shot = true
+explosiveness = 1.0
+visibility_aabb = AABB(-6, -1, -6, 12, 8, 12)
+process_material = SubResource("spark_pm")
+draw_pass_1 = SubResource("spark_quad")
+cast_shadow = 0
+
+[node name="Smoke" type="GPUParticles3D" parent="."]
+emitting = false
+amount = 18
+lifetime = 1.8
+one_shot = true
+explosiveness = 0.9
+visibility_aabb = AABB(-6, -1, -6, 12, 10, 12)
+process_material = SubResource("smoke_pm")
+draw_pass_1 = SubResource("smoke_quad")
+cast_shadow = 0
+
+[node name="Scorch" type="Decal" parent="."]
+size = Vector3(3.2, 1, 3.2)
+texture_albedo = ExtResource("3")
+upper_fade = 0.5
+lower_fade = 0.5

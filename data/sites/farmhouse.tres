@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ScavengeSite" format=3]
+
+[ext_resource type="Script" path="res://data/scavenge_site.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Farmhouse"
+note = "root cellar?"
+map_position = Vector2(0.16, 0.72)
+icon = "farm"
+gone_seconds = 65.0
+scrap = 0
+weapon_chance = 0.04
+food_chance = 0.45
+survivor_chance = 0.22

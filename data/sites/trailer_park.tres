@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ScavengeSite" format=3]
+
+[ext_resource type="Script" path="res://data/scavenge_site.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Trailer park"
+note = "people were living here"
+map_position = Vector2(0.76, 0.58)
+icon = "trailer"
+gone_seconds = 95.0
+scrap = 1
+weapon_chance = 0.1
+food_chance = 0.25
+survivor_chance = 0.32

@@ -1,0 +1,121 @@
+# Builds the game on every push to main (or by hand, from the Actions tab):
+# runs the tests; exports NightfallOutpost.exe, zips it with "HOW TO PLAY.txt"
+# and puts it on the rolling "Latest Windows build" release; and exports the
+# browser version and publishes it on GitHub Pages
+# (https://reesegodwin.github.io/zombie_defence/).
+name: Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: windows-build
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.7.1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Godot and its export templates
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-windows-web
+
+      - name: Download Godot and the Windows and web export templates
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          set -e
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          mkdir -p ~/godot
+          curl -sSL -o /tmp/godot.zip "$base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d ~/godot
+          mv ~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
+          curl -sSL -o /tmp/templates.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          dest=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          mkdir -p "$dest"
+          unzip -q -j /tmp/templates.tpz "templates/windows_release_x86_64.exe" "templates/windows_debug_x86_64.exe" "templates/web_nothreads_release.zip" "templates/web_nothreads_debug.zip" "templates/version.txt" -d "$dest"
+
+      - name: Import the project
+        run: ~/godot/godot --headless --path . --import || true
+
+      - name: Run the tests
+        run: |
+          ~/godot/godot --headless --path . --script res://tests/sim_test.gd | tee test.log
+          grep -q "RESULT: OK" test.log
+          ~/godot/godot --headless --path . --script res://tests/gait_check.gd | tee gait.log
+          grep -q "RESULT: OK" gait.log
+
+      - name: Export the Windows exe
+        run: |
+          mkdir -p export
+          ~/godot/godot --headless --path . --export-release "Windows Desktop" export/NightfallOutpost.exe
+          test -s export/NightfallOutpost.exe
+
+      - name: Zip it
+        run: |
+          cp "dist/HOW TO PLAY.txt" export/
+          cd export
+          zip -9 -q NightfallOutpost-windows.zip NightfallOutpost.exe "HOW TO PLAY.txt"
+          ls -la
+
+      - name: Attach the zip to this run
+        uses: actions/upload-artifact@v4
+        with:
+          name: NightfallOutpost-windows
+          path: export/NightfallOutpost-windows.zip
+
+      - name: Update the "Latest Windows build" release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          notes="Built automatically from ${GITHUB_SHA::7} on $(date -u '+%Y-%m-%d %H:%M UTC').
+
+          Download **NightfallOutpost-windows.zip**, unzip it, and double-click **NightfallOutpost.exe**. Nothing to install.
+          The first time, Windows may say \"Windows protected your PC\" (the game isn't signed): click **More info**, then **Run anyway**.
+          If **Smart App Control** blocks it, play in your browser instead: https://reesegodwin.github.io/zombie_defence/"
+          git tag -f windows-latest "$GITHUB_SHA"
+          git push -f origin windows-latest
+          if gh release view windows-latest > /dev/null 2>&1; then
+            gh release edit windows-latest --title "Latest Windows build" --notes "$notes"
+          else
+            gh release create windows-latest --title "Latest Windows build" --notes "$notes" --latest
+          fi
+          gh release upload windows-latest export/NightfallOutpost-windows.zip --clobber
+
+      - name: Export the browser version
+        run: |
+          mkdir -p export/web
+          ~/godot/godot --headless --path . --export-release "Web" export/web/index.html
+          test -s export/web/index.html
+
+      - name: Upload it for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: export/web
+
+  pages:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Publish on GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

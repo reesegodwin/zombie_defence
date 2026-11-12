@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://data/weapon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Hunting rifle"
+description = "One heavy round that punches through four bodies."
+damage = 55.0
+pellets = 1
+pierce = 4
+splash_radius = 0.0
+seconds_between_shots = 0.85
+spread = 0.004
+reach = 13.5
+knockback = 0.1
+magazine = 8
+reload_seconds = 1.8
+barrel_length = 0.95
+sound = "rifle"
+slot_label = "RFL"
