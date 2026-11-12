@@ -258,9 +258,19 @@ func sync(s: Dictionary, dt: float) -> void:
 		var ang: float = s["aim"]
 		var face := atan2(cos(ang), sin(ang))
 		upper.rotation.y = face
-		hips.rotation.y = lerp_angle(hips.rotation.y, face, 0.15)
-		# A slightly wide, braced stance; a little breathing.
-		_legs(0.12, 0.08, -0.12, 0.05)
+		if (pos - _last).length() <= 0.001:
+			hips.rotation.y = lerp_angle(hips.rotation.y, face, 0.15)
+		var step := pos - _last
+		if step.length() > 0.001 and dt > 0.0:
+			# Walking (you, with the keys) while still aiming: the legs stride
+			# the way you're going, the gun stays on target.
+			_heading = atan2(step.x, step.y)
+			_phase += minf(step.length(), 0.5) / Body.stride_cycle(stride) * TAU
+			_legs(Body.hip_swing(_phase, stride), maxf(0.0, -cos(_phase)) * 0.9, Body.hip_swing(_phase + PI, stride), maxf(0.0, cos(_phase)) * 0.9)
+			hips.rotation.y = lerp_angle(hips.rotation.y, _heading, 0.3)
+		else:
+			# A slightly wide, braced stance; a little breathing.
+			_legs(0.12, 0.08, -0.12, 0.05)
 		var breathe := sin(_t * 1.7) * 0.008
 		var recoil: float = s["recoil"] * 0.9
 		upper.position = Vector3(0, hip_y + 0.04 + breathe, 0) - Vector3(cos(ang), 0, sin(ang)) * recoil

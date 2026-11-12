@@ -44,6 +44,26 @@ func _unit_checks() -> void:
 	check(z["hp"] <= 0, "five pistol shots kill a walker")
 	check(g.kills == 1, "kills are counted")
 
+	# Walking with WASD: you go where you're steered, round buildings, and
+	# never out past the walls or fence.
+	var gwk = Game.new()
+	var pme: Dictionary = gwk.crew[0]
+	var wstart := Vector2(pme["x"], pme["y"])
+	for i in 60:
+		gwk.walk_player(Vector2(0, 1), 1.0 / 60.0)
+	check(pme["y"] > wstart.y + 2.5 and pme["state"] == "wall" and pme.has("post"), "WASD walks you down off the walkway into the yard (%.1f -> %.1f)" % [wstart.y, pme["y"]])
+	for i in 600:
+		gwk.walk_player(Vector2(0, 1), 1.0 / 60.0)
+	check(pme["y"] < D.BASE_Y1 and gwk.walkable(Vector2(pme["x"], pme["y"])), "but not out through the back fence")
+	pme["x"] = 2.0; pme["y"] = 17.8   # beside the bunker
+	for i in 120:
+		gwk.walk_player(Vector2(1, 0), 1.0 / 60.0)
+	check(pme["x"] < 3.6, "the bunker's in the way")
+	pme["x"] = 11.0; pme["y"] = 17.0
+	for i in 200:
+		gwk.walk_player(Vector2(0, -1), 1.0 / 60.0)
+	check(Game.on_deck(Vector2(pme["x"], pme["y"])) and not pme.has("post") and pme["side"] == 0 and pme["y"] > D.WALL_Y, "walking up onto the front walkway puts you on that wall, not over it")
+
 	# No range cap: a bullet carries on past a gun's reach. Aim gets worse with
 	# distance, except with the hunting rifle.
 	var pw: Dictionary = D.WEAPONS["pistol"]

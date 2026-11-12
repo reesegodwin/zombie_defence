@@ -51,7 +51,6 @@ var settings                   # display settings (scripts/settings.gd)
 var progress                   # Grit and camp upgrades (scripts/progress.gd)
 
 var _mouse_screen = null   # last cursor position over the battlefield
-var _panning := false
 var _press_trap := false
 var _over_handled := false
 var hover_survivor := -1
@@ -313,12 +312,16 @@ func toggle_sound() -> void:
 # --- Loop -------------------------------------------------------------------
 func _process(dt: float) -> void:
 	_clock += dt
-	_keyboard_pan(dt)
+	var live: bool = started and not paused and not hud.map_open() and not hud.research_open() and not hud.options_open() and not hud.camp_open() and not hud.saves_open()
+	_keyboard_walk(minf(dt, 0.05), live)
+	if not live and Input.mouse_mode == Input.MOUSE_MODE_HIDDEN:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE   # menus need the mouse
 	if started:
 		_update_aim()
 		# The world waits while you study the scavenging map.
-		if not paused and not hud.map_open() and not hud.research_open() and not hud.options_open() and not hud.camp_open() and not hud.saves_open():
+		if live:
 			game.step(minf(dt, 0.05))
+	_follow(dt)
 	# Autosave every dawn.
 	if started and not game.over:
 		var night_now: bool = game.is_night()
@@ -489,14 +492,55 @@ func _update_aim() -> void:
 	game.input_aim = aim
 
 
-func _keyboard_pan(dt: float) -> void:
+## WASD (or the arrows): you walk, up the screen for W. Once you've fallen,
+## the keys move the view instead.
+func _keyboard_walk(dt: float, live: bool) -> void:
 	var v := Vector2.ZERO
 	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT): v.x -= 1
 	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT): v.x += 1
 	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP): v.y += 1
 	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN): v.y -= 1
-	if v != Vector2.ZERO:
+	if v == Vector2.ZERO or not started or game.over:
+		return
+	var me: Dictionary = game.crew[0]
+	if me["hp"] <= 0.0 or not me["is_player"]:
 		rig.pan_keys(v, dt)
+		return
+	if not live:
+		return
+	# Screen directions on the ground.
+	var fwd := Vector3(-rig.global_basis.z.x, 0, -rig.global_basis.z.z).normalized()
+	var right := Vector3(rig.global_basis.x.x, 0, rig.global_basis.x.z).normalized()
+	var w := right * v.x + fwd * v.y
+	game.walk_player(Vector2(w.x, w.z).normalized(), dt)
+	_hide_cursor()
+
+
+## The cursor hides while you walk, and comes back as soon as the mouse moves.
+func _hide_cursor() -> void:
+	if Input.mouse_mode == Input.MOUSE_MODE_VISIBLE and placing == "" and throwing < 0 and selected_id < 0:
+		Input.mouse_mode = Input.MOUSE_MODE_HIDDEN
+
+
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_HIDDEN:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+
+## The camera stays on you (or on the truck once you're in it).
+func _follow(dt: float) -> void:
+	if not started:
+		return
+	var me: Dictionary = game.crew[0]
+	if not me["is_player"] or me["hp"] <= 0.0:
+		return   # fallen: the view is yours to move
+	var at := Vector3(me["x"], 0.0, me["y"])
+	if me["state"] == "aboard" and truck != null:
+		at = Vector3(truck.position.x, 0.0, truck.position.z)
+	elif me["state"] == "away":
+		return
+	var k := 1.0 - exp(-dt * 8.0)
+	rig.position = rig.position.lerp(at, k)
 
 
 # --- Input ------------------------------------------------------------------
@@ -668,7 +712,6 @@ func field_input(event: InputEvent) -> void:
 					game.input_firing = false
 					_press_trap = false
 			MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE:
-				_panning = event.pressed
 				if event.pressed and event.button_index == MOUSE_BUTTON_RIGHT and (placing != "" or selected_id >= 0 or throwing >= 0):
 					cancel_actions()
 			MOUSE_BUTTON_WHEEL_UP:
@@ -684,8 +727,6 @@ func field_input(event: InputEvent) -> void:
 		if hs != hover_survivor:
 			hover_survivor = hs
 			hud.field.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if hs >= 0 else Control.CURSOR_ARROW
-		if _panning:
-			rig.drag(event.position - event.relative, event.position)
 		if placing != "":
 			var gp := _grid(event.position)
 			_show_building_preview(gp, game.can_build_at(placing, gp.x, gp.y).has("ok"))

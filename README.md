@@ -158,7 +158,8 @@ floodlight, muzzle flashes, burning fuel, explosions and blood on the ground.
 | Move items | Drag between slots; drag traps onto the ground in front of the wall |
 | Use a supply (wire) | Double-click it, or select it and press Use |
 | Pause | P or Space |
-| Pan / zoom | Right-drag or WASD / mouse wheel; Home recentres |
+| Walk | WASD or the arrow keys: you walk anywhere in the yard or along the walkways, and the camera follows you. The cursor hides while you walk and comes back when you move the mouse |
+| Zoom | Mouse wheel |
 | Sound on/off | N |
 | Move several of the crew at once | Left-drag a box over them, starting inside the base (a drag out in the lanes still shoots), then click a walkway or a spot in the base |
 | The camp (spend Grit, any time) | C or the Camp button |

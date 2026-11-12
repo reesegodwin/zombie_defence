@@ -109,6 +109,7 @@ const BRUTES_FROM := 200.0            # and the first brutes
 
 # --- Scavenging, strangers, food -------------------------------------------
 const WALK_SPEED := 2.2                 # tiles per second, walking to and from the pass
+const PLAYER_SPEED := 3.4               # you, walking with WASD (tiles per second)
 # The route from the back of the base up through the mountain pass (x, y).
 const PASS_PATH := [Vector2(11.2, 22.5), Vector2(11.2, 29.0), Vector2(11.7, 32.5), Vector2(12.5, 36.0), Vector2(12.6, 40.0), Vector2(12.1, 44.0)]
 const SCRAP_TIERS := [[12, 24], [24, 42], [45, 80]]   # low, medium, high: min and max scrap
@@ -202,6 +203,7 @@ const TURRET_REACH := 1.8         # how close to a turret a zombie at the wall m
 const BUILD_SIZE := {"turret": Vector2(1.2, 1.2), "radio": Vector2(1.6, 1.6)}
 const RADIO_SPOT := Vector2(17.8, 25.0)       # where the test bot puts the radio
 const RADIO_EVERY := 180.0                    # a survivor hears the radio about this often (seconds, on average)
+const GATE_PATH := Rect2(9.9, 20.8, 2.6, 7.6)
 const BLOCKERS := [
 	Rect2(3.6, 16.8, 2.8, 2.4),    # bunker
 	Rect2(13.2, 17.3, 1.7, 1.4),   # hut
@@ -210,7 +212,7 @@ const BLOCKERS := [
 	Rect2(11.8, 19.0, 0.8, 0.8),   # barrel
 	Rect2(12.3, 19.7, 1.0, 1.0),   # fire barrel
 	Rect2(7.9, 19.8, 2.0, 2.2),    # tent and barrel
-	Rect2(9.9, 20.8, 2.6, 7.6),    # the path to the gate (and where the army truck parks)
+	GATE_PATH,                     # the path to the gate (and where the army truck parks)
 	Rect2(3.6, 26.1, 1.4, 1.0),    # generator
 	Rect2(5.2, 25.4, 0.4, 0.4),    # its work lamp
 	Rect2(16.1, 26.6, 1.8, 0.9),   # workbench

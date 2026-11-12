@@ -133,11 +133,11 @@ static func field_side(p: Vector2, margin := 0.0) -> int:
 
 
 ## True if p is up on one of the walkways behind the walls.
-static func on_deck(p: Vector2) -> bool:
+static func on_deck(p: Vector2, extra := 0.0) -> bool:
 	for side in D.LANES.size():
 		var L: Dictionary = D.LANES[side]
 		var uv := lane_uv(side, p)
-		if uv.x >= L["u0"] - 0.2 and uv.x <= L["u1"] + 0.2 and uv.y >= D.WALL_Y + D.WALL_T and uv.y <= D.WALK_Y + 0.7:
+		if uv.x >= L["u0"] - 0.2 and uv.x <= L["u1"] + 0.2 and uv.y >= D.WALL_Y + D.WALL_T and uv.y <= D.WALK_Y + 0.7 + extra:
 			return true
 	return false
 
@@ -408,6 +408,77 @@ func move_survivor_to(i: int, p: Vector2) -> Dictionary:
 	s["path_t"] = 0.0
 	s["state"] = "moving"
 	return {"ok": true, "msg": ("You head" if s["is_player"] else s["name"] + " heads") + " over there."}
+
+
+## You, walking with the keys: dir is the way to go on the ground (x, y),
+## any length up to 1. Anywhere in the yard or up on the walkways, round the
+## buildings; not out past the walls or the fence.
+func walk_player(dir: Vector2, dt: float) -> void:
+	if crew.is_empty() or dir == Vector2.ZERO:
+		return
+	var s: Dictionary = crew[0]
+	if not s["is_player"] or s["hp"] <= 0.0 or not s["state"] in ["wall", "moving"]:
+		return
+	if dir.length() > 1.0:
+		dir = dir.normalized()
+	var here := Vector2(s["x"], s["y"])
+	var step := dir * D.PLAYER_SPEED * dt
+	var to := here + step
+	if not walkable(to):
+		# Slide along whatever's in the way.
+		to = here + Vector2(step.x, 0.0)
+		if not walkable(to):
+			to = here + Vector2(0.0, step.y)
+			if not walkable(to):
+				return
+	s["x"] = to.x
+	s["y"] = to.y
+	s["state"] = "wall"
+	s["route"] = []
+	s["repairing"] = false
+	_stop_fixing(s)
+	_take_spot(s, to)
+
+
+## Somewhere you can stand: the yard or a walkway, clear of buildings,
+## turrets and the parked army truck.
+func walkable(p: Vector2) -> bool:
+	if not in_base(p) and not on_deck(p, 0.15):
+		return false
+	for r in D.BLOCKERS:
+		if r.position == D.GATE_PATH.position:
+			continue   # just kept clear for the gate
+		if r.grow(0.15).has_point(p):
+			return false
+	for t in turrets:
+		if Vector2(t["x"] - p.x, t["y"] - p.y).length() < 0.55:
+			return false
+	if evac >= 2.0 and evac_go < 0.0 and absf(p.x - TRUCK_STOP.x) < 1.25 and p.y > TRUCK_STOP.y - 3.2 and p.y < TRUCK_STOP.y + 3.2:
+		return false
+	return true
+
+
+## Makes p a survivor's spot: on a walkway, that wall and place on it;
+## in the yard, the wall they're nearest (for facing and the bot).
+func _take_spot(s: Dictionary, p: Vector2) -> void:
+	var spot := deck_spot(p)
+	if on_deck(p) and not spot.is_empty():
+		s.erase("post")
+		s["side"] = spot["side"]
+		s["u"] = spot["u"]
+		return
+	var best := 0
+	var bd := INF
+	for side in D.LANES.size():
+		var L: Dictionary = D.LANES[side]
+		var uv := lane_uv(side, p)
+		var d := absf(uv.y - D.WALK_Y) + maxf(0.0, maxf(L["u0"] - uv.x, uv.x - L["u1"]))
+		if d < bd:
+			bd = d
+			best = side
+	s["post"] = p
+	s["side"] = best
+	s["u"] = clampf(lane_uv(best, p).x, D.LANES[best]["u0"] + 0.4, D.LANES[best]["u1"] - 0.4)
 
 
 func free_name() -> String:
