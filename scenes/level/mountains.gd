@@ -17,7 +17,7 @@ const Terrain = preload("res://scripts/terrain.gd")
 @export var snow_material: Material
 @export var path_material: Material
 ## How wide the pass stays clear, in metres either side of the path.
-@export var pass_half_width := 1.3
+@export var pass_half_width := 2.0
 
 
 ## The mountains run behind the base, across the whole south of the map.
@@ -166,7 +166,7 @@ func _build() -> void:
 		m.material_override = path_material
 		var mid := (a + b) * 0.5
 		var length := a.distance_to(b) + 0.6
-		m.transform = Transform3D(Basis(Vector3.UP, atan2(b.x - a.x, b.y - a.y)).scaled(Vector3(1.4, 0.02, length)), Vector3(mid.x, 0.012, mid.y))
+		m.transform = Transform3D(Basis(Vector3.UP, atan2(b.x - a.x, b.y - a.y)).scaled(Vector3(2.4, 0.02, length)), Vector3(mid.x, 0.012, mid.y))
 		m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(m)
 

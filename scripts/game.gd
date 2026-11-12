@@ -569,7 +569,7 @@ func hit_wall(side: int, u: float, dmg: float) -> void:
 # --- Inside the base ----------------------------------------------------------
 ## People the dead can get at: everyone in the base or walking in it.
 func defenders() -> Array:
-	return crew.filter(func(s): return s["state"] in ["wall", "moving", "arriving", "returning"] and s["hp"] > 0.0)
+	return crew.filter(func(s): return s["state"] in ["wall", "moving", "arriving", "returning", "boarding"] and s["hp"] > 0.0)
 
 
 func any_breach() -> bool:
@@ -642,7 +642,7 @@ func _choose_prey(z: Dictionary):
 func _prey_alive(p: Dictionary) -> bool:
 	if turrets.has(p):
 		return true
-	return crew.has(p) and p["hp"] > 0.0 and p["state"] in ["wall", "moving", "arriving", "returning"]
+	return crew.has(p) and p["hp"] > 0.0 and p["state"] in ["wall", "moving", "arriving", "returning", "boarding"]
 
 
 # --- Paths inside the base ------------------------------------------------------
@@ -1751,7 +1751,7 @@ func update_trip(dt: float) -> void:
 func update_walkers(dt: float) -> void:
 	for s in crew:
 		var st: String = s["state"]
-		if st == "wall" or st == "away" or st == "dead":
+		if st == "wall" or st == "away" or st == "dead" or st == "aboard":
 			continue
 		var length := maxf(0.01, route_length(s["route"]))
 		var dp := D.WALK_SPEED * dt / length
@@ -1766,6 +1766,12 @@ func update_walkers(dt: float) -> void:
 			s["path_t"] = minf(1.0, s["path_t"] + dp)
 			if s["path_t"] >= 1.0:
 				s["state"] = "away"
+		elif st == "boarding":
+			s["path_t"] = minf(1.0, s["path_t"] + dp)
+			if s["path_t"] >= 1.0:
+				s["state"] = "aboard"
+				toast.emit(("You climb" if s["is_player"] else s["name"] + " climbs") + " into the truck.", "info")
+				_changed()
 		else:
 			s["path_t"] = maxf(0.0, s["path_t"] - dp)
 			if s["path_t"] <= 0.0:
@@ -2635,7 +2641,7 @@ func update_cycle() -> void:
 			run_won.emit()
 			return
 		evac = 0.0
-		toast.emit("Dawn on day %d. An army truck is coming down the pass to move you all to %s." % [day_number(), D.LEVELS[level]["name"]], "good")
+		toast.emit("Dawn on day %d. An army truck is coming down the pass to move you all to %s, but the horde isn't letting up." % [day_number(), D.LEVELS[level]["name"]], "good")
 		sound.emit("levelup")
 		truck_coming.emit(level + 1)
 	# Darkness: fades in over the last stretch of the day, out over the last of the night.
@@ -2647,7 +2653,7 @@ func update_cycle() -> void:
 	night = smoothstep(0.0, 1.0, k)
 	dark = lerpf(0.12, 0.58, night)
 	if not is_night():
-		if n > 1 and _once("dawn%d" % n):
+		if n > 1 and evac < 0.0 and _once("dawn%d" % n):
 			toast.emit("Dawn. Day %d. The dead thin out with the light." % n, "good")
 			new_day.emit(n)
 			sound.emit("coin")
@@ -2674,16 +2680,21 @@ func update_director(dt: float) -> void:
 	time += dt
 	threat = 1 + int(time / D.THREAT_EVERY)
 	update_cycle()
-	if evac >= 0.0:
-		return   # the truck's coming: no more of the dead
-	update_lulls()
+	if evac_go >= 0.0:
+		return   # everyone's in the truck: nobody left to come for
+	# The last night's horde never stops: they keep coming while the truck's here.
+	var last_night := evac >= 0.0 or (not is_endless() and is_night() and day_number() == D.WIN_NIGHTS)
+	if evac < 0.0:
+		update_lulls()
 	# Winding down before dawn: the rest of the horde never comes, and only
 	# stragglers, so daylight finds the night's dead mostly put down.
-	var winding := is_night() and D.CYCLE - cycle_pos() < D.NIGHT_WIND_DOWN
+	var winding := is_night() and D.CYCLE - cycle_pos() < D.NIGHT_WIND_DOWN and not last_night
 	if winding:
 		horde_left = 0
-	var rate: float = spawn_rate(time) * (D.DAY_SPAWN if winding or not is_night() else D.NIGHT_SPAWN) * (1.0 + D.HEAT_SPAWN * heat) * D.LEVELS[level - 1].get("spawn", 1.0)
-	if in_lull():
+	var rate: float = spawn_rate(time) * (D.NIGHT_SPAWN if last_night or (is_night() and not winding) else D.DAY_SPAWN) * (1.0 + D.HEAT_SPAWN * heat) * D.LEVELS[level - 1].get("spawn", 1.0)
+	if evac >= 0.0:
+		rate += EVAC_HORDE
+	if in_lull() and evac < 0.0:
 		rate = minf(D.LULL_RATE, rate)
 	spawn_acc += rate * dt
 	while spawn_acc >= 1.0:
@@ -2885,33 +2896,92 @@ func is_endless() -> bool:
 
 
 # --- The army truck: on to the next level -------------------------------------------
-const TRUCK_ARRIVES := 7.0     # seconds after the truck is called that it pulls into the yard
-const TRUCK_LEAVES := 15.0     # and that it drives off with everyone, to the next base
+# At dawn after the last night the truck backs down the mountain pass into the
+# yard. The dead don't stop: the player has to send everyone over to climb in
+# the back (board_truck), and once they're all on, it drives off up the pass.
+# As it rolls out through the gate the level ends.
+const TRUCK_ARRIVES := 9.0     # seconds after it's called that it's parked in the yard
+const TRUCK_STOP := Vector2(11.2, 24.4)   # where it parks, nose to the gate
+const TRUCK_BOARD := Vector2(11.2, 20.7)  # the tailgate, where the crew climb in
+const TRUCK_OUT := 3.5         # seconds from pulling away to rolling out through the gate
+const TRUCK_GONE := 5.0        # and to the next level
+const EVAC_HORDE := 1.2        # extra dead a second while the truck's here: the night's horde never stops
+var evac_go := -1.0            # seconds since it pulled away with everyone (-1: not yet)
 
 
-## While the truck comes: no more of the dead turn up; once it's in, everyone
-## walks over and climbs on; then it's off to the next level.
+## True once the truck is parked and waiting for the crew.
+func truck_waiting() -> bool:
+	return evac >= TRUCK_ARRIVES and evac_go < 0.0
+
+
+## Who still has to get on: everyone alive who isn't aboard yet.
+func left_to_board() -> int:
+	var n := 0
+	for c in crew:
+		if c["state"] != "dead" and c["state"] != "aboard" and c["hp"] > 0.0:
+			n += 1
+	return n
+
+
+## Sends a survivor to climb into the back of the truck.
+func board_truck(i: int) -> Dictionary:
+	if i < 0 or i >= crew.size():
+		return {"msg": ""}
+	if not truck_waiting():
+		return {"msg": "The truck isn't here yet."}
+	var s: Dictionary = crew[i]
+	if s["state"] == "boarding" or s["state"] == "aboard":
+		return {"msg": ""}
+	if s["state"] != "wall" and s["state"] != "moving":
+		return {"msg": s["name"] + " can't get to the truck right now."}
+	var here := Vector2(s["x"], s["y"])
+	var route: Array = [here]
+	if on_deck(here) and s["state"] == "wall" and not s.has("post"):
+		route.append(yard_point(s["side"], s["u"]))
+	route.append(TRUCK_BOARD + Vector2(randf_range(-0.3, 0.3), -0.3))
+	route.append(TRUCK_BOARD)
+	s.erase("post")
+	s["repairing"] = false
+	_stop_fixing(s)
+	s["route"] = route
+	s["path_t"] = 0.0
+	s["state"] = "boarding"
+	_changed()
+	return {"ok": true, "msg": ("You head" if s["is_player"] else s["name"] + " heads") + " for the truck."}
+
+
+## Everyone at once (the G key / the HUD button).
+func board_all() -> Dictionary:
+	var sent := 0
+	for i in crew.size():
+		if board_truck(i).has("ok"):
+			sent += 1
+	if sent == 0:
+		return {"msg": "" if truck_waiting() else "The truck isn't here yet."}
+	return {"ok": true, "msg": "Everyone to the truck!" if sent > 1 else "To the truck!"}
+
+
+## The truck backs in, waits, then drives off once everyone's in.
 func update_evac(dt: float) -> void:
 	if evac < 0.0:
 		return
 	var before := evac
 	evac += dt
 	if before < TRUCK_ARRIVES and evac >= TRUCK_ARRIVES:
-		toast.emit("The truck's here. Everyone on board!", "good")
+		toast.emit("The truck's here! Pick your people and click the truck, or press G: everyone in the back, and the dead aren't stopping.", "good")
+		sound.emit("horn")
 		if trip != null:
-			trip["who"]["state"] = "wall"   # picked up on the road
+			trip["who"]["state"] = "aboard"   # picked up on the road
 			trip = null
-		var k := 0
-		for i in crew.size():
-			var c: Dictionary = crew[i]
-			if c["hp"] <= 0.0 or c["state"] == "dead":
-				continue
-			if not c["state"] in ["wall", "moving"]:
-				c["state"] = "wall"
-			move_survivor_to(i, D.HUB + Vector2(1.8 + (k % 2) * 0.6, 0.8 + (k / 2) * 0.6))   # beside the truck
-			k += 1
-	if evac >= TRUCK_LEAVES:
-		advance_level()
+			_changed()
+	if truck_waiting() and left_to_board() == 0:
+		evac_go = 0.0
+		toast.emit("Everyone's in. Go, go, go!", "good")
+		sound.emit("levelup")
+	if evac_go >= 0.0:
+		evac_go += dt
+		if evac_go >= TRUCK_GONE:
+			advance_level()
 
 
 ## Everyone alive moves to the next level's base: a fresh start there (day 1,
@@ -2922,6 +2992,7 @@ func advance_level() -> void:
 	level += 1
 	open_at = D.LEVELS[level - 1]["open_at"].duplicate()
 	evac = -1.0
+	evac_go = -1.0
 	time = 0.0
 	threat = 1
 	sides_open = [true, false, false]

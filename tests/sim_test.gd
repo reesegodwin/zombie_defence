@@ -349,20 +349,50 @@ func _unit_checks() -> void:
 	g.time = D.WIN_NIGHTS * D.CYCLE - 0.05
 	g.step(0.1)
 	check(called[0] == 1 and g.evac >= 0.0 and not g.over, "at dawn on day 6 of level 1 the truck comes (the run goes on)")
-	var n_before: int = g.zombies.size()
+	g.horde_left = 0   # (the test jumped straight to dawn: no night's horde still queued)
+	g.zombies.clear()
+	var n_before: int = g.spawned
 	for i in 60:
 		g.step(0.1)
-	check(g.zombies.size() <= n_before, "no more of the dead turn up while it comes")
-	for i in 120:
+		g.zombies.clear()   # (nobody's shooting in this test)
+	check(not g.truck_waiting() and g.board_truck(0).has("msg") and not g.board_truck(0).has("ok"), "nobody can board before it's parked")
+	for i in 60:
 		g.step(0.1)
+		g.zombies.clear()
+	check(g.truck_waiting() and g.level == 1, "the truck parks in the yard and waits")
+	for i in 200:
+		g.step(0.1)
+		g.zombies.clear()
+	check(g.truck_waiting() and g.level == 1, "and it doesn't leave until the crew are told to get in")
+	check(g.spawned > n_before + 50, "the horde keeps coming while it waits (%d in 32 s)" % (g.spawned - n_before))
+	var bea := -1
+	for c in g.crew.size():
+		if g.crew[c]["name"] == "Bea":
+			bea = c
+	check(bea >= 0, "Bea is still alive")
+	check(g.board_truck(bea).has("ok") and g.crew[bea]["state"] == "boarding", "a survivor can be sent to the truck")
+	for i in 150:
+		g.step(0.1)
+		g.zombies.clear()   # (nobody's shooting in this test)
+	check(g.crew[bea]["state"] == "aboard" and g.level == 1 and g.evac_go < 0.0, "they climb in; the truck waits for the rest")
+	check(g.board_all().has("ok"), "then everyone's sent")
+	for i in 400:
+		g.step(0.1)
+		g.zombies.clear()   # (nobody's shooting in this test)
+		if g.level == 2:
+			break
 	check(g.level == 2 and g.day_number() == 1 and g.evac < 0.0, "then everyone's at level 2's base, on day 1")
 	check(g.crew.any(func(c): return c["name"] == "Bea" and c["weapon"] == "smg") and g.researched.has("firearms") and g.kills >= 50, "with the crew, their guns, research and kills (%s)" % str(g.crew.map(func(c): return [c["name"], c["weapon"], c["hp"]])))
 	check(g.turrets.is_empty() and g.walls.all(func(w): return w["hp"] == w["max_hp"]), "at a fresh base")
 	check(g.nights_survived() == D.WIN_NIGHTS, "the nights held so far carry over")
 	for lv in [3, 4]:
 		g.time = D.WIN_NIGHTS * D.CYCLE - 0.05
-		for i in 200:
+		for i in 600:
 			g.step(0.1)
+			if g.truck_waiting():
+				g.board_all()
+			if g.level == lv:
+				break
 		check(g.level == lv and not g.over, "the truck takes them on to level %d" % lv)
 	check(g.is_endless() and g.sides_open[0], "level 4 is the endless last stand")
 	g.time = D.WIN_NIGHTS * D.CYCLE * 2.0

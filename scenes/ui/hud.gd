@@ -78,6 +78,7 @@ var _opt_mode: OptionButton
 var _opt_size: OptionButton
 var _opt_scale: OptionButton
 var _sizes: Array = []
+var _btn_board: Button     # "Everyone in the truck", while it waits in the yard
 
 
 func _ready() -> void:
@@ -358,6 +359,36 @@ func hide_game_over() -> void:
 
 
 ## A big banner across the middle of the screen, fading in and out: "DAY 3".
+## The big button that sends everyone to the truck, shown while it waits.
+func _sync_board(g) -> void:
+	var show: bool = g.truck_waiting() and g.left_to_board() > 0 and not g.over
+	if _btn_board == null:
+		if not show:
+			return
+		_btn_board = Button.new()
+		_btn_board.anchor_left = 0.5
+		_btn_board.anchor_right = 0.5
+		_btn_board.anchor_top = 1.0
+		_btn_board.anchor_bottom = 1.0
+		_btn_board.offset_left = -190
+		_btn_board.offset_right = 190
+		_btn_board.offset_top = -150
+		_btn_board.offset_bottom = -96
+		_btn_board.add_theme_font_size_override("font_size", 24)
+		_btn_board.focus_mode = Control.FOCUS_NONE
+		_btn_board.pressed.connect(func(): main.board_all())
+		over_overlay.get_parent().add_child(_btn_board)
+	_btn_board.visible = show
+	if show:
+		var waiting := 0
+		for c in g.crew:
+			if c["state"] == "boarding":
+				waiting += 1
+		var left: int = g.left_to_board() - waiting
+		_btn_board.text = "Everyone in the truck! (G)" if left > 0 else "Climbing in... (%d)" % waiting
+		_btn_board.disabled = left <= 0
+
+
 func banner(title: String, sub := "") -> void:
 	var box := VBoxContainer.new()
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -623,6 +654,7 @@ func update_hud() -> void:
 		elif not g.sides_open[side] and g.open_at[side] != INF and g.time >= g.open_at[side] - D.SIDE_WARNING:
 			phase += "  ·  the %s opens soon" % D.LANES[side]["name"].to_lower()
 	stats_label.text = phase
+	_sync_board(g)
 	btn_auto.text = "Auto-fire: %s (F)" % ("on" if g.input_auto else "off")
 	btn_storage.text = "Storage %d/%d (I)" % [g.storage["items"].size(), g.storage["cap"]]
 	btn_pause.text = "Resume (P)" if main.paused else "Pause (P)"

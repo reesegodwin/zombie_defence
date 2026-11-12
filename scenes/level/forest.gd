@@ -66,6 +66,8 @@ func _build() -> void:
 				continue  # the lane
 			if x >= D.BASE_X0 - 1 and x <= D.BASE_X1 and y >= D.WALL_Y - 1 and y <= D.BASE_Y1 + 1:
 				continue  # the base and a strip of cleared ground round its fence
+			if y >= D.BASE_Y1 - 1 and _pass_distance(cp) < 3.2:
+				continue  # the trail up the pass, wide enough for the army truck
 			var near := x == D.X0 - 2 or x == D.X1 + 1 or x == D.X0 - 1 or x == D.X1
 			var p := (0.9 if near else 0.6) if y <= D.WALL_Y else (0.45 if near else 0.3)
 			if far > 0.0:
@@ -206,3 +208,17 @@ func _multimesh(mesh: Mesh, mat: Material, count: int, colors: bool, parent: Nod
 	mi.material_override = mat
 	(parent if parent != null else self).add_child(mi)
 	return mi
+
+
+## How far p is from the trail up the mountain pass.
+static func _pass_distance(p: Vector2) -> float:
+	var pts: Array = D.PASS_PATH
+	var best := INF
+	for i in range(1, pts.size()):
+		var a: Vector2 = pts[i - 1]
+		var b: Vector2 = pts[i]
+		var t := clampf((p - a).dot(b - a) / (b - a).length_squared(), 0.0, 1.0)
+		best = minf(best, p.distance_to(a.lerp(b, t)))
+	if p.y > pts[-1].y:
+		best = minf(best, absf(p.x - pts[-1].x))
+	return best

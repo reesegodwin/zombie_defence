@@ -210,7 +210,7 @@ const BLOCKERS := [
 	Rect2(11.8, 19.0, 0.8, 0.8),   # barrel
 	Rect2(12.3, 19.7, 1.0, 1.0),   # fire barrel
 	Rect2(7.9, 19.8, 2.0, 2.2),    # tent and barrel
-	Rect2(10.2, 21.4, 2.0, 7.0),   # the path to the gate
+	Rect2(9.9, 20.8, 2.6, 7.6),    # the path to the gate (and where the army truck parks)
 	Rect2(3.6, 26.1, 1.4, 1.0),    # generator
 	Rect2(5.2, 25.4, 0.4, 0.4),    # its work lamp
 	Rect2(16.1, 26.6, 1.8, 0.9),   # workbench

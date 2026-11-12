@@ -156,7 +156,7 @@ func _legs(hl: float, kl: float, hr: float, kr: float) -> void:
 func sync(s: Dictionary, dt: float) -> void:
 	_t += dt
 	var state: String = s["state"]
-	visible = state != "away"
+	visible = state != "away" and state != "aboard"
 	_bar.visible = false
 	# Health, when they're hurt.
 	var hp_frac: float = clampf(s.get("hp", 1.0) / s.get("max_hp", 1.0), 0.0, 1.0)

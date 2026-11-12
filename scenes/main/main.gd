@@ -154,8 +154,8 @@ func _sync_truck() -> void:
 		if truck == null:
 			truck = Truck.new()
 			buildings_root.add_child(truck)
-		truck.at(game.evac, Game.TRUCK_ARRIVES)
-		_fade_to(clampf((game.evac - (Game.TRUCK_LEAVES - 1.5)) / 1.5, 0.0, 1.0))
+		truck.at(game.evac, game.evac_go)
+		_fade_to(clampf((game.evac_go - Game.TRUCK_OUT) / (Game.TRUCK_GONE - Game.TRUCK_OUT), 0.0, 1.0) if game.evac_go >= 0.0 else 0.0)
 	elif truck != null:
 		truck.queue_free()
 		truck = null
@@ -293,6 +293,21 @@ func toggle_pause() -> void:
 		paused = not paused
 
 
+## Everyone into the back of the army truck.
+func board_all() -> void:
+	if not started or game.over:
+		return
+	var r: Dictionary = game.board_all()
+	if r.get("msg", "") != "":
+		hud.toast(r["msg"], "info" if r.has("ok") else "danger")
+	cancel_actions()
+
+
+## The ground under the truck while it waits in the yard (for clicks).
+static func on_truck(p: Vector2) -> bool:
+	return absf(p.x - Game.TRUCK_STOP.x) < 1.4 and p.y > Game.TRUCK_BOARD.y - 0.6 and p.y < Game.TRUCK_STOP.y + 3.2
+
+
 func toggle_auto() -> void:
 	game.input_auto = not game.input_auto
 
@@ -408,8 +423,10 @@ func _sync_scene(dt: float) -> void:
 	# Rock in the mountain pass turns see-through around anyone walking it.
 	var walkers: Array = []
 	for s in game.crew:
-		if s["state"] != "wall" and s["state"] != "away" and s["y"] > D.BASE_Y1 - 1.0:
+		if not s["state"] in ["wall", "away", "aboard"] and s["y"] > D.BASE_Y1 - 1.0:
 			walkers.append(Vector3(s["x"], 0.0, s["y"]))
+	if truck != null and truck.position.z > D.BASE_Y1 - 1.0:
+		walkers.push_front(Vector3(truck.position.x, 0.0, truck.position.z))
 	var none := Vector3(0, -100, 0)
 	RenderingServer.global_shader_parameter_set("walker_a", walkers[0] if walkers.size() > 0 else none)
 	RenderingServer.global_shader_parameter_set("walker_b", walkers[1] if walkers.size() > 1 else none)
@@ -506,6 +523,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			hud.toggle_camp()
 		KEY_F:
 			toggle_auto()
+		KEY_G:
+			board_all()
 		KEY_I, KEY_TAB:
 			if started:
 				hud.toggle_inventory()
@@ -601,6 +620,21 @@ func field_input(event: InputEvent) -> void:
 								hud.toast(r["msg"], "info" if r.has("ok") else "danger")
 						else:
 							selected_id = game.crew[who]["id"]
+						return
+					if game.truck_waiting() and on_truck(_grid(event.position)):
+						# The truck: whoever's picked climbs in (or everyone, if nobody is).
+						if selected_id >= 0:
+							var sent := 0
+							for id in [selected_id] + group_ids:
+								for c in game.crew.size():
+									if game.crew[c]["id"] == id and game.board_truck(c).has("ok"):
+										sent += 1
+							hud.toast("%d of the crew head for the truck." % sent if sent > 1 else ("To the truck!" if sent == 1 else "They can't get there right now."), "info" if sent > 0 else "danger")
+							selected_id = -1
+							group_ids.clear()
+						else:
+							hud.toast("Pick survivors first, then click the truck. Or press G to send everyone.")
+						game.input_firing = false
 						return
 					if selected_id >= 0:
 						# A damaged turret: go and repair it.

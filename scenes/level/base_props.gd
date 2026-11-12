@@ -355,20 +355,20 @@ static func _tent() -> ArrayMesh:
 	return k.mesh()
 
 
-# --- The gate to the pass (posts 2 m apart, beam at 2.05 m) -----------------------
+# --- The gate to the pass (posts 3.4 m apart, beam at 3.1 m: the army truck fits) ---
 static func _gate() -> ArrayMesh:
 	var k := _kit(0.4, 61)
 	var up := Vector3(PI / 2, 0, 0)
 	for sx in [-1, 1]:
-		k.cyl(Vector3(sx * 1.0, 1.05, 0), 0.12, 2.2, LOG, 8, up)
-		k.cyl(Vector3(sx * 1.0, 2.17, 0), 0.1, 0.06, LOG.darkened(0.2), 8, up)
-		k.box(Vector3(sx * 0.8, 1.72, 0), Vector3(0.5, 0.08, 0.08), LOG.lightened(0.05), Vector3(0, 0, sx * 0.75))
-	k.cyl(Vector3(0, 2.0, 0), 0.1, 2.6, LOG, 8, Vector3(0, PI / 2, 0))
+		k.cyl(Vector3(sx * 1.7, 1.6, 0), 0.14, 3.3, LOG, 8, up)
+		k.cyl(Vector3(sx * 1.7, 3.27, 0), 0.12, 0.06, LOG.darkened(0.2), 8, up)
+		k.box(Vector3(sx * 1.45, 2.75, 0), Vector3(0.6, 0.09, 0.09), LOG.lightened(0.05), Vector3(0, 0, sx * 0.75))
+	k.cyl(Vector3(0, 3.1, 0), 0.12, 4.0, LOG, 8, Vector3(0, PI / 2, 0))
 	# A plank sign hung on ropes.
 	for sx in [-0.45, 0.45]:
-		k.box(Vector3(sx, 1.8, 0.05), Vector3(0.02, 0.3, 0.02), ROPE)
-	k.box(Vector3(0, 1.6, 0.06), Vector3(1.2, 0.22, 0.04), PLANK)
-	k.box(Vector3(0, 1.6, 0.085), Vector3(0.9, 0.05, 0.01), Color(0.75, 0.2, 0.12))
+		k.box(Vector3(sx, 2.9, 0.05), Vector3(0.02, 0.3, 0.02), ROPE)
+	k.box(Vector3(0, 2.7, 0.06), Vector3(1.2, 0.22, 0.04), PLANK)
+	k.box(Vector3(0, 2.7, 0.085), Vector3(0.9, 0.05, 0.01), Color(0.75, 0.2, 0.12))
 	return k.mesh()
 
 

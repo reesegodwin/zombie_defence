@@ -12,7 +12,7 @@ const D = preload("res://scripts/defs.gd")
 		if is_inside_tree():
 			_build()
 ## Gap left in the back fence for the gate, centred on the trail (metres).
-@export var gate_width := 2.4
+@export var gate_width := 3.8
 
 
 func _ready() -> void:
