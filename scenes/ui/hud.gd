@@ -662,7 +662,7 @@ func update_hud() -> void:
 
 	var h := ""
 	if main.started:
-		if g.time < 10:
+		if g.time < 10 and not main.settings.tutorial:
 			h = "Hold the left mouse button to shoot. Your aim snaps to the zombie under the cursor."
 		elif g.any_breach() and g.evac_go < 0.0:
 			h = "A wall is down and they're getting in. Repair it to a quarter of its strength to close the gap. If everyone in the base falls, the run is over."
@@ -676,13 +676,13 @@ func update_hud() -> void:
 			h = "The %s wall is damaged. Click a survivor on it, then click them again to have them repair it (costs scrap)." % D.LANES[w["side"]]["name"].to_lower()
 		elif g.time < 60 and g.crew.size() > 1:
 			h = "Click a survivor to pick them, then click a walkway or anywhere in the base to move them there."
-		elif not _hinted_map and g.trip == null and not g.available_scavengers().is_empty():
+		elif not _hinted_map and not main.settings.tutorial and g.trip == null and not g.available_scavengers().is_empty():
 			h = "You have someone who could go scavenging. Press M to open the map."
 		elif g.crew.size() == 1 and g.time < D.FIRST_STRANGER_AT:
 			h = "You're alone for now. Keep an eye on the mountain pass behind the base."
-		elif not _hinted_research and g.research_cur == "" and g.researched.is_empty() and g.scrap >= 15:
+		elif not _hinted_research and not main.settings.tutorial and g.research_cur == "" and g.researched.is_empty() and g.scrap >= 15:
 			h = "Press T to research: it unlocks guns, traps, walls, turrets and better provisions."
-		elif not _hinted_storage and g.storage["items"].size() > 0:
+		elif not _hinted_storage and not main.settings.tutorial and g.storage["items"].size() > 0:
 			h = "You have something in storage. Press I to open it and hand it out."
 		elif inv_panel.visible:
 			h = "Storage is open. Clicking the field still shoots, unless you grab a placed trap."
@@ -895,6 +895,7 @@ func _option_row(box: VBoxContainer, label: String) -> OptionButton:
 const FOG_QUALITIES := ["Off", "Low", "Medium", "High"]
 var _opt_fog: OptionButton
 var _opt_gfx: OptionButton
+var _opt_tut: OptionButton
 
 
 func _build_options() -> void:
@@ -935,6 +936,15 @@ func _build_options() -> void:
 	_opt_gfx = _option_row(box, "Graphics")
 	for q in ["Low", "Medium", "High"]:
 		_opt_gfx.add_item(q)
+	_opt_tut = _option_row(box, "Tutorial")
+	_opt_tut.add_item("On")
+	_opt_tut.add_item("Off")
+	_opt_tut.item_selected.connect(func(i):
+		var was: bool = main.settings.tutorial
+		main.settings.tutorial = i == 0
+		if main.settings.tutorial and not was:
+			main.settings.tutorial_done = []   # on again: replay it from the start
+		main.settings.save())
 	_opt_fog = _option_row(box, "Fog")
 	for q in FOG_QUALITIES:
 		_opt_fog.add_item(q)
@@ -984,6 +994,7 @@ func _fill_options() -> void:
 	_opt_size.select(pick)
 	_opt_size.disabled = st.mode != "Windowed"
 	_opt_fog.select(maxi(0, FOG_QUALITIES.find(st.fog)))
+	_opt_tut.select(0 if st.tutorial else 1)
 	_opt_gfx.select(maxi(0, ["Low", "Medium", "High"].find(st.graphics)))
 	var si: int = Settings.UI_SCALES.find(st.ui_scale)
 	_opt_scale.select(si if si >= 0 else Settings.UI_SCALES.find(1.0))

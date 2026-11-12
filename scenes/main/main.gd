@@ -12,6 +12,7 @@ const Terrain = preload("res://scripts/terrain.gd")
 const Saves = preload("res://scripts/saves.gd")
 const Truck = preload("res://scenes/actors/truck.gd")
 const Reticle = preload("res://scenes/ui/reticle.gd")
+const Tutorial = preload("res://scenes/ui/tutorial.gd")
 
 @export var zombie_scene: PackedScene
 @export var survivor_scene: PackedScene
@@ -49,6 +50,7 @@ var _box: Panel                # the box drawn while dragging
 var placing := ""              # "turret" or "radio" while choosing where to build one
 var throwing := -1             # uid of the molotov or pipe bomb being aimed, or -1
 var settings                   # display settings (scripts/settings.gd)
+var tutorial                   # the highlight-and-arrow tutorial (scenes/ui/tutorial.gd)
 var progress                   # Grit and camp upgrades (scripts/progress.gd)
 
 var _mouse_screen = null   # last cursor position over the battlefield
@@ -255,6 +257,7 @@ func apply_fog() -> void:
 
 func start() -> void:
 	_new_game()   # with whatever was just bought at the camp
+	tutorial.run_started()
 	started = true
 	hud.close_camp()
 	hud.hide_title()
@@ -281,6 +284,7 @@ func restart() -> void:
 	if hud.research_open():
 		hud.toggle_research()
 	_new_game()
+	tutorial.run_started()
 	paused = false
 	rig.reset()
 	hud.toast("Again. Hold the wall.")
@@ -506,6 +510,10 @@ func _bullseye_cursor() -> void:
 	r.main = self
 	r.name = "Reticle"
 	hud.add_child(r)
+	tutorial = Tutorial.new()
+	tutorial.main = self
+	tutorial.name = "Tutorial"
+	hud.add_child(tutorial)   # last: over everything, never in the way of a click
 
 
 ## WASD (or the arrows): you walk, up the screen for W. Once you've fallen,

@@ -15,16 +15,22 @@ var ui_scale := 1.0
 var fog := "High"          # ground fog quality: Off, Low, Medium, High (see ground_fog.gd)
 var graphics := "High"     # Low, Medium, High: anti-aliasing, shadows, effects, lights (main.gd apply_graphics)
 var detected := false      # true on the very first run, when graphics was picked for this PC
+var path := PATH            # (tests use their own file)
+var tutorial := true       # the highlight-and-arrow tutorial (scenes/ui/tutorial.gd)
+var tutorial_done: Array = []   # its steps already done on this computer (each shows once, ever)
 
 
-static func load_or_detect() -> RefCounted:
+static func load_or_detect(p := PATH) -> RefCounted:
 	var s = load("res://scripts/settings.gd").new()
+	s.path = p
 	var cfg := ConfigFile.new()
-	if cfg.load(PATH) == OK:
+	if cfg.load(p) == OK:
 		s.mode = cfg.get_value("display", "mode", s.mode)
 		s.size = cfg.get_value("display", "size", s.size)
 		s.ui_scale = cfg.get_value("display", "ui_scale", s.ui_scale)
 		s.fog = cfg.get_value("graphics", "fog", s.fog)
+		s.tutorial = cfg.get_value("tutorial", "on", true)
+		s.tutorial_done = cfg.get_value("tutorial", "done", [])
 		s.graphics = cfg.get_value("graphics", "quality", "")
 		if s.graphics == "":
 			s.pick_graphics()   # saved before there was a Graphics setting
@@ -64,7 +70,9 @@ func save() -> void:
 	cfg.set_value("display", "ui_scale", ui_scale)
 	cfg.set_value("graphics", "fog", fog)
 	cfg.set_value("graphics", "quality", graphics)
-	cfg.save(PATH)
+	cfg.set_value("tutorial", "on", tutorial)
+	cfg.set_value("tutorial", "done", tutorial_done)
+	cfg.save(path)
 
 
 ## Window sizes that fit on the current screen.

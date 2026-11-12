@@ -41,6 +41,13 @@ func open() -> void:
 	_refresh()
 
 
+## Where a site sits on screen (its drawing on the map), for the tutorial.
+func site_rect(key: String) -> Rect2:
+	var p: Vector2 = canvas.get_global_transform() * (canvas.site_px(key) + Vector2(0, -6))
+	var r := 46.0 * canvas.get_global_transform().get_scale().x
+	return Rect2(p - Vector2(r, r), Vector2(r, r) * 2.0)
+
+
 func close() -> void:
 	visible = false
 	closed.emit()

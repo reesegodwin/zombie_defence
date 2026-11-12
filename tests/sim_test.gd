@@ -45,7 +45,39 @@ func _unit_checks() -> void:
 	check(z["hp"] <= 0, "five pistol shots kill a walker")
 	check(g.kills == 1, "kills are counted")
 
-	# Bullets fly: bt_out of the end of the barrel, taking time to get there.
+	# The tutorial's steps: when each is ready, and when it's done.
+	var Tut = load("res://scenes/ui/tutorial.gd")
+	var gt = Game.new()
+	check(not Tut.step_ready("rescue", gt), "tutorial: no rescue hint while you're alone")
+	gt.add_survivor("Bea", "pistol", false)
+	check(Tut.step_ready("rescue", gt) and not Tut.step_done("rescue", gt), "tutorial: once someone can go, point them at the ranger cabin")
+	gt.send_scavenger(1, "ranger_cabin")
+	check(Tut.step_done("rescue", gt), "tutorial: done when they set off for the cabin")
+	gt.scrap = D.RESEARCH["firearms"]["cost"]
+	check(Tut.step_ready("research", gt), "tutorial: research is pointed out once you can afford the SMG")
+	gt.start_research("firearms")
+	check(Tut.step_done("research", gt), "tutorial: done once research starts")
+	gt.research_cur = ""
+	gt.researched["firearms"] = true
+	check(Tut.step_ready("buy_smg", gt) and not Tut.step_done("buy_smg", gt), "tutorial: SMG researched: point at the workshop")
+	gt.add_to_storage("smg")
+	check(Tut.step_done("buy_smg", gt) and Tut.step_ready("equip", gt) and not Tut.step_done("equip", gt), "tutorial: built: now hand it out")
+	gt.crew[0]["weapon"] = "smg"
+	check(Tut.step_done("equip", gt), "tutorial: done when someone holds it")
+	gt.walls[0]["hp"] = gt.walls[0]["max_hp"] * 0.4
+	gt.scrap = 50
+	check(Tut.step_ready("repair", gt) and not Tut.step_done("repair", gt), "tutorial: a battered wall: point at someone to repair it")
+	# Its settings: on/off and what's been done carry over, in their own file.
+	var tpath := "user://test_settings.cfg"
+	var st = load("res://scripts/settings.gd").load_or_detect(tpath)
+	st.tutorial = false
+	st.tutorial_done = ["walk", "rescue"]
+	st.save()
+	var st2 = load("res://scripts/settings.gd").load_or_detect(tpath)
+	check(st2.tutorial == false and st2.tutorial_done == ["walk", "rescue"], "tutorial settings are saved")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(tpath))
+
+	# Bullets fly: out of the end of the barrel, taking time to get there.
 	var gb = Game.new()
 	var bt_sh: Dictionary = gb.crew[0]
 	var bt_tz: Dictionary = gb.spawn_zombie("walker", 100.0, 0.0)
