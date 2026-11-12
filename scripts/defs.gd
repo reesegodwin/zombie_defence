@@ -86,7 +86,8 @@ const TWILIGHT := 15.0          # seconds the light takes to fade at dusk (and r
 const DUSK_WARNING := 20.0      # warned this long before nightfall
 const DAY_SPAWN := 0.35         # share of the normal spawn rate by day
 const NIGHT_SPAWN := 0.72       # and by night
-const NIGHT_WIND_DOWN := 25.0  # the last seconds of the night: no more horde, day-rate stragglers, so dawn finds it mostly dealt with
+const NIGHT_WIND_DOWN := 45.0  # the last seconds of the night: no more horde, only a trickle of stragglers, so dawn finds it mostly dealt with
+const WIND_DOWN_SPAWN := 0.15  # that trickle, as a share of the normal spawn rate
 const MIDNIGHT_WAVE := 0.5      # the midnight wave, as a share of the nightfall horde
 
 # --- How fast the night gets harder -----------------------------------------

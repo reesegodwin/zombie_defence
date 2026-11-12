@@ -64,6 +64,7 @@ func _ready() -> void:
 	add_child(buildings_root)
 	rig.bounds = Rect2(-26, -16, 76, 52)   # room to look down every lane
 	hud.main = self
+	_bullseye_cursor()
 	settings = Settings.load_or_detect()
 	_apply_settings.call_deferred()
 	# Test scripts keep their own progress file, so they never touch the player's.
@@ -492,6 +493,30 @@ func _update_aim() -> void:
 	game.input_aim = aim
 
 
+## Over the battlefield the cursor is a bullseye: red and white rings with
+## a dark edge so it shows on snow and on dirt, and a dot in the middle where
+## you're aiming. (Menus and buttons keep the normal arrow.)
+func _bullseye_cursor() -> void:
+	var size := 32
+	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	var c := (size - 1) / 2.0
+	# Rings from the outside in: [outer radius, colour].
+	var rings := [[15.0, Color(0.1, 0.05, 0.05)], [13.8, Color(0.86, 0.12, 0.1)], [10.6, Color(0.97, 0.95, 0.9)],
+		[8.0, Color(0.86, 0.12, 0.1)], [5.0, Color(0.97, 0.95, 0.9)], [2.6, Color(0.86, 0.12, 0.1)]]
+	for y in size:
+		for x in size:
+			var d := Vector2(x - c, y - c).length()
+			var col := Color(0, 0, 0, 0)
+			for r in rings:
+				# Soft edges: blend each ring in over its last pixel.
+				var k := clampf(r[0] + 0.5 - d, 0.0, 1.0)
+				if k > 0.0:
+					col = col.lerp(r[1], k) if col.a > 0.0 else Color(r[1].r, r[1].g, r[1].b, k)
+			img.set_pixel(x, y, col)
+	Input.set_custom_mouse_cursor(ImageTexture.create_from_image(img), Input.CURSOR_CROSS, Vector2(c, c))
+	hud.field.mouse_default_cursor_shape = Control.CURSOR_CROSS
+
+
 ## WASD (or the arrows): you walk, up the screen for W. Once you've fallen,
 ## the keys move the view instead.
 func _keyboard_walk(dt: float, live: bool) -> void:
@@ -726,7 +751,7 @@ func field_input(event: InputEvent) -> void:
 		var hs := survivor_at(event.position)
 		if hs != hover_survivor:
 			hover_survivor = hs
-			hud.field.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if hs >= 0 else Control.CURSOR_ARROW
+			hud.field.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if hs >= 0 else Control.CURSOR_CROSS
 		if placing != "":
 			var gp := _grid(event.position)
 			_show_building_preview(gp, game.can_build_at(placing, gp.x, gp.y).has("ok"))

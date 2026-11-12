@@ -2869,7 +2869,8 @@ func update_director(dt: float) -> void:
 	var winding := is_night() and D.CYCLE - cycle_pos() < D.NIGHT_WIND_DOWN and not last_night
 	if winding:
 		horde_left = 0
-	var rate: float = spawn_rate(time) * (D.NIGHT_SPAWN if last_night or (is_night() and not winding) else D.DAY_SPAWN) * (1.0 + D.HEAT_SPAWN * heat) * D.LEVELS[level - 1].get("spawn", 1.0)
+	var share: float = D.NIGHT_SPAWN if last_night or (is_night() and not winding) else (D.WIND_DOWN_SPAWN if winding else D.DAY_SPAWN)
+	var rate: float = spawn_rate(time) * share * (1.0 + D.HEAT_SPAWN * heat) * D.LEVELS[level - 1].get("spawn", 1.0)
 	if evac >= 0.0:
 		rate += EVAC_HORDE
 	if in_lull() and evac < 0.0:
