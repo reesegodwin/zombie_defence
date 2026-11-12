@@ -17,10 +17,12 @@ extends Resource
 @export var reach := 13.0                ## Effective range, in tiles. Bullets fly on as far as they go, but past half of this the aim gets worse.
 @export var accuracy_falloff := 1.0      ## How quickly aim worsens with distance (0: holds its aim at any distance).
 @export var knockback := 0.04            ## How far a hit shoves the zombie back.
+@export var bullet_speed := 70.0         ## How fast its bullets fly, metres a second.
 @export var magazine := 15               ## Shots before a reload.
 @export var reload_seconds := 1.2        ## How long a reload takes.
 @export_group("Presentation")
 @export var barrel_length := 0.45        ## Length of the gun model, in metres.
+@export var muzzle_reach := 0.9          ## How far in front of the shooter the barrel ends (where shots come out), metres. Measured off the model.
 @export var sound := "gun"               ## gun, smg, shotgun, rifle or launch.
 @export var slot_label := "PST"          ## Short text shown in inventory slots.
 
@@ -31,6 +33,7 @@ func to_dict() -> Dictionary:
 		"spread": spread, "range": reach, "pellets": pellets, "pierce": pierce, "knock": knockback,
 		"len": barrel_length, "sound": sound, "short": slot_label,
 		"mag": magazine, "reload": reload_seconds, "falloff": accuracy_falloff,
+		"bullet_speed": bullet_speed, "muzzle": muzzle_reach,
 	}
 	if splash_radius > 0.0:
 		d["splash"] = splash_radius

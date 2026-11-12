@@ -41,8 +41,45 @@ func _unit_checks() -> void:
 	z["x"] = g.crew[0]["x"]; z["y"] = 10.0
 	for i in 5:
 		g.fire(g.crew[0], z["x"], z["y"], 1.0)
+		_fly(g)
 	check(z["hp"] <= 0, "five pistol shots kill a walker")
 	check(g.kills == 1, "kills are counted")
+
+	# Bullets fly: bt_out of the end of the barrel, taking time to get there.
+	var gb = Game.new()
+	var bt_sh: Dictionary = gb.crew[0]
+	var bt_tz: Dictionary = gb.spawn_zombie("walker", 100.0, 0.0)
+	bt_tz["x"] = bt_sh["x"]; bt_tz["y"] = bt_sh["y"] - 5.0
+	var bt_hp_b: float = bt_tz["hp"]
+	gb.fire(bt_sh, bt_tz["x"], bt_tz["y"], 1.0)
+	var bt_b0: Dictionary = gb.bullets[0]
+	var bt_out := Vector2(bt_b0["x"] - bt_sh["x"], bt_b0["y"] - bt_sh["y"])
+	check(bt_out.length() > 0.7 and bt_out.length() < 1.0 and bt_out.normalized().dot(Vector2(0, -1)) > 0.99, "a bullet starts at the end of the barrel, not the body (%.2f m out)" % bt_out.length())
+	check(absf(bt_b0["h"] - (D.DECK_H + Game.MUZZLE_UP)) < 0.01, "at gun height, up on the walkway")
+	check(bt_tz["hp"] == bt_hp_b, "it hasn't hit anything the moment it's fired")
+	gb.update_bullets(0.03)
+	check(bt_tz["hp"] == bt_hp_b and gb.bullets.size() == 1, "nor a moment later: it's still on its way")
+	_fly(gb)
+	for k in 4:   # (a stray one can miss)
+		gb.fire(bt_sh, bt_tz["x"], bt_tz["y"], 1.0)
+		_fly(gb)
+	check(bt_tz["hp"] < bt_hp_b and gb.bullets.is_empty(), "then it lands")
+	# A rifle round passes through several, and never hits the same one twice.
+	gb.crew[0]["weapon"] = "rifle"
+	gb.zombies.clear()
+	var bt_line: Array = []
+	for k in 4:
+		var lz: Dictionary = gb.spawn_zombie("walker", 100.0, 0.0)
+		lz["x"] = bt_sh["x"]; lz["y"] = bt_sh["y"] - 6.0 - k * 1.2
+		bt_line.append(lz)
+	var bt_hp0: float = bt_line[0]["hp"]
+	gb.fire(bt_sh, bt_sh["x"], bt_sh["y"] - 8.0, 1.0)
+	var bt_steps := 0
+	while not gb.bullets.is_empty() and bt_steps < 500:
+		gb.update_bullets(0.004)   # tiny bt_steps: each walker crossed many times over
+		bt_steps += 1
+	var bt_hp_line: float = bt_line[0]["hp"]
+	check(bt_line[0]["hp"] < bt_hp0 and bt_line.all(func(lz): return absf(lz["hp"] - bt_hp_line) < 0.01), "a rifle round passes through the line, each hit exactly once (%s)" % str(bt_line.map(func(lz): return snapped(lz["hp"], 0.1))))
 
 	# Walking with WASD: you go where you're steered, round buildings, and
 	# never out past the walls or fence.
@@ -76,6 +113,7 @@ func _unit_checks() -> void:
 	farz["x"] = gr.crew[0]["x"]; farz["y"] = gr.crew[0]["y"] - rw["range"] * 2.5
 	for i in 6:
 		gr.fire(gr.crew[0], farz["x"], farz["y"], 1.0)
+		_fly(gr)
 	check(farz["hp"] <= 0, "a rifle shot kills a walker well past its listed reach")
 	var gp = Game.new()
 	var hits := 0
@@ -84,6 +122,7 @@ func _unit_checks() -> void:
 		pz["x"] = gp.crew[0]["x"]; pz["y"] = gp.crew[0]["y"] - pw["range"] * 4.0
 		var hp0: float = pz["hp"]
 		gp.fire(gp.crew[0], pz["x"], pz["y"], 1.0)
+		_fly(gp)
 		if pz["hp"] < hp0:
 			hits += 1
 		gp.zombies.clear()
@@ -100,7 +139,7 @@ func _unit_checks() -> void:
 	you["aim"] = atan2(9.0 - you["y"], 16.0 - you["x"]) + 1.2   # looking well away
 	var want := atan2(za["y"] - you["y"], za["x"] - you["x"])
 	g.update_crew(0.016)
-	check(absf(angle_difference(you["aim"], want)) > 0.3 and g.tracers.is_empty(), "swinging onto a new target takes time, and nobody fires till lined up")
+	check(absf(angle_difference(you["aim"], want)) > 0.3 and g.bullets.is_empty(), "swinging onto a new target takes time, and nobody fires till lined up")
 	for i in 90:
 		g.update_crew(0.016)
 	check(absf(angle_difference(you["aim"], want)) < 0.1, "with auto-fire on you aim at your target, not the cursor")
@@ -248,6 +287,7 @@ func _unit_checks() -> void:
 	tz["x"] = 6.0; tz["y"] = 10.0
 	for i in 60:
 		g.update_turrets(0.1)
+		g.update_bullets(0.1)
 	check(tz["hp"] <= 0, "turrets shoot the dead on their own")
 	var g2 = Game.new()
 	var base_t: Dictionary = g2.turret_stats()
@@ -746,6 +786,7 @@ func _unit_checks() -> void:
 			var hp1: float = ez["hp"]
 			for k in 20:
 				g.fire(you0, ez["x"], ez["y"], 1.0)
+				_fly(g)
 			if ez["hp"] >= hp1:
 				reach_ok = false
 			g.zombies.clear()
@@ -1047,6 +1088,7 @@ func _unit_checks() -> void:
 	ez2["x"] = at.x - 4.0; ez2["y"] = at.y
 	for i in 60:
 		g.update_crew(0.1)
+		g.update_bullets(0.1)
 	check(ez2["hp"] <= 0, "and shoot what comes at their new wall")
 	g.walls[2]["hp"] = 100.0
 	g.scrap = 50
@@ -1223,3 +1265,11 @@ func _sim_run(limit: float) -> Dictionary:
 func _research_all(g) -> void:
 	for k in D.RESEARCH:
 		g.researched[k] = true
+
+
+## Lets every bullet in flight land (or fly off).
+func _fly(g) -> void:
+	var n := 0
+	while not g.bullets.is_empty() and n < 400:
+		g.update_bullets(0.02)
+		n += 1

@@ -39,6 +39,7 @@ var shots: Array = []
 var fires: Array = []
 var parts: Array = []
 var tracers: Array = []
+var bullets: Array = []      # shots in flight (see fire / update_bullets)
 var texts: Array = []
 var traps: Array = []
 var storage := {"cap": 8, "items": []}
@@ -1097,7 +1098,12 @@ func auto_target(s: Dictionary, rng: float) -> Variant:
 	return best
 
 
-const MUZZLE_H := 29.0  # pixels above the ground: walkway plus shoulder height
+const BULLET_SPEED := 70.0        # metres a second (a gun can set its own)
+const BULLETS_MAX := 400           # in flight at once; past that the oldest go
+const BULLET_AIM_H := 1.05         # bullets drop toward this height at the aimed distance (a chest)
+const MUZZLE_UP := 1.41            # the muzzle's height above a shooter's feet
+const MUZZLE_SIDE := -0.05         # and how far it's off to the side of their aim
+const TURRET_MUZZLE := Vector2(0.88, 2.0)   # a turret's: forward, height
 const SHOT_MAX := 90.0  # how far a bullet flies (the whole map: no range cap)
 const AUTO_REACH := 1.5 # auto-fire takes on targets out to this many times a gun's reach
 const AUTO_REACH_STEADY := 3.0   # (or this, for a gun that holds its aim, like the rifle)
@@ -1122,42 +1128,85 @@ func fire(s: Dictionary, tx: float, ty: float, dmg_mul: float, w = null) -> void
 	s["flash"] = 0.06
 	s["recoil"] = 0.1
 	sound.emit(w["sound"])
-	var dist := Vector2(tx - s["x"], ty - s["y"]).length()
+	var mz := muzzle_point(s, w, ang)
+	var dist := Vector2(tx - mz.x, ty - mz.z).length()
+	if dist > 0.3:
+		ang = atan2(ty - mz.z, tx - mz.x)   # from the barrel's end, so a true shot meets the mark
 	var wide := spread_mul(w, dist) * (2.0 - D.skill_fx(s, "aim"))
 	if w.has("splash"):
 		# Lobbed: further out it lands wider of the mark, and long or short.
 		var ga: float = ang + (randf() * 2.0 - 1.0) * w["spread"] * wide
 		var d := dist * (1.0 + (randf() * 2.0 - 1.0) * 0.06 * (wide - 1.0))
-		shots.append({"kind": "grenade", "x0": s["x"], "y0": s["y"], "x1": s["x"] + cos(ga) * d, "y1": s["y"] + sin(ga) * d,
+		shots.append({"kind": "grenade", "x0": mz.x, "y0": mz.z, "h0": mz.y, "x1": mz.x + cos(ga) * d, "y1": mz.z + sin(ga) * d,
 			"t": 0.0, "dur": 0.25 + d / 12.0, "dmg": w["dmg"] * dmg_mul, "splash": w["splash"]})
 		return
+	# Real bullets: out of the barrel, flying on until they hit (see update_bullets).
+	# They drop from the muzzle toward a body's chest height at the aimed distance.
+	var drop := (BULLET_AIM_H - mz.y) / maxf(dist, 1.0)
+	var width: float = 1.0 if w["pellets"] > 1 else (2.4 if s.get("weapon", "") == "rifle" else 1.6)
 	for p in int(w["pellets"]):
 		var a: float = ang + (randf() * 2.0 - 1.0) * w["spread"] * wide
-		var dx := cos(a)
-		var dy := sin(a)
+		bullets.append({"x": mz.x, "y": mz.z, "h": mz.y, "drop": drop, "dx": cos(a), "dy": sin(a),
+			"speed": w.get("bullet_speed", BULLET_SPEED) * randf_range(0.95, 1.05), "flown": 0.0,
+			"dmg": w["dmg"] * dmg_mul, "pierce": int(w["pierce"]), "knock": w["knock"], "hit": {}, "w": width})
+	if bullets.size() > BULLETS_MAX:
+		bullets = bullets.slice(bullets.size() - BULLETS_MAX)
+
+
+## Where a shot leaves the gun (x, height, y in metres): the end of the
+## barrel, measured off the models (survivor.gd's muzzle, turret.gd's).
+static func muzzle_point(s: Dictionary, w: Dictionary, ang: float) -> Vector3:
+	var fwd := Vector2(cos(ang), sin(ang))
+	var side := Vector2(-fwd.y, fwd.x)
+	var p := Vector2(s["x"], s["y"])
+	if not s.has("is_player"):
+		# A turret: the bore, up on its tower.
+		p += fwd * TURRET_MUZZLE.x
+		return Vector3(p.x, TURRET_MUZZLE.y, p.y)
+	p += fwd * w.get("muzzle", 0.9) + side * MUZZLE_SIDE
+	var ground := D.DECK_H if on_deck(Vector2(s["x"], s["y"])) else 0.0
+	return Vector3(p.x, ground + MUZZLE_UP, p.y)
+
+
+## Moves every bullet in flight; each hits the zombies in its path in turn,
+## up to its pierce, and flies on until it's spent.
+func update_bullets(dt: float) -> void:
+	for b in bullets:
+		var step: float = b["speed"] * dt
+		var dx: float = b["dx"]
+		var dy: float = b["dy"]
 		var hits: Array = []
 		for z in zombies:
-			if z["hp"] <= 0:
+			if z["hp"] <= 0 or b["hit"].has(z["id"]):
 				continue
-			var rx: float = z["x"] - s["x"]
-			var ry: float = z["y"] - s["y"]
+			var rx: float = z["x"] - b["x"]
+			var ry: float = z["y"] - b["y"]
 			var t := rx * dx + ry * dy
-			if t <= 0 or t > SHOT_MAX:
+			if t < -0.3 or t > step:
 				continue
 			if absf(rx * dy - ry * dx) < ZT(z["type"])["r"] + 0.1:
 				hits.append([t, z])
 		hits.sort_custom(func(a1, b1): return a1[0] < b1[0])
-		var hit := hits.slice(0, int(w["pierce"]))
-		for h in hit:
+		var moved := step
+		for h in hits:
 			var z: Dictionary = h[1]
-			damage(z, w["dmg"] * dmg_mul)
+			b["hit"][z["id"]] = true
+			damage(z, b["dmg"])
 			if z["type"] != "brute":
-				knock_back(z, w["knock"])
+				knock_back(z, b["knock"])
 			burst(z["x"], z["y"], 2, {"colors": [Color("6a2a22"), Color("8a3a2c")], "spread": 1.0, "up": 60.0, "life": 0.35, "size": 2.0, "z": 16.0})
-		var ln: float = hit[-1][0] if hit.size() > 0 else maxf(dist + 4.0, w["range"])
-		var h2: float = 17.0 * ZT(hit[-1][1]["type"])["scale"] if hit.size() > 0 else 0.0
-		tracers.append({"x1": s["x"], "y1": s["y"], "h1": MUZZLE_H, "x2": s["x"] + dx * ln, "y2": s["y"] + dy * ln, "h2": h2,
-			"life": 0.07, "w": 1.0 if w["pellets"] > 1 else (2.4 if s.get("weapon", "") == "rifle" else 1.6)})
+			b["pierce"] -= 1
+			if b["pierce"] <= 0:
+				moved = maxf(0.0, h[0])
+				b["done"] = true
+				break
+		b["x"] += dx * moved
+		b["y"] += dy * moved
+		b["flown"] += moved
+		b["h"] = maxf(0.15, b["h"] + b["drop"] * moved)
+		if b["flown"] >= SHOT_MAX:
+			b["done"] = true
+	bullets = bullets.filter(func(b): return not b.has("done"))
 
 
 ## Turns a shooter's aim toward want at rate (radians a second). True once
@@ -2923,7 +2972,7 @@ func apply_live(id: String, lv: int) -> bool:
 # zombie inside is after, which turret someone is repairing, who's out
 # scavenging) are saved as ids and linked up again on loading. What's only for
 # show (particles, tracers, floating text) isn't kept.
-const _NOT_SAVED := ["parts", "tracers", "texts", "input_aim", "input_firing", "input_auto", "shake", "death_mul", "wall"]
+const _NOT_SAVED := ["parts", "tracers", "bullets", "texts", "input_aim", "input_firing", "input_auto", "shake", "death_mul", "wall"]
 const SAVE_VERSION := 1
 
 
@@ -3132,6 +3181,7 @@ func advance_level() -> void:
 	fires.clear()
 	parts.clear()
 	tracers.clear()
+	bullets.clear()
 	texts.clear()
 	traps.clear()
 	turrets.clear()
@@ -3221,5 +3271,6 @@ func step(dt: float) -> void:
 	update_health(dt)
 	update_crew(dt)
 	update_turrets(dt)
+	update_bullets(dt)
 	update_shots(dt)
 	update_parts(dt)

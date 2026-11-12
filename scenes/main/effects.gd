@@ -41,7 +41,7 @@ func clear() -> void:
 
 func sync(g) -> void:
 	_sync_parts(g.parts)
-	_sync_tracers(g.tracers)
+	_sync_tracers(g.bullets)
 	_sync_projectiles(g.shots)
 	_sync_fires(g.fires)
 
@@ -74,24 +74,32 @@ func _sync_parts(parts: Array) -> void:
 	b.visible_instance_count = nb
 
 
+## Bullets in flight, drawn as short glowing streaks trailing back toward
+## the gun they came from.
 func _sync_tracers(list: Array) -> void:
 	var mm: MultiMesh = tracers.multimesh
 	var n := 0
-	for t in list:
+	for b in list:
 		if n >= mm.instance_count:
 			break
-		var p1 := Vector3(t["x1"], t["h1"] * height_scale + D.DECK_H * 0.0, t["y1"])
-		var p2 := Vector3(t["x2"], t["h2"] * height_scale + Terrain.sample(t["x2"], t["y2"]), t["y2"])
-		var dir := p2 - p1
+		var tail: float = minf(STREAK, b["flown"])
+		if tail < 0.05:
+			tail = 0.05
+		var head := Vector3(b["x"], b["h"] + Terrain.sample(b["x"], b["y"]), b["y"])
+		var bx: float = b["x"] - b["dx"] * tail
+		var by: float = b["y"] - b["dy"] * tail
+		var back := Vector3(bx, b["h"] - b["drop"] * tail + Terrain.sample(bx, by), by)
+		var dir := head - back
 		var length := dir.length()
-		if length < 0.01:
-			continue
-		var w: float = t["w"] * 0.022
+		var w: float = b["w"] * 0.045
 		var basis := Basis.looking_at(dir / length, Vector3.UP) * Basis.from_scale(Vector3(w, w, length))
-		mm.set_instance_transform(n, Transform3D(basis, (p1 + p2) * 0.5))
-		mm.set_instance_color(n, Color(1, 0.85, 0.5, clampf(t["life"] / 0.07, 0.0, 1.0)))
+		mm.set_instance_transform(n, Transform3D(basis, (head + back) * 0.5))
+		mm.set_instance_color(n, Color(1.0, 0.78, 0.38, 1.0))
 		n += 1
 	mm.visible_instance_count = n
+
+
+const STREAK := 1.2   # metres of glowing streak behind each bullet
 
 
 func _sync_projectiles(shots: Array) -> void:
@@ -101,7 +109,7 @@ func _sync_projectiles(shots: Array) -> void:
 		if n >= mm.instance_count:
 			break
 		var k: float = clampf(sh["t"] / sh["dur"], 0.0, 1.0)
-		var h := 1.7 * (1.0 - k) + sin(k * PI) * 3.2
+		var h: float = sh.get("h0", 1.7) * (1.0 - k) + sin(k * PI) * 3.2
 		var pos := Vector3(lerpf(sh["x0"], sh["x1"], k), h + Terrain.sample(sh["x1"], sh["y1"]) * k, lerpf(sh["y0"], sh["y1"], k))
 		var spin := Basis(Vector3.RIGHT, k * 14.0).scaled(Vector3.ONE * 0.13)
 		mm.set_instance_transform(n, Transform3D(spin, pos))

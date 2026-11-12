@@ -69,7 +69,7 @@ mesh = SubResource("cube")
 [sub_resource type="MultiMesh" id="mm_tracers"]
 transform_format = 1
 use_colors = true
-instance_count = 300
+instance_count = 400
 visible_instance_count = 0
 mesh = SubResource("cube")
 
