@@ -381,10 +381,15 @@ func _unit_checks() -> void:
 		g.zombies.clear()
 		if g.evac_go >= 0.0:
 			break
-	g.walls[0]["hp"] = 0.0
-	g.walls[0]["breached"] = true
+	var warned := [0]
+	var count_warn := func(msg, _kind): if "wall is down" in msg: warned[0] += 1
+	g.toast.connect(count_warn)
+	g.walls[0]["hp"] = 1.0
+	g.hit_wall(0, 7.0, 50.0)
 	g.step(0.1)
-	check(not g.over, "a wall falling once everyone's in the truck doesn't end the run")
+	g.toast.disconnect(count_warn)
+	check(not g.over and g.walls[0]["breached"], "a wall falling once everyone's in the truck doesn't end the run")
+	check(warned[0] == 0, "and there's no 'wall is down' warning then")
 	for i in 400:
 		g.step(0.1)
 		g.zombies.clear()   # (nobody's shooting in this test)

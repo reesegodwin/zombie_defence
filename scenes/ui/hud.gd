@@ -667,7 +667,7 @@ func update_hud() -> void:
 	if main.started:
 		if g.time < 10:
 			h = "Auto-fire is on: you shoot whatever is closest to the wall." if g.input_auto else "Hold the left mouse button to shoot. Your aim snaps to the zombie under the cursor."
-		elif g.any_breach():
+		elif g.any_breach() and g.evac_go < 0.0:
 			h = "A wall is down and they're getting in. Repair it to a quarter of its strength to close the gap. If everyone in the base falls, the run is over."
 		elif main.throwing >= 0:
 			h = "Click where to throw it. Whoever's on the nearest wall throws. Right-click or Esc to cancel."

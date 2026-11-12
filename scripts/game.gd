@@ -558,7 +558,8 @@ func hit_wall(side: int, u: float, dmg: float) -> void:
 		# The gap: where it gave way, kept clear of the wall's ends.
 		w["gap"] = clampf(u, L["u0"] + D.GAP_HALF, L["u1"] - D.GAP_HALF)
 		shake = 1.0
-		toast.emit("The %s wall is down! They're getting in. Shoot them, or repair the gap to close it." % L["name"].to_lower(), "danger")
+		if evac_go < 0.0:   # (no warning once everyone's in the truck and away)
+			toast.emit("The %s wall is down! They're getting in. Shoot them, or repair the gap to close it." % L["name"].to_lower(), "danger")
 		for k in 6:
 			var p := lane_point(side, u + (randf() - 0.5) * 3.0, D.WALL_Y)
 			burst(p.x, p.y, 12, {"colors": wall_mat()["chips"], "spread": 3.0, "up": 180.0, "life": 1.0, "size": 4.0, "z": 18.0})
