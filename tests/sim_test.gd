@@ -533,6 +533,31 @@ func _unit_checks() -> void:
 		finds_eyed += int(lr["weapon"] != "") + int(lr["food"] > 0) + lr["throwables"].size()
 	check(finds_eyed > finds_plain * 1.2, "Scavenger's eye finds more (%d finds against %d)" % [finds_eyed, finds_plain])
 	g = Game.new()
+	var gf = Game.new()
+	gf.apply_meta({"levels": {"kit_survivor": 3}, "level": 1})
+	check(D.META["kit_survivor"]["costs"].size() == 3 and gf.crew.size() == 4, "A friend goes to level 3: three friends start with you (%d crew)" % gf.crew.size())
+	var gbig = Game.new()
+	for i in 20:
+		gbig.add_survivor(gbig.free_name(), "pistol", false)
+	gbig.layout_crew()
+	var names := {}
+	var spaced := true
+	for c in gbig.crew:
+		names[c["name"]] = true
+		for o in gbig.crew:
+			if o != c and Vector2(c["x"], c["y"]).distance_to(Vector2(o["x"], o["y"])) < 0.6:
+				spaced = false
+	check(gbig.crew.size() == 21 and names.size() == 21, "no cap on survivors, and nobody shares a name (%d)" % gbig.crew.size())
+	check(spaced, "a big crew spreads out (the front wall, then the yard) instead of standing in each other")
+	gbig.radio = {"x": 5.0, "y": 22.0, "hp": 100.0}
+	gbig.first_stranger_done = true
+	var n_big: int = gbig.crew.size()
+	for i in 4000:
+		gbig.update_arrivals(1.0)
+		if gbig.crew.size() > n_big:
+			break
+	check(gbig.crew.size() > n_big, "the radio still brings people in with a big crew")
+
 	g.apply_meta({"levels": {"scav_eye": 2}})
 	check(g.scav_eye == 2, "Scavenger's eye bought at the camp carries into a run")
 	# Bought in the middle of a run, your skills take hold at once; the kit waits.
@@ -769,7 +794,7 @@ func _unit_checks() -> void:
 	g.apply_meta({"levels": all, "heat": 2})
 	var me: Dictionary = g.crew[0]
 	check(me["skills"].get("aim", 0) == 3 and me["skills"].get("repair", 0) == 3, "bought skills are yours from the start")
-	check(me["weapon"] == "smg" and g.scrap == base_scrap + 100 and g.crew.size() == 2, "the starting kit: SMG, scrap and a friend")
+	check(me["weapon"] == "smg" and g.scrap == base_scrap + 100 and g.crew.size() == 1 + D.META["kit_survivor"]["costs"].size(), "the starting kit: SMG, scrap and friends")
 	check(g.storage["items"].filter(func(it): return it["key"] == "spikes").size() == 4, "and spike strips")
 	check(g.researched.has("turrets") and g.researched.has("firearms") and g.research_count == 0, "blueprints start researched (and don't count as research done)")
 	check(g.walls[0]["stage"] == 1 and g.walls[2]["max_hp"] == roundf(D.WALL_TIERS[1]["hp"] * 1.3), "wooden walls, made tougher")

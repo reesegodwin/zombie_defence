@@ -72,7 +72,6 @@ const LULL_EVERY := [50.0, 75.0]      # seconds from the end of one lull to the 
 const LULL_LENGTH := [25.0, 35.0]
 const LULL_RATE := 0.2                # zombies a second during a lull (one every 5 s)
 
-const MAX_CREW := 5
 const WIRE_MAX := 24.0
 const STORAGE_MAX := 24
 
@@ -441,7 +440,7 @@ const META := {
 	"kit_smg": {"cat": 1, "name": "SMG", "costs": [40], "desc": "Start with an SMG instead of the pistol."},
 	"kit_traps": {"cat": 1, "name": "Spike strips", "costs": [20, 30], "desc": "Start with two spike strips in storage per level."},
 	"kit_food": {"cat": 1, "name": "Tinned food", "costs": [10, 20], "desc": "Start with 4 more food per level."},
-	"kit_survivor": {"cat": 1, "name": "A friend", "costs": [60], "desc": "Start with a survivor already on the wall beside you."},
+	"kit_survivor": {"cat": 1, "name": "A friend", "costs": [60, 90, 130], "desc": "Start with one more survivor already on the wall beside you per level."},
 	"bp_firearms": {"cat": 2, "name": "SMG", "costs": [25], "research": "firearms", "desc": "Start every run with the SMG researched."},
 	"bp_spikes": {"cat": 2, "name": "Spike strips", "costs": [15], "research": "spikes", "desc": "Start every run with Spike strips researched."},
 	"bp_carpentry": {"cat": 2, "name": "Carpentry", "costs": [35], "research": "carpentry", "desc": "Start every run with Carpentry researched."},

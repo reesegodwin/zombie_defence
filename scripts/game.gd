@@ -279,6 +279,9 @@ func layout_crew() -> void:
 			continue
 		s["side"] = 0
 		s["u"] = _free_front_spot(s)
+		if s["u"] < 0.0:
+			# The front walkway's full: a spot in the yard instead.
+			_take_spot(s, _free_yard_spot(s))
 		if s["state"] == "wall":
 			var p := station_point(s)
 			s["x"] = p.x
@@ -287,15 +290,37 @@ func layout_crew() -> void:
 
 func _free_front_spot(me: Dictionary) -> float:
 	var mid := (D.X0 + D.X1) / 2.0
-	for off in D.CREW_SLOTS:
+	var offs: Array = D.CREW_SLOTS.duplicate()
+	for k in range(1, 12):
+		offs.append(-1.5 * k + 0.75)   # past the usual spots: fill in every metre and a half
+		offs.append(1.5 * k - 0.75)
+	for off in offs:
 		var u := clampf(mid + off, D.X0 + 0.6, D.X1 - 0.6)
 		var taken := false
 		for o in crew:
-			if o != me and o["side"] == 0 and absf(o["u"] - u) < 1.2:
+			if o != me and o["side"] == 0 and not o.has("post") and absf(o["u"] - u) < 1.2:
 				taken = true
 		if not taken:
 			return u
-	return mid + randf_range(-4.0, 4.0)
+	return -1.0   # full
+
+
+## A clear spot in the yard, away from everyone else.
+func _free_yard_spot(me: Dictionary) -> Vector2:
+	var y := D.WALK_Y + 2.0
+	while y < D.BASE_Y1 - 1.0:
+		var x := D.BASE_X0 + 1.5
+		while x < D.BASE_X1 - 1.0:
+			var p := Vector2(x, y)
+			var clear := walkable(p)
+			for o in crew:
+				if o != me and Vector2(o["x"], o["y"]).distance_to(p) < 1.0:
+					clear = false
+			if clear:
+				return p
+			x += 1.2
+		y += 1.2
+	return D.HUB
 
 
 ## Where a survivor stands on their walkway.
@@ -489,7 +514,16 @@ func free_name() -> String:
 	for n in D.NAMES:
 		if not used.has(n):
 			pool.append(n)
-	return pool.pick_random() if pool.size() > 0 else "Sam"
+	if pool.size() > 0:
+		return pool.pick_random()
+	# Everyone's taken: the same names again, numbered.
+	var n := 2
+	while true:
+		for nm in D.NAMES:
+			if not used.has("%s %d" % [nm, n]):
+				return "%s %d" % [nm, n]
+		n += 1
+	return "Sam"
 
 
 # A survivor's effective numbers, from their role and the gear they carry.
@@ -1911,7 +1945,7 @@ func _roll_loot(site_key: String, who = null) -> Dictionary:
 		r["food"] = int(round(randi_range(2, 5) * sqrt(forage) * research_mul("food_yield")))
 	elif researched.has("foraging"):
 		r["food"] = int(round(1 * research_mul("food_yield")))   # foraging: never empty-handed
-	if randf() < site["survivor_chance"] * luck and crew.size() < D.MAX_CREW:
+	if randf() < site["survivor_chance"] * luck:
 		r["survivor"] = free_name()
 	return r
 
@@ -2126,8 +2160,6 @@ var first_stranger_done := false
 
 
 func update_arrivals(dt: float) -> void:
-	if crew.size() >= D.MAX_CREW:
-		return
 	# The radio station: now and then someone hears it and comes.
 	if radio != null and first_stranger_done and randf() < dt / D.RADIO_EVERY:
 		_stranger_arrives("Someone heard your radio. They're coming down the mountain pass…")
@@ -2568,7 +2600,7 @@ func auto_shop() -> void:
 			want = "wall_wood"
 		elif can_buy("turret").has("ok"):
 			want = "turret"
-		elif can_buy("radio").has("ok") and crew.size() < D.MAX_CREW:
+		elif can_buy("radio").has("ok") and crew.size() < 6:   # (the bot stops at six)
 			want = "radio"
 		elif can_buy("wall_stone").has("ok"):
 			want = "wall_stone"
@@ -2847,7 +2879,7 @@ func apply_meta(m: Dictionary) -> void:
 		you["weapon"] = "smg"
 	for i in 2 * lv.get("kit_traps", 0):
 		add_to_storage("spikes")
-	if lv.get("kit_survivor", 0) > 0:
+	for i in lv.get("kit_survivor", 0):
 		add_survivor(free_name(), "pistol", false)
 	_changed()
 
