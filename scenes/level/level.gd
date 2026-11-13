@@ -61,7 +61,12 @@ func apply_base(key: String) -> void:
 			var n := get_node_or_null(nm) as Node3D
 			if n:
 				_home[nm] = n.transform
+	var prev_base := base
 	base = key
+	# The ground fog keeps clear of the buildings: lay it again round where
+	# they stand now (not needed the first time, at the outpost it was made for).
+	if ground_fog != null and key != prev_base and not (prev_base == "" and key == "outpost"):
+		ground_fog.set_quality(ground_fog.quality)
 	var props: Dictionary = Bases.BASES[key]["props"]
 	var home_props: Dictionary = Bases.BASES["outpost"]["props"]
 	for prop in PROP_NODES:
