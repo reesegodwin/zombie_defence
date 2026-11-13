@@ -30,6 +30,7 @@ func set_level(open_at: Array) -> void:
 	for side in _lit.size():   # a new base: every spotlight dark again
 		_lit[side] = false
 		_on_t[side] = 0.0
+	_seen_frames = 0
 	_apply_spots(0.0)
 
 
@@ -146,10 +147,12 @@ func spots_enabled(on: bool) -> void:
 ## Called every frame with which lanes the dead are coming down: a lane's
 ## lights come on the first time, and stay on.
 func update_lights(live: Array, dt: float) -> void:
+	_seen_frames += 1
 	for side in 3:
 		if live[side] and not _lit[side]:
 			_lit[side] = true
-			_on_t[side] = 0.0
+			# On already at the start of a run; a lane waking up later fades up.
+			_on_t[side] = 0.0 if _seen_frames > 30 else 10.0
 		if _lit[side]:
 			_on_t[side] += dt
 	_apply_spots(dt)
@@ -159,9 +162,8 @@ func _apply_spots(_dt: float) -> void:
 	for side in 3:
 		var b := 0.0
 		if _lit[side]:
-			# A stuttering start, as if the generator's catching.
-			var t: float = _on_t[side]
-			b = 1.0 if t > 1.1 else (1.0 if fmod(t * 7.3, 1.0) > 0.45 else 0.15)
+			# A smooth fade up (no flicker).
+			b = smoothstep(0.0, 0.8, _on_t[side])
 		for sp in _spots[side]:
 			var full := lerpf(4.0, 12.0, _night) if sp == floodlight else lerpf(SPOT_DAY, SPOT_NIGHT, _night)
 			sp.light_energy = full * b
@@ -175,6 +177,7 @@ func _apply_spots(_dt: float) -> void:
 @onready var lanterns: Node3D = $Lanterns
 
 var _t := 0.0
+var _seen_frames := 0   # frames of lights updates since the level was set up
 
 
 func _ready() -> void:
