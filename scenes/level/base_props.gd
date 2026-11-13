@@ -731,6 +731,21 @@ static func _gate() -> ArrayMesh:
 	return k.mesh()
 
 
+## One leaf of the back gate (1.6 wide, hinged at x = 0, reaching out along
+## +x): a braced frame of planks.
+static func gate_leaf() -> ArrayMesh:
+	var k := _kit(0.4, 62)
+	for i in 6:
+		var x := 0.14 + i * 0.26
+		k.box(Vector3(x, 1.0, 0), Vector3(0.24, 1.8 - (i % 2) * 0.08, 0.06), PLANK.lerp(OLD_PLANK, k.rng.randf()))
+	for y in [0.35, 1.65]:
+		k.box(Vector3(0.82, y, 0.05), Vector3(1.6, 0.12, 0.05), LOG)
+	k.box(Vector3(0.82, 1.0, 0.05), Vector3(1.75, 0.1, 0.05), LOG, Vector3(0, 0, 0.72))   # the brace
+	for y in [0.4, 1.6]:
+		k.box(Vector3(0.05, y, 0.07), Vector3(0.18, 0.06, 0.03), Color(0.2, 0.2, 0.2))   # hinges
+	return k.mesh()
+
+
 # --- The front walkway (14 x 0.45 x 1.3, centred) -------------------------------
 static func _walkway(length := 14.0) -> ArrayMesh:
 	var h := length / 2.0

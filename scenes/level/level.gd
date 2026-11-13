@@ -47,6 +47,47 @@ func set_level(open_at: Array, def := {}) -> void:
 	apply_palette(def.get("palette", "green"))
 
 
+# --- The back gate ---------------------------------------------------------------
+# Two leaves hung on the gate posts. They swing outward on their own when
+# anyone comes up to the gate, or the truck, and close again behind them.
+const GATE_AT := Vector2(11.2, 28.0)
+const GATE_REACH := 3.6      # metres from the gate that open it (people)
+const GATE_REACH_TRUCK := 9.0
+var _leaves: Array = []      # [pivot, side (-1 left, 1 right)]
+var _gate_open := 0.0        # 0 shut .. 1 wide open
+
+
+func _build_gate_leaves() -> void:
+	var mesh := BaseProps.gate_leaf()
+	for side in [-1.0, 1.0]:
+		var pivot := Node3D.new()
+		pivot.position = Vector3(GATE_AT.x + side * 1.6, 0.0, GATE_AT.y + 0.05)
+		var mi := MeshInstance3D.new()
+		mi.mesh = mesh
+		mi.material_override = Culvert._material()
+		mi.scale = Vector3(-side, 1.0, 1.0)   # (each reaches in toward the middle)
+		pivot.add_child(mi)
+		add_child(pivot)
+		_leaves.append([pivot, side])
+
+
+## Opens the gate for anyone near it (people: points on the ground; the truck
+## from further off), and closes it after; called every frame (main.gd).
+func update_gate(people: Array, truck_at, dt: float) -> void:
+	if _leaves.is_empty():
+		_build_gate_leaves()
+	var want := 0.0
+	for p in people:
+		if p.distance_to(GATE_AT) < GATE_REACH:
+			want = 1.0
+	if truck_at != null and truck_at.distance_to(GATE_AT) < GATE_REACH_TRUCK:
+		want = 1.0
+	_gate_open = move_toward(_gate_open, want, dt * (1.6 if want > 0.0 else 0.8))
+	var swing := smoothstep(0.0, 1.0, _gate_open) * deg_to_rad(100.0)
+	for l in _leaves:
+		l[0].rotation.y = swing * l[1]   # both swing out, away from the yard
+
+
 # --- The base's yard and the country ----------------------------------------------
 const Bases = preload("res://scripts/bases.gd")
 ## Each prop in bases.gd and the node(s) it moves here.

@@ -486,6 +486,12 @@ func _process(dt: float) -> void:
 	_sync_scene(dt)
 	hud.field.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if pointing() else Control.CURSOR_CROSS
 	level.weather.follow(rig.position)
+	if started:
+		var people: Array = []
+		for c in game.crew:
+			if c["hp"] > 0.0 and not c["state"] in ["away", "aboard", "dead"]:
+				people.append(Vector2(c["x"], c["y"]))
+		level.update_gate(people, Vector2(truck.position.x, truck.position.z) if truck != null else null, dt)
 	_sync_bench_signs()
 	_sync_truck()
 	_set_mood()
