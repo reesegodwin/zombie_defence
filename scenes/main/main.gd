@@ -430,6 +430,10 @@ func toggle_sound() -> void:
 # --- Loop -------------------------------------------------------------------
 func _process(dt: float) -> void:
 	_clock += dt
+	if _press_t > 0.0:
+		_press_t -= dt
+		if _press_t <= 0.0:
+			_set_hand(false)   # ...and springs back
 	var live: bool = started and not paused and not hud.map_open() and not hud.research_open() and not hud.options_open() and not hud.camp_open() and not hud.saves_open()
 	if net.is_host():
 		live = started and not paused and not game.over   # friends are playing: menus don't stop the world
@@ -635,9 +639,9 @@ func _bullseye_cursor() -> void:
 	Input.set_custom_mouse_cursor(ImageTexture.create_from_image(blank), Input.CURSOR_CROSS, Vector2(1, 1))
 	hud.field.mouse_default_cursor_shape = Control.CURSOR_CROSS
 	# Everywhere else (buttons, menus, survivors): a chunky pixel-art hand.
-	var hand := ImageTexture.create_from_image(hand_cursor_image())
-	Input.set_custom_mouse_cursor(hand, Input.CURSOR_ARROW, HAND_TIP)
-	Input.set_custom_mouse_cursor(hand, Input.CURSOR_POINTING_HAND, HAND_TIP)
+	_hand_up = ImageTexture.create_from_image(hand_cursor_image())
+	_hand_down = ImageTexture.create_from_image(hand_cursor_image(true))
+	_set_hand(false)
 	var r := Reticle.new()
 	r.main = self
 	r.name = "Reticle"
@@ -683,19 +687,38 @@ const HAND_PX := 2
 const HAND_TIP := Vector2(9, 1)   # the fingertip: where it clicks
 
 
-static func hand_cursor_image() -> Image:
+## pressed: the hand pushed in (a click): down and right by its edge, a
+## shade darker, the edge gone.
+static func hand_cursor_image(pressed := false) -> Image:
 	var w: int = HAND[0].length() * HAND_PX
 	var h: int = HAND.size() * HAND_PX
 	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
 	var cols := {"B": Color(0.05, 0.05, 0.05), "W": Color(0.97, 0.97, 0.95), "D": Color(0.25, 0.25, 0.25, 0.9)}
+	if pressed:
+		cols = {"B": Color(0.05, 0.05, 0.05), "W": Color(0.78, 0.78, 0.76)}
+	var off := Vector2i(HAND_PX, HAND_PX) if pressed else Vector2i.ZERO
 	for y in HAND.size():
 		var row: String = HAND[y]
 		for x in row.length():
 			var ch := row[x]
 			if cols.has(ch):
-				img.fill_rect(Rect2i(x * HAND_PX, y * HAND_PX, HAND_PX, HAND_PX), cols[ch])
+				var r := Rect2i(Vector2i(x * HAND_PX, y * HAND_PX) + off, Vector2i(HAND_PX, HAND_PX)).intersection(Rect2i(0, 0, w, h))
+				if r.has_area():
+					img.fill_rect(r, cols[ch])
 	return img
+
+
+var _hand_up: Texture2D
+var _hand_down: Texture2D
+var _press_t := 0.0     # seconds left showing the pressed hand
+
+
+func _set_hand(pressed: bool) -> void:
+	var tex: Texture2D = _hand_down if pressed else _hand_up
+	# (Same click point both ways: pressed, the hand itself sits a pixel lower and to the right.)
+	Input.set_custom_mouse_cursor(tex, Input.CURSOR_ARROW, HAND_TIP)
+	Input.set_custom_mouse_cursor(tex, Input.CURSOR_POINTING_HAND, HAND_TIP)
 
 
 ## WASD (or the arrows): you walk, up the screen for W. Once you've fallen,
@@ -733,6 +756,10 @@ func _hide_cursor() -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]:
+		if _hand_down != null:
+			_set_hand(true)   # the hand presses in...
+			_press_t = 0.12
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_HIDDEN:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
