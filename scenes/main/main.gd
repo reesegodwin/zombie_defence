@@ -634,6 +634,10 @@ func _bullseye_cursor() -> void:
 	blank.fill(Color(0, 0, 0, 0))
 	Input.set_custom_mouse_cursor(ImageTexture.create_from_image(blank), Input.CURSOR_CROSS, Vector2(1, 1))
 	hud.field.mouse_default_cursor_shape = Control.CURSOR_CROSS
+	# Everywhere else (buttons, menus, survivors): a chunky pixel-art hand.
+	var hand := ImageTexture.create_from_image(hand_cursor_image())
+	Input.set_custom_mouse_cursor(hand, Input.CURSOR_ARROW, HAND_TIP)
+	Input.set_custom_mouse_cursor(hand, Input.CURSOR_POINTING_HAND, HAND_TIP)
 	var r := Reticle.new()
 	r.main = self
 	r.name = "Reticle"
@@ -642,6 +646,56 @@ func _bullseye_cursor() -> void:
 	tutorial.main = self
 	tutorial.name = "Tutorial"
 	hud.add_child(tutorial)   # last: over everything, never in the way of a click
+
+
+## The hand rather than the crosshair over the field: on a survivor, or while
+## choosing where to send someone or where to put a building.
+func pointing() -> bool:
+	return hover_survivor >= 0 or selected_id >= 0 or placing != ""
+
+
+## The pointing hand: B outline, W white, D the dark edge that gives it
+## depth (drawn down and to the right), each pixel HAND_PX screen pixels.
+const HAND := [
+	"....BB...........",
+	"...BWWB..........",
+	"...BWWBD.........",
+	"...BWWBD.........",
+	"...BWWBD.........",
+	"...BWWBBB........",
+	"...BWWBWWBBB.....",
+	"...BWWBWWBWWBB...",
+	".BBBWWBWWBWWBWBD.",
+	"BWWBWWWWWWWWBWWBD",
+	"BWWWBWWWWWWWWWWBD",
+	".BWWBWWWWWWWWWWBD",
+	"..BWWWWWWWWWWWWBD",
+	"..BWWWWWWWWWWWWBD",
+	"...BWWWWWWWWWWWBD",
+	"...BWWWWWWWWWWBD.",
+	"....BWWWWWWWWWBD.",
+	"....BWWWWWWWWWBD.",
+	".....BWWWWWWWBD..",
+	".....BBBBBBBBBD..",
+	"......DDDDDDDDD..",
+]
+const HAND_PX := 2
+const HAND_TIP := Vector2(9, 1)   # the fingertip: where it clicks
+
+
+static func hand_cursor_image() -> Image:
+	var w: int = HAND[0].length() * HAND_PX
+	var h: int = HAND.size() * HAND_PX
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var cols := {"B": Color(0.05, 0.05, 0.05), "W": Color(0.97, 0.97, 0.95), "D": Color(0.25, 0.25, 0.25, 0.9)}
+	for y in HAND.size():
+		var row: String = HAND[y]
+		for x in row.length():
+			var ch := row[x]
+			if cols.has(ch):
+				img.fill_rect(Rect2i(x * HAND_PX, y * HAND_PX, HAND_PX, HAND_PX), cols[ch])
+	return img
 
 
 ## WASD (or the arrows): you walk, up the screen for W. Once you've fallen,
@@ -909,7 +963,7 @@ func field_input(event: InputEvent) -> void:
 		var hs := survivor_at(event.position)
 		if hs != hover_survivor:
 			hover_survivor = hs
-			hud.field.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if hs >= 0 else Control.CURSOR_CROSS
+		hud.field.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if pointing() else Control.CURSOR_CROSS
 		if placing != "":
 			var gp := _grid(event.position)
 			_show_building_preview(gp, game.can_build_at(placing, gp.x, gp.y).has("ok"))
