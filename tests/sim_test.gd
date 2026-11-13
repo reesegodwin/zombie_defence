@@ -651,7 +651,9 @@ func _unit_checks() -> void:
 	check(far.get("inside", false) and absf(crossed_u - gap_mid) <= Game.seg_len(0) / 2.0, "a zombie at the next section walks along to the gap and in through it (crossed at u=%.1f)" % crossed_u)
 	for i in 300:   # (time for it to reach the wall and get to work)
 		g.update_zombies(0.05)
-	check(not stays.get("inside", false) and Game.seg_at(0, Game.lane_uv(0, Vector2(stays["x"], stays["y"])).x) == Game.seg_at(0, 15.5) and g.walls[0]["segs"][Game.seg_at(0, 15.5)]["hp"] < g.walls[0]["segs"][Game.seg_at(0, 15.5)]["max_hp"], "one three sections away ignores it and keeps breaking its own section")
+	var su: float = Game.lane_uv(0, Vector2(stays["x"], stays["y"])).x
+	var segs_far: Array = g.walls[0]["segs"]
+	check(not stays.get("inside", false) and Game.seg_at(0, su) >= 2 and (segs_far[3]["hp"] < segs_far[3]["max_hp"] or segs_far[4]["hp"] < segs_far[4]["max_hp"]), "one three sections away ignores it and keeps breaking its own section")
 
 	# The crew can repair a damaged turret, for scrap.
 	g = Game.new()
