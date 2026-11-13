@@ -3293,7 +3293,7 @@ func _pick_type(t: float) -> String:
 	var pb: float = minf(0.14, 0.03 + (t - D.BRUTES_FROM) / 2000.0) * mix.get("brute", 1.0) if t > D.BRUTES_FROM else 0.0
 	var pr: float = minf(0.35, 0.08 + (t - D.RUNNERS_FROM) / 700.0) * mix.get("runner", 1.0) if t > D.RUNNERS_FROM else 0.0
 	pr = minf(pr, 0.85 - pb)
-	var pf: float = minf(0.08, 0.02 + (t - D.BLOATERS_FROM) / 3000.0) * mix.get("bloater", 1.0) if t > D.BLOATERS_FROM else 0.0
+	var pf: float = minf(0.06, 0.015 + (t - D.BLOATERS_FROM) / 3500.0) * mix.get("bloater", 1.0) if t > D.BLOATERS_FROM else 0.0
 	if r > 1.0 - pf:
 		return "bloater"
 	if r < pb:

@@ -139,7 +139,7 @@ const BRUTES_FROM := 200.0            # and the first brutes
 const BLOATERS_FROM := 330.0          # and the first bloaters (they burst when they die)
 # A bloater bursting: everything within BLOAT_R metres is hurt, and the wall
 # section in front of it if it went up at the wall.
-const BLOAT := {"r": 2.2, "crew": 28.0, "zombies": 45.0, "wall": 70.0}
+const BLOAT := {"r": 2.2, "crew": 25.0, "zombies": 45.0, "wall": 55.0}
 
 # --- Scavenging, strangers, food -------------------------------------------
 const WALK_SPEED := 2.2                 # tiles per second, walking to and from the pass
