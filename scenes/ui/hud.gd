@@ -658,7 +658,7 @@ func update_hud() -> void:
 	if _grit_t <= 0.0 and grit_label != null:
 		_grit_t = 0.5
 		grit_label.text = "Grit %d   +%d" % [main.progress.grit, g.run_result()["total"]]
-	var you: Dictionary = g.crew[0]
+	var you: Dictionary = main.local_player() if main.local_player() != null else g.crew[0]
 	var wname: String = D.WEAPONS[you["weapon"]]["name"]
 	# Just your gun, and a word while it reloads (no round count).
 	if g.is_reloading(you):

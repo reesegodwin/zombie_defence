@@ -53,6 +53,7 @@ var placing := ""              # "turret" or "radio" while choosing where to bui
 var throwing := -1             # uid of the molotov or pipe bomb being aimed, or -1
 var settings                   # display settings (scripts/settings.gd)
 var tutorial                   # the highlight-and-arrow tutorial (scenes/ui/tutorial.gd)
+var net                        # co-op: hosting or joined (scripts/net.gd), or null playing alone
 var progress                   # Grit and camp upgrades (scripts/progress.gd)
 
 var _mouse_screen = null   # last cursor position over the battlefield
@@ -176,6 +177,13 @@ func _fade_to(a: float) -> void:
 
 
 ## The crew have arrived at the next level's base: clear away the old one.
+## Your own character (in co-op, the one with your network id).
+func local_player():
+	if game == null:
+		return null
+	return game.me(net.my_peer() if net != null else 1)
+
+
 ## "Level 2: The Crossroads"
 func level_title() -> String:
 	return "Level %d: %s" % [game.level, D.LEVELS[game.level - 1]["name"]]
@@ -546,7 +554,9 @@ func _keyboard_walk(dt: float, live: bool) -> void:
 	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN): v.y -= 1
 	if v == Vector2.ZERO or not started or game.over:
 		return
-	var me: Dictionary = game.crew[0]
+	var me = local_player()
+	if me == null:
+		return
 	if me["hp"] <= 0.0 or not me["is_player"]:
 		rig.pan_keys(v, dt)
 		return
@@ -590,7 +600,9 @@ func _zombie_detail() -> void:
 func _follow(dt: float) -> void:
 	if not started:
 		return
-	var me: Dictionary = game.crew[0]
+	var me = local_player()
+	if me == null:
+		return
 	if not me["is_player"] or me["hp"] <= 0.0:
 		return   # fallen: the view is yours to move
 	var at := Vector3(me["x"], 0.0, me["y"])
@@ -667,7 +679,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				if not hud.camp_open():
 					hud.toggle_camp()
 			elif started:
-				game.start_reload(game.crew[0])
+				game.start_reload(local_player())
 		KEY_HOME:
 			rig.reset()
 		KEY_EQUAL, KEY_KP_ADD:

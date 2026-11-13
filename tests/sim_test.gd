@@ -148,6 +148,30 @@ func _unit_checks() -> void:
 	check(Tut.step_ready("move", gmov) and not Tut.step_done("move", gmov), "tutorial: with someone on the wall, show how to move them")
 	gmov.move_survivor(1, 0, 6.0)
 	check(Tut.step_done("move", gmov), "tutorial: done once one of the crew is sent somewhere")
+	# Co-op: more players, each with their own aim and trigger.
+	var gco = Game.new()
+	var p2: Dictionary = gco.add_player(2, "Jo")
+	check(gco.me(2) == p2 and gco.me(1) == gco.crew[0] and absf(p2["u"] - gco.crew[0]["u"]) > 0.5, "a second player joins with their own spot on the wall")
+	var zc: Dictionary = gco.spawn_zombie("walker", 100.0, 0.0)
+	zc["x"] = p2["x"] + 1.0; zc["y"] = 8.0
+	gco.inputs[2] = {"aim": Vector2(zc["x"], zc["y"]), "firing": true}
+	gco.input_firing = false
+	for i in 30:
+		gco.update_crew(0.05)
+	check(gco.bullets.size() > 0 and p2["ammo"] < int(D.WEAPONS["pistol"]["mag"]) and gco.crew[0].get("ammo", 15) == int(D.WEAPONS["pistol"]["mag"]), "player 2 shoots from their own input; the host doesn't")
+	gco.walk_player(Vector2(0, 1), 0.3, 2)
+	check(p2["y"] > D.WALK_Y + 0.5, "and walks on their own")
+	gco.crew[0]["hp"] = 0.0
+	gco.crew[0]["state"] = "dead"
+	gco.walls[0]["breached"] = true
+	gco.update_crew(0.05)
+	gco.step(0.05)
+	check(not gco.over, "the run isn't lost while another player still stands")
+	var gmeta = Game.new()
+	gmeta.add_player(2, "Jo")
+	gmeta.apply_meta({"levels": {"p_aim": 2, "kit_smg": 1}})
+	check(gmeta.me(2)["skills"].get("aim", 0) == 2 and gmeta.me(2)["weapon"] == "smg", "the camp's upgrades are the whole team's")
+
 	# Its settings: on/off and what's been done carry over, in their own file.
 	var tpath := "user://test_settings.cfg"
 	var st = load("res://scripts/settings.gd").load_or_detect(tpath)

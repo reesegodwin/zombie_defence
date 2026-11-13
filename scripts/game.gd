@@ -93,8 +93,10 @@ var won := false               # held out to the end: the convoy came
 var research_count := 0        # projects finished this run (blueprints don't count)
 
 # Player input, written by main.gd each frame (grid coordinates).
-var input_aim = null           # Vector2 or null
+var input_aim = null           # Vector2 or null: the host's own player (peer 1)
 var input_firing := false
+## The other players' (co-op): peer id -> {"aim": Vector2 or null, "firing": bool}.
+var inputs := {}
 var moved_crew := false         # has the player sent one of the crew somewhere yet (the tutorial)
 var input_auto := false          # a stand-in player for the tests and balance bots: you shoot whatever is nearest the wall (not in the game)
 
@@ -109,6 +111,7 @@ func _init() -> void:
 		walls.append(w)
 	wall = walls[0]
 	add_survivor("You", "pistol", true)
+	crew[0]["peer"] = 1
 
 
 # --- Lanes ------------------------------------------------------------------
@@ -295,7 +298,7 @@ func _free_front_spot(me: Dictionary) -> float:
 	var mid := (D.X0 + D.X1) / 2.0
 	# You start in the middle; the crew's spots go out from the middle of the
 	# wall (not from wherever you've walked to), and you don't take one up.
-	var offs: Array = [0.0] if me["is_player"] else D.CREW_SLOTS.slice(1)
+	var offs: Array = [0.0, 1.0, -1.0, 2.0, -2.0] if me["is_player"] else D.CREW_SLOTS.slice(1)
 	for k in range(1, 12):
 		offs.append(-1.5 * k + 0.75)   # past the usual spots: fill in every metre and a half
 		offs.append(1.5 * k - 0.75)
@@ -303,7 +306,7 @@ func _free_front_spot(me: Dictionary) -> float:
 		var u := clampf(mid + off, D.X0 + 0.6, D.X1 - 0.6)
 		var taken := false
 		for o in crew:
-			if o != me and not o["is_player"] and o["side"] == 0 and not o.has("post") and absf(o["u"] - u) < 1.2:
+			if o != me and o["is_player"] == me["is_player"] and o["side"] == 0 and not o.has("post") and absf(o["u"] - u) < (0.9 if me["is_player"] else 1.2):
 				taken = true
 		if not taken:
 			return u
@@ -447,11 +450,11 @@ func move_survivor_to(i: int, p: Vector2) -> Dictionary:
 ## You, walking with the keys: dir is the way to go on the ground (x, y),
 ## any length up to 1. Anywhere in the yard or up on the walkways, round the
 ## buildings; not out past the walls or the fence.
-func walk_player(dir: Vector2, dt: float) -> void:
+func walk_player(dir: Vector2, dt: float, peer := 1) -> void:
 	if crew.is_empty() or dir == Vector2.ZERO:
 		return
-	var s: Dictionary = crew[0]
-	if not s["is_player"] or s["hp"] <= 0.0 or not s["state"] in ["wall", "moving"]:
+	var s = me(peer)
+	if s == null or not s["is_player"] or s["hp"] <= 0.0 or not s["state"] in ["wall", "moving"]:
 		return
 	if dir.length() > 1.0:
 		dir = dir.normalized()
@@ -476,6 +479,41 @@ func walk_player(dir: Vector2, dt: float) -> void:
 	s["repairing"] = false
 	_stop_fixing(s)
 	_take_spot(s, to)
+
+
+## A player's character (peer 1 is the host; co-op friends have their own
+## network ids), or null if they have none (they fell and were left behind).
+func me(peer := 1) -> Variant:
+	for s in crew:
+		if s["is_player"] and s.get("peer", 1) == peer:
+			return s
+	return null
+
+
+## Every player's character still standing.
+func players_alive() -> Array:
+	return crew.filter(func(s): return s["is_player"] and s["hp"] > 0.0 and s["state"] != "dead")
+
+
+## A co-op friend joins: their own character on the wall, a pistol, the
+## scout's look in their own colour. Returns it.
+func add_player(peer: int, pname: String) -> Dictionary:
+	var s := add_survivor(pname, "pistol", true)
+	s["peer"] = peer
+	s["skills"] = crew[0]["skills"].duplicate()   # the team's camp skills (the host has them)
+	s["jacket"] = D.PLAYER_COLOURS[(peer * 7) % D.PLAYER_COLOURS.size()]
+	inputs[peer] = {"aim": null, "firing": false}
+	_changed()
+	return s
+
+
+## A co-op friend leaves: their character goes too.
+func remove_player(peer: int) -> void:
+	var s = me(peer)
+	if s != null and peer != 1:
+		crew.erase(s)
+		inputs.erase(peer)
+		_changed()
 
 
 ## Somewhere you can stand: the yard or a walkway, clear of buildings,
@@ -969,7 +1007,7 @@ func update_health(dt: float) -> void:
 			s["hp"] = minf(s["max_hp"], s["hp"] + D.HEAL_PER_SECOND * dt)
 	# (Anyone already in the army truck is safe: it'll drive off with them.)
 	var aboard := crew.any(func(c): return c["state"] == "aboard")
-	if not over and not aboard and defenders().is_empty() and (any_breach() or crew[0]["state"] == "dead"):
+	if not over and not aboard and defenders().is_empty() and (any_breach() or players_alive().is_empty()):
 		over = true
 		shake = 1.0
 		sound.emit("crash")
@@ -1331,15 +1369,18 @@ func update_crew(dt: float) -> void:
 		if s["is_player"]:
 			# Holding the mouse aims at the cursor; otherwise you face the cursor.
 			# (input_auto is the test bots' stand-in: it shoots on its own.)
-			var manual: bool = input_firing and input_aim != null
+			var peer: int = s.get("peer", 1)
+			var aim_at = input_aim if peer == 1 else inputs.get(peer, {}).get("aim", null)
+			var firing: bool = input_firing if peer == 1 else inputs.get(peer, {}).get("firing", false)
+			var manual: bool = firing and aim_at != null
 			var target = null
 			var lined_up := false
-			if not manual and input_auto:
+			if not manual and input_auto and peer == 1:
 				target = auto_target(s, auto_reach(w))
 				if target != null:
 					lined_up = swivel(s, atan2(target["y"] - s["y"], target["x"] - s["x"]), D.TURN_RATE, dt)
-			elif input_aim != null:
-				lined_up = swivel(s, atan2(input_aim.y - s["y"], input_aim.x - s["x"]), D.TURN_RATE_MANUAL, dt)
+			elif aim_at != null:
+				lined_up = swivel(s, atan2(aim_at.y - s["y"], aim_at.x - s["x"]), D.TURN_RATE_MANUAL, dt)
 			s["auto_target"] = target["id"] if target != null else -1
 			if manual or target != null:
 				s["idle"] = 0.0
@@ -1348,7 +1389,7 @@ func update_crew(dt: float) -> void:
 			if s["cd"] > 0 or not lined_up:
 				continue
 			if manual:
-				_shoot(s, input_aim.x, input_aim.y, k)
+				_shoot(s, aim_at.x, aim_at.y, k)
 			elif target != null:
 				_shoot(s, target["x"], target["y"], k)
 		else:
@@ -3045,12 +3086,12 @@ func apply_meta(m: Dictionary) -> void:
 	heat = int(m.get("heat", 0))
 	level = clampi(int(m.get("level", 2)), 1, D.LEVELS.size())
 	open_at = D.LEVELS[level - 1]["open_at"].duplicate()
-	var you: Dictionary = crew[0]
-	# Your skills.
-	for id in _PLAYER_SKILLS:
-		var n: int = lv.get(id, 0)
-		if n > 0:
-			you["skills"][_PLAYER_SKILLS[id]] = maxi(you["skills"].get(_PLAYER_SKILLS[id], 0), n)
+	# Your skills (in co-op, every player's: the camp's upgrades are the team's).
+	for p in crew.filter(func(c): return c["is_player"]):
+		for id in _PLAYER_SKILLS:
+			var n: int = lv.get(id, 0)
+			if n > 0:
+				p["skills"][_PLAYER_SKILLS[id]] = maxi(p["skills"].get(_PLAYER_SKILLS[id], 0), n)
 	mods["crew_dmg"] += 0.1 * lv.get("commander", 0)
 	wall_mul = 1.0 + 0.1 * lv.get("tough", 0)
 	price_mul = 1.0 - 0.08 * lv.get("quartermaster", 0)
@@ -3078,7 +3119,8 @@ func apply_meta(m: Dictionary) -> void:
 	scrap += 25 * lv.get("kit_scrap", 0)
 	food += 4.0 * lv.get("kit_food", 0)
 	if lv.get("kit_smg", 0) > 0:
-		you["weapon"] = "smg"
+		for p in crew.filter(func(c): return c["is_player"]):
+			p["weapon"] = "smg"
 	for i in 2 * lv.get("kit_traps", 0):
 		add_to_storage("spikes")
 	for i in lv.get("kit_survivor", 0):
@@ -3091,10 +3133,10 @@ func apply_meta(m: Dictionary) -> void:
 func apply_live(id: String, lv: int) -> bool:
 	if not id in D.META_LIVE or over:
 		return false
-	var you: Dictionary = crew[0]
 	if _PLAYER_SKILLS.has(id):
 		var k: String = _PLAYER_SKILLS[id]
-		you["skills"][k] = maxi(you["skills"].get(k, 0), lv)
+		for p in crew.filter(func(c): return c["is_player"]):
+			p["skills"][k] = maxi(p["skills"].get(k, 0), lv)
 	match id:
 		"commander":
 			mods["crew_dmg"] += 0.1   # one more level
@@ -3120,7 +3162,7 @@ func apply_live(id: String, lv: int) -> bool:
 # zombie inside is after, which turret someone is repairing, who's out
 # scavenging) are saved as ids and linked up again on loading. What's only for
 # show (particles, tracers, floating text) isn't kept.
-const _NOT_SAVED := ["parts", "tracers", "bullets", "texts", "input_aim", "input_firing", "input_auto", "shake", "death_mul", "wall"]
+const _NOT_SAVED := ["parts", "tracers", "bullets", "texts", "input_aim", "input_firing", "inputs", "input_auto", "shake", "death_mul", "wall"]
 const SAVE_VERSION := 1
 
 

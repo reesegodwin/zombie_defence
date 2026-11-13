@@ -174,7 +174,9 @@ func _check_done() -> void:
 
 
 func _done_now(id: String, g) -> bool:
-	var me: Dictionary = g.crew[0]
+	var me = main.local_player()
+	if me == null:
+		return true
 	match id:
 		"walk":
 			if _walk_from == null:
@@ -191,7 +193,7 @@ func _ready_now(id: String) -> bool:
 	var g = main.game
 	match id:
 		"walk", "shoot":
-			return g.crew[0]["is_player"] and g.crew[0]["hp"] > 0.0
+			return main.local_player() != null and main.local_player()["hp"] > 0.0
 		"grit":
 			return grit_ready(main.progress)
 	return step_ready(id, g)
@@ -421,7 +423,9 @@ func _drag_arrow(a: Vector2, b: Vector2) -> void:
 
 ## W, A, S and D keycaps beside you.
 func _draw_keys() -> void:
-	var me: Dictionary = main.game.crew[0]
+	var me = main.local_player()
+	if me == null:
+		return
 	var p: Vector2 = main.rig.world_to_screen(Vector3(me["x"], D.DECK_H + 1.0, me["y"])) + Vector2(70, -40)
 	var font := get_theme_default_font()
 	var k := 34.0
@@ -444,7 +448,9 @@ func _draw_mouse() -> void:
 	if main._mouse_screen != null:
 		at = main._mouse_screen + Vector2(46, 34)
 	else:
-		var me: Dictionary = main.game.crew[0]
+		var me = main.local_player()
+		if me == null:
+			return
 		at = main.rig.world_to_screen(Vector3(me["x"], D.DECK_H + 1.0, me["y"])) + Vector2(70, -40)
 	var body := Rect2(at - Vector2(18, 26), Vector2(36, 52))
 	var sb := StyleBoxFlat.new()

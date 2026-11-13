@@ -56,8 +56,10 @@ func _spread_px() -> float:
 	var g = main.game
 	if g.crew.is_empty() or g.input_aim == null:
 		return 0.0
-	var me: Dictionary = g.crew[0]
-	if not me["is_player"] or me["hp"] <= 0.0:
+	var me = main.local_player()
+	if me == null:
+		return 0.0
+	if me["hp"] <= 0.0:
 		return 0.0
 	var aim: Vector2 = g.input_aim
 	var dist := aim.distance_to(Vector2(me["x"], me["y"]))

@@ -326,6 +326,7 @@ static func _load_dir(dir: String, keys: Array) -> Dictionary:
 	return out
 
 const NAMES := ["Dana", "Marek", "Priya", "Hollis", "June", "Tomas", "Ada", "Kofi", "Rosa", "Lev", "Imke", "Sol"]
+const PLAYER_COLOURS := [Color("3e5a6e"), Color("7a3b30"), Color("3f6a3a"), Color("6a5a2a"), Color("5a3f6e")]   # co-op players' jackets
 const JACKETS := [Color("7a5c3a"), Color("4d5a3c"), Color("5c3f4f"), Color("3d4f5c"), Color("6b6b4a")]
 const DECK_H := 0.45     # walkway height, in metres
 const SKINS := [Color("e0b896"), Color("c49270"), Color("8d5e3e"), Color("f1cfb0"), Color("a8775a")]
