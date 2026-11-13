@@ -1,7 +1,7 @@
 // The one material for every body (scenes/actors/body.gd). Colours come from
 // the vertex colours (sRGB); their alpha says what the surface is: 1 dead skin
 // (mottled, with dark veins, sores and grime), 0.75 living skin (faint
-// blotches), 0.5 cloth (a coarse weave), 0.35 cloth knitted in stripes, 0.15
+// blotches), 0.6 hair (fine strands), 0.5 cloth (a coarse weave), 0.35 cloth knitted in stripes, 0.15
 // something that glows (eyes), 0 anything else (eyes, teeth, boots: plain).
 shader_type spatial;
 
@@ -37,6 +37,7 @@ void fragment() {
 	float skin = step(0.65, COLOR.a);
 	float cloth = step(0.25, COLOR.a) * (1.0 - skin);
 	float stripe = cloth * (1.0 - step(0.43, COLOR.a));
+	float hair = cloth * step(0.56, COLOR.a);
 	float glow = step(0.08, COLOR.a) * (1.0 - step(0.25, COLOR.a));
 	vec3 p = local_pos;
 
@@ -67,10 +68,15 @@ void fragment() {
 	// Creases, and a rib knit on the stripes.
 	cl *= 1.0 - 0.18 * smoothstep(0.55, 0.8, noise(p * vec3(30.0, 9.0, 30.0) + vec3(4.0)));
 	cl *= 1.0 - 0.12 * stripe * step(0.5, fract(p.y * 180.0));
+	// Hair: fine strands running down it, lighter and darker.
+	float strand = noise(p * vec3(420.0, 22.0, 420.0)) * 0.6 + noise(p * vec3(150.0, 9.0, 150.0)) * 0.4;
+	cl = mix(cl, c * (0.62 + 0.75 * strand), hair);
 
 	ALBEDO = mix(c, mix(cl, sk, skin), max(skin, cloth));
 	ROUGHNESS = mix(0.55, mix(0.95, 0.62, skin), max(skin, cloth));
 	SPECULAR = mix(0.6, 0.35, cloth);
+	ROUGHNESS = mix(ROUGHNESS, 0.8, hair);
+	SPECULAR = mix(SPECULAR, 0.25, hair);
 	// Wet blood shines.
 	float wet = smoothstep(0.1, 0.3, c.r - c.g * 2.2) * step(c.r, 0.2) * (1.0 - glow);
 	ROUGHNESS = mix(ROUGHNESS, 0.32, wet * 0.8);

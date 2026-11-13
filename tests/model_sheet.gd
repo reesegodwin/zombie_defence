@@ -11,15 +11,16 @@ const Body = preload("res://scenes/actors/body.gd")
 const Guns = preload("res://scenes/actors/guns.gd")
 const Turret = preload("res://scenes/actors/turret.gd")
 const GUNS := ["pistol", "smg", "shotgun", "rifle", "launcher"]
-const HAIR := [Color("2a1d14"), Color("4a3221"), Color("1a1715"), Color("7a5a35"), Color("5c4a3a"), Color("9a8f86")]
-const PANTS := [Color("2f3540"), Color("3b3a33"), Color("4a4137"), Color("283028"), Color("40362f")]
-# You (in the cap and jacket), then a few of the crew.
+const Survivor = preload("res://scenes/actors/survivor.gd")
+# You (the scout), then one of each of the other models.
 const CREW := [
-	{"skin": Color("d9a77f"), "shirt": Color("3e5a6e"), "hair_style": "cap", "cap": Color("3b4a3a"), "sleeves": "long", "seed": 1},
-	{"skin": 1, "shirt": 0, "hair_style": "long", "sleeves": "short", "pack": true, "seed": 5},
-	{"skin": 3, "shirt": 2, "hair_style": "short", "sleeves": "long", "pack": true, "seed": 2},
-	{"skin": 4, "shirt": 3, "hair_style": "short", "sleeves": "short", "seed": 11},
-	{"skin": 2, "shirt": 1, "hair_style": "cap", "cap": Color("5a3a2a"), "sleeves": "long", "pack": true, "seed": 7},
+	{"model": "scout", "name": "You", "build": "m", "skin": Color("d9a77f"), "shirt": Color("3e5a6e"), "seed": 1},
+	{"model": "soldier", "name": "Marek", "build": "m", "skin": 0, "shirt": 3, "seed": 2},
+	{"model": "tank", "name": "Dana", "build": "f", "skin": 1, "shirt": 1, "seed": 5},
+	{"model": "jacket", "name": "Kofi", "build": "m", "skin": 2, "shirt": 0, "seed": 11},
+	{"model": "ranger", "name": "Tomas", "build": "m", "skin": 4, "shirt": 4, "seed": 7},
+	{"model": "hooded", "name": "Rosa", "build": "f", "skin": 3, "shirt": 2, "seed": 9},
+	{"model": "tank", "name": "Lev", "build": "m", "skin": 0, "shirt": 2, "seed": 4},
 ]
 const VIEWS := [0.0, -0.6, -PI / 2, PI]
 
@@ -230,57 +231,54 @@ func _turret(cam: Camera3D) -> void:
 
 func _survivor(i: int) -> Node3D:
 	var c: Dictionary = CREW[i]
-	var rng := RandomNumberGenerator.new()
-	rng.seed = c["seed"]
-	var look := c.duplicate()
-	if look["skin"] is int:
-		look["skin"] = D.SKINS[look["skin"]]
-	if look["shirt"] is int:
-		look["shirt"] = D.JACKETS[look["shirt"]]
-	look["hair"] = HAIR[rng.randi() % HAIR.size()]
-	look["pants"] = PANTS[rng.randi() % PANTS.size()]
-	look["rng"] = rng
 	var n := Node3D.new()
 	root.add_child(n)
-	var j := Body.survivor(n, look)
+	if c["build"] == "f":
+		n.scale = Vector3.ONE * 0.95
+	var j := Body.survivor(n, Survivor.look_of({"id": c["seed"], "name": c["name"], "is_player": i == 0,
+		"skin": c["skin"] if c["skin"] is Color else D.SKINS[c["skin"]], "jacket": c["shirt"] if c["shirt"] is Color else D.JACKETS[c["shirt"]]}, c["model"]))
 	n.set_meta("j", j)
 	_pose(j)
 	return n
 
 
+## Everyone side by side, then their faces, then each from four sides.
 func _survivors(cam: Camera3D) -> void:
-	cam.size = 2.3
-	cam.position = Vector3(0, 0.92, 10)
 	var models := []
-	for i in VIEWS.size():
-		var n := _survivor(0)
-		n.position = Vector3((i - 1.5) * 1.15, 0, 0)
-		n.rotation.y = VIEWS[i]
-		models.append(n)
-	await _shot("survivor")
-	cam.size = 0.75
-	cam.position = Vector3(-1.725, 1.5, 10)
-	root.size = Vector2i(800, 800)
-	await _shot("survivor_face")
-	for m in models:
-		m.free()
-	models.clear()
-	root.size = Vector2i(1600, 800)
-	cam.size = 2.3
-	cam.position = Vector3(0, 0.92, 10)
+	root.size = Vector2i(2400, 1000)
+	cam.size = 2.9
+	cam.position = Vector3(0, 0.95, 10)
 	for i in CREW.size():
 		var n := _survivor(i)
-		n.position = Vector3((i - 2) * 0.95, 0, 0)
-		n.rotation.y = -0.35
+		n.position = Vector3((i - (CREW.size() - 1) / 2.0) * 0.98, 0, 0)
+		n.rotation.y = -0.3
 		models.append(n)
 	await _shot("crew")
-	cam.size = 1.2
-	cam.position = Vector3(0, 1.5, 10)
-	root.size = Vector2i(1600, 500)
+	root.size = Vector2i(2400, 420)
+	root.size = Vector2i(2400, 300)
+	cam.size = 0.86
+	cam.position = Vector3(0, 1.6, 10)
 	await _shot("crew_faces")
-	root.size = Vector2i(1600, 800)
 	for m in models:
 		m.free()
+	root.size = Vector2i(1600, 800)
+	for i in CREW.size():
+		models.clear()
+		for v in VIEWS.size():
+			var n := _survivor(i)
+			n.position = Vector3((v - 1.5) * 1.15, 0, 0)
+			n.rotation.y = VIEWS[v]
+			models.append(n)
+		cam.size = 2.3
+		cam.position = Vector3(0, 0.92, 10)
+		await _shot("survivor_" + CREW[i]["model"])
+		cam.size = 0.75
+		cam.position = Vector3(-1.725, 1.5, 10)
+		root.size = Vector2i(800, 800)
+		await _shot("survivor_" + CREW[i]["model"] + "_face")
+		root.size = Vector2i(1600, 800)
+		for m in models:
+			m.free()
 
 
 func _a_pose(z: Node3D) -> void:

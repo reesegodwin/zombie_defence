@@ -1,4 +1,4 @@
-# The look of one survivor: a cartoon person (scenes/actors/body.gd) who
+# The look of one survivor: one of the models in scenes/actors/body.gd, who
 # holds their gun in both hands, turns to aim, recoils and flashes the muzzle;
 # walks with a proper stride when sent somewhere; kneels to hammer at the wall
 # when repairing; works the gun when reloading; and falls when killed. When
@@ -15,9 +15,16 @@ const Guns = preload("res://scenes/actors/guns.gd")
 ## Leg swing while walking, in radians.
 @export var stride := 0.55
 
-const PANTS := [Color("2f3540"), Color("3b3a33"), Color("4a4137"), Color("283028"), Color("40362f")]
-const HAIR := [Color("2a1d14"), Color("4a3221"), Color("1a1715"), Color("7a5a35"), Color("5c4a3a"), Color("9a8f86")]
-const SHOES := [Color("231d18"), Color("3a2c22"), Color("1d1f22")]
+const PANTS := [Color("3b3a33"), Color("4a4137"), Color("283028"), Color("40362f"), Color("4f5440"), Color("5a5142")]
+const JEANS := [Color("2f3a52"), Color("34405a"), Color("28303f")]
+const HAIR := [Color("2a1d14"), Color("4a3221"), Color("1a1715"), Color("7a5a35"), Color("5c4a3a"), Color("9a8f86"), Color("b08a4a"), Color("8a3a22")]
+const SHOES := [Color("231d18"), Color("3a2c22"), Color("1d1f22"), Color("5a4634")]
+const CAPS := [Color("3b4a3a"), Color("5a3a2a"), Color("2f3540"), Color("6a6250")]
+const UNDER := [Color("8a8578"), Color("b9b2a0"), Color("5f6a5a"), Color("7a5a52"), Color("4a5560")]
+const SCARVES := [Color("6a5f4a"), Color("7a3a2e"), Color("4a5a4a"), Color("5a5a66")]
+## Whose build is a woman's (anyone else by the roll of their id).
+const WOMEN := ["Dana", "Priya", "June", "Ada", "Rosa", "Imke"]
+const MEN := ["Marek", "Hollis", "Tomas", "Kofi", "Lev", "Sol"]
 
 @onready var label: Label3D = $NameLabel
 @onready var ring: MeshInstance3D = $Ring
@@ -72,20 +79,49 @@ func _make_bar(y: float, color: Color) -> Array:
 	return [bar, fill_node]
 
 
-func setup(s: Dictionary) -> void:
-	# Each survivor looks the same every time they're seen (seeded by their id).
+## What a survivor looks like: the same every time they're seen (by their id).
+## You are the scout: hood up, cap, dust mask, a pack with an axe on it.
+## model: which of Body.SURVIVOR_MODELS to be (else by their id).
+static func look_of(s: Dictionary, model := "") -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = int(s["id"]) * 7919 + 13
-	var styles := ["short", "short", "long", "cap"]
-	j = Body.survivor(self, {
-		"skin": s["skin"], "shirt": s["jacket"], "pants": PANTS[rng.randi() % PANTS.size()],
-		"shoes": SHOES[rng.randi() % SHOES.size()], "hair": HAIR[rng.randi() % HAIR.size()],
-		"hair_style": "cap" if s["is_player"] else styles[rng.randi() % styles.size()],
-		"cap": Color("3b4a3a") if s["is_player"] else Color("5a3a2a"),
-		"sleeves": "long" if s["is_player"] or rng.randf() < 0.5 else "short",
-		"width": rng.randf_range(0.95, 1.08), "rng": rng,
-		"pack": not s["is_player"] and rng.randf() < 0.45,
-	})
+	var fem: bool = rng.randf() < 0.5
+	if s["name"] in WOMEN:
+		fem = true
+	elif s["name"] in MEN or s["is_player"]:
+		fem = false
+	if model == "":
+		var pick: Array = ["tank", "jacket", "ranger", "hooded", "tank"] if fem else ["soldier", "jacket", "ranger", "hooded", "tank"]
+		model = "scout" if s["is_player"] else pick[rng.randi() % pick.size()]
+	var M: Dictionary = Body.SURVIVOR_MODELS[model]
+	var look: Dictionary = M.duplicate()
+	var styles: Array = M["hair"]
+	if fem:   # short hair is the exception
+		styles = styles.filter(func(k): return k != "buzz")
+		if rng.randf() < 0.6:
+			styles = ["ponytail", "long"]
+	else:
+		styles = styles.filter(func(k): return k != "ponytail") if rng.randf() < 0.8 else styles
+	var pants: Array = JEANS if M["legs"] == "jeans" else PANTS
+	var shoes: Array = M.get("shoes", SHOES)
+	look.merge({
+		"skin": s["skin"], "shirt": s["jacket"], "build": "f" if fem else "m",
+		"pants": pants[rng.randi() % pants.size()], "shoes": shoes[rng.randi() % shoes.size()],
+		"hair": HAIR[rng.randi() % HAIR.size()], "hair_style": styles[rng.randi() % styles.size()],
+		"cap": CAPS[rng.randi() % CAPS.size()] if M.get("cap", false) or (not M.get("hood", false) and rng.randf() < 0.2) else null,
+		"beard": 0.0 if fem else (rng.randf_range(0.5, 1.0) if rng.randf() < M.get("beard", 0.0) else (0.3 if rng.randf() < 0.4 else 0.0)),
+		"under": UNDER[rng.randi() % UNDER.size()], "scarf_col": SCARVES[rng.randi() % SCARVES.size()],
+		"width": rng.randf_range(0.96, 1.06) * (0.94 if fem else 1.0), "rng": rng,
+		"key": "s/%d/%s/%s/%s/%s" % [s["id"], model, s["skin"].to_html(), s["jacket"].to_html(), s["name"]],
+	}, true)
+	return look
+
+
+func setup(s: Dictionary, model := "") -> void:
+	var look := look_of(s, model)
+	if look["build"] == "f":
+		scale = Vector3.ONE * 0.95
+	j = Body.survivor(self, look)
 	upper = j["spine"]
 	hips = j["hips"]
 	# The gun, held in front at chest height, and its muzzle flash.
