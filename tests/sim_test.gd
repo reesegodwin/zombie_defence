@@ -1069,7 +1069,16 @@ func _unit_checks() -> void:
 	check(pr.grit == 0 and pr.levels.is_empty() and pr.max_heat == 0, "progress starts empty")
 	var g_short = Game.new()
 	g_short.level = 1   # level 1: no extra Grit for the level
-	check(g_short.run_result()["total"] == D.GRIT["base"], "even the shortest run pays %d Grit" % D.GRIT["base"])
+	check(g_short.run_result()["total"] == 0, "a run that gets nowhere pays nothing")
+	g_short.apply_meta(pr.meta())
+	g_short.level = 1
+	check(g_short.first_run and g_short.run_result()["total"] == D.GRIT["base"], "but your very first run pays a welcome %d Grit" % D.GRIT["base"])
+	pr.runs = 1
+	var g_second = Game.new()
+	g_second.apply_meta(pr.meta())
+	check(not g_second.first_run, "and only the first")
+	pr.reset()
+	check(pr.meta()["first_run"], "a full reset (all Grit gone) brings the welcome back")
 	check(not pr.buy("kit_scrap").has("ok"), "upgrades cost Grit")
 	pr.grit = 500
 	check(pr.buy("kit_scrap").has("ok") and pr.level("kit_scrap") == 1 and pr.grit == 500 - D.META["kit_scrap"]["costs"][0], "Grit buys an upgrade level")
@@ -1198,7 +1207,7 @@ func _unit_checks() -> void:
 	g.heat = 2
 	g.level = 1
 	var r2: Dictionary = g.run_result()
-	check(r2["nights"] == 2 and not r2["won"] and r2["total"] == int(round((D.GRIT["base"] + 2 * D.GRIT["night"]) * (1.0 + 2 * D.HEAT_GRIT))), "a loss pays for the nights held, more at Heat")
+	check(r2["nights"] == 2 and not r2["won"] and r2["total"] == int(round((2 * D.GRIT["night"]) * (1.0 + 2 * D.HEAT_GRIT))), "a loss pays for the nights held, more at Heat")
 
 	# Magazines and reloading.
 	g = Game.new()

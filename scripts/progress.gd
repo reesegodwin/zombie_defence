@@ -153,4 +153,4 @@ func reach(lv: int) -> void:
 
 ## What a new run starts with (handed to the game's apply_meta).
 func meta() -> Dictionary:
-	return {"levels": levels.duplicate(), "heat": heat, "level": map_level}
+	return {"levels": levels.duplicate(), "heat": heat, "level": map_level, "first_run": runs == 0}

@@ -97,6 +97,7 @@ var input_aim = null           # Vector2 or null: the host's own player (peer 1)
 var input_firing := false
 ## The other players' (co-op): peer id -> {"aim": Vector2 or null, "firing": bool}.
 var inputs := {}
+var first_run := false         # the player's first run ever (or since a full reset): it pays D.GRIT["base"] on top
 var moved_crew := false         # has the player sent one of the crew somewhere yet (the tutorial)
 var input_auto := false          # a stand-in player for the tests and balance bots: you shoot whatever is nearest the wall (not in the game)
 
@@ -3287,6 +3288,7 @@ const _PLAYER_SKILLS := {"p_repair": "repair", "p_thrift": "thrift", "p_aim": "a
 ## Call it straight after Game.new(), before the first step.
 func apply_meta(m: Dictionary) -> void:
 	var lv: Dictionary = m.get("levels", {})
+	first_run = bool(m.get("first_run", false))
 	heat = int(m.get("heat", 0))
 	level = clampi(int(m.get("level", 2)), 1, D.LEVELS.size())
 	open_at = D.LEVELS[level - 1]["open_at"].duplicate()
@@ -3640,7 +3642,7 @@ func advance_level() -> void:
 func run_result() -> Dictionary:
 	var nights := nights_survived()
 	var parts := {
-		"base": D.GRIT["base"],
+		"base": D.GRIT["base"] if first_run else 0,   # a welcome, on your very first run only
 		"nights": nights * D.GRIT["night"],
 		"kills": kills / D.GRIT["kills_per"],
 		"research": research_count * D.GRIT["research"],
