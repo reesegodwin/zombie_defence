@@ -6,6 +6,8 @@
 # The Kit below is also what the turret (turret.gd) is built from.
 extends RefCounted
 
+const Models = preload("res://scripts/models.gd")
+
 const STEEL := Color(0.2, 0.21, 0.22)
 const BLACK := Color(0.1, 0.1, 0.11)
 const POLY := Color(0.14, 0.14, 0.15)
@@ -35,7 +37,10 @@ static func get_gun(key: String, length: float) -> Dictionary:
 			"flamer": ends = _flamer(k)
 			"ar": ends = _ar(k)
 			_: ends = _pistol(k)
-		_cache[key] = {"mesh": k.mesh(), "ends": ends}
+		# A Blender model of the gun (assets/models/gun_<key>.glb) if there is one,
+		# built to the same ends as the code version, which still gives them.
+		var model: ArrayMesh = Models.mesh("gun_" + key)
+		_cache[key] = {"mesh": model if model != null else k.mesh(), "ends": ends}
 	var g: Dictionary = _cache[key]
 	var ends: Vector2 = g["ends"]
 	var s := length / (ends.y - ends.x)

@@ -2360,6 +2360,8 @@ func open_sites() -> Array:
 
 
 func can_send(si: int, site_key: String) -> Dictionary:
+	if not biome_sites().has(site_key):
+		return {"msg": "The %s is a long way from here." % D.SITES[site_key]["name"]}
 	if looted.has(site_key):
 		return {"msg": "The %s has already been picked clean." % D.SITES[site_key]["name"]}
 	return can_scavenge(si)

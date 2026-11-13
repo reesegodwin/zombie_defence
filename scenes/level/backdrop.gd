@@ -11,6 +11,7 @@
 # code from the same Kit as the other props (guns.gd), one mesh per kind.
 extends Node3D
 
+const Models = preload("res://scripts/models.gd")
 const D = preload("res://scripts/defs.gd")
 const Terrain = preload("res://scripts/terrain.gd")
 const Guns = preload("res://scenes/actors/guns.gd")
@@ -237,6 +238,9 @@ static func _piece(k: Guns.Kit, what: String, at: Vector3, yaw: float, rng: Rand
 
 ## A base's own landmark behind it.
 static func _landmark(what: String) -> ArrayMesh:
+	var model: ArrayMesh = Models.mesh(what)   # a Blender model of it, if there is one
+	if model != null:
+		return model
 	var k := Guns.Kit.new()
 	k.wear = 0.6
 	k.rng.seed = 304

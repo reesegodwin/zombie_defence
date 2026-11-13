@@ -7,3 +7,6 @@ shots/
 # Worked out by tools/bake.gd (the CI does it before exporting)
 assets/baked/
 addons/godotsteam/
+
+# Blender scripts
+__pycache__/

@@ -8,6 +8,7 @@ extends RefCounted
 
 const Guns = preload("res://scenes/actors/guns.gd")
 const Culvert = preload("res://scenes/level/culvert.gd")
+const Models = preload("res://scripts/models.gd")
 
 const CONCRETE := Color(0.5, 0.5, 0.5)
 const DARK := Color(0.08, 0.08, 0.09)
@@ -231,8 +232,8 @@ static var _extra_cache := {}
 ## The mesh for a landmark kind, made once.
 static func extra(kind: String) -> ArrayMesh:
 	if not _extra_cache.has(kind):
-		var m: ArrayMesh
-		match kind:
+		var m: ArrayMesh = Models.mesh(kind)   # a Blender model of it, if there is one
+		match kind if m == null else "":
 			"water_tower": m = _x_water_tower()
 			"boxcar": m = _x_boxcar()
 			"watchtower": m = _x_watchtower()
@@ -249,6 +250,7 @@ static func extra(kind: String) -> ArrayMesh:
 			"pileup": m = _x_pileup()
 			"jersey": m = _x_jersey()
 			"flag": m = _x_flag()
+			"": pass
 			_: m = _x_antlers()
 		_extra_cache[kind] = m
 	return _extra_cache[kind]

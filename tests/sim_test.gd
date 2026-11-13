@@ -172,6 +172,7 @@ func _unit_checks() -> void:
 	check(so["path_t"] == tso and so.get("fighting", false), "someone you sent somewhere stops to shoot the dead in range on the way")
 	# A newcomer can be sent scavenging as soon as they're in through the gate.
 	var gsc = Game.new()
+	gsc.death_mul = 0.0
 	var nw: Dictionary = gsc.add_survivor("Ned", "pistol", false)
 	nw["state"] = "arriving"
 	nw["route"] = Game.pass_route(nw)
@@ -182,7 +183,7 @@ func _unit_checks() -> void:
 	check(not gsc.can_scavenge(ni).has("ok"), "still out in the pass: can't be sent yet")
 	while not Game.in_base(Vector2(nw["x"], nw["y"])):
 		gsc.update_walkers(0.05)
-	check(nw["state"] == "arriving" and gsc.available_scavengers().has(ni) and gsc.send_scavenger(ni, "gas_station").has("ok"), "but once inside the base, off they go")
+	check(nw["state"] == "arriving" and gsc.available_scavengers().has(ni) and gsc.send_scavenger(ni, "church").has("ok"), "but once inside the base, off they go")
 	var spot_n := Game.station_point(nw)
 	for i in 2000:
 		gsc.step(0.1)
@@ -1172,13 +1173,13 @@ func _unit_checks() -> void:
 	# Scavenging.
 	g = Game.new()
 	g.death_mul = 0.0
-	check(not g.send_scavenger(0, "gas_station").has("ok"), "you can't send yourself")
+	check(not g.send_scavenger(0, "church").has("ok"), "you can't send yourself")
 	g.add_survivor("Dana", "pistol", false, {})
 	var dana: Dictionary = g.crew[1]
-	check(g.send_scavenger(1, "gas_station").has("ok") and dana["state"] == "leaving", "a survivor can be sent out")
+	check(g.send_scavenger(1, "church").has("ok") and dana["state"] == "leaving", "a survivor can be sent out")
 	g.add_survivor("Kofi", "pistol", false, {})
-	check(not g.send_scavenger(2, "farmhouse").has("ok"), "only one survivor can be out at a time")
-	var gone: float = D.SITES["gas_station"]["gone"]
+	check(not g.send_scavenger(2, "trailer_park").has("ok"), "only one survivor can be out at a time")
+	var gone: float = D.SITES["church"]["gone"]
 	check(absf(g.trip_time_left() - gone) < 0.5, "the trip takes as long as the map says")
 	var scrap0: int = g.scrap
 	var seen_away := false
@@ -1193,9 +1194,12 @@ func _unit_checks() -> void:
 	check(seen_away, "the survivor disappears while away")
 	check(g.trip == null and dana["state"] == "wall" and absf(t - gone) < 1.0, "they come back after the trip time")
 	check(g.scrap - scrap0 >= D.SCRAP_TIERS[0][0] and g.scrap - scrap0 <= D.SCRAP_TIERS[0][1], "they bring back scrap in the site's range")
-	check(g.looted.has("gas_station") and not g.site_open("gas_station"), "a looted place is marked as picked clean")
-	check(not g.send_scavenger(1, "gas_station").has("ok"), "a looted place can't be visited again")
-	check(g.send_scavenger(1, "farmhouse").has("ok"), "other places are still open")
+	check(g.looted.has("church") and not g.site_open("church"), "a looted place is marked as picked clean")
+	check(not g.send_scavenger(1, "church").has("ok"), "a looted place can't be visited again")
+	check(g.send_scavenger(1, "trailer_park").has("ok"), "other places are still open")
+	var gmap = Game.new()
+	gmap.add_survivor("Ivo", "pistol", false, {})
+	check(gmap.can_send(1, "church").has("ok") and not gmap.can_send(1, "gas_station").has("ok"), "places on another country's map can't be reached from here")
 	# Lucky finds over many trips at a rich site.
 	var finds := {"weapon": 0, "food": 0, "survivor": 0, "high": 0}
 	for k in 400:
@@ -1683,14 +1687,14 @@ func _unit_checks() -> void:
 	var lost := []
 	g.scavenger_lost.connect(func(nm, _site): lost.append(nm))
 	var scrap1: int = g.scrap
-	g.send_scavenger(1, "gas_station")
+	g.send_scavenger(1, "church")
 	for i in 2000:
 		g.update_trip(0.1)
 		g.update_walkers(0.1)
 		if g.trip == null:
 			break
 	check(lost == ["Rosa"] and g.crew.size() == 2 and not g.crew.has(doomed), "a scavenger can die and never come back")
-	check(g.scrap == scrap1 and not g.looted.has("gas_station"), "nothing comes back, and the place is still there to loot")
+	check(g.scrap == scrap1 and not g.looted.has("church"), "nothing comes back, and the place is still there to loot")
 	check(g.crew[1]["name"] == "Kofi" and g.crew[1]["state"] == "wall", "the rest of the crew carries on")
 
 	# Food.
