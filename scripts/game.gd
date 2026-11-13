@@ -1240,7 +1240,10 @@ func update_zombies(dt: float) -> void:
 	# 0.71 m), not against every other zombie: a big horde stays cheap.
 	var n := zombies.size()
 	var cells := {}
+	var radius := PackedFloat32Array()   # (each one's radius, looked up once)
+	radius.resize(n)
 	for i in n:
+		radius[i] = ZT(zombies[i]["type"])["r"]
 		var c := Vector2i(floori(zombies[i]["x"]), floori(zombies[i]["y"]))
 		if cells.has(c):
 			cells[c].append(i)
@@ -1248,11 +1251,12 @@ func update_zombies(dt: float) -> void:
 			cells[c] = [i]
 	for i in n:
 		var a: Dictionary = zombies[i]
-		var ra: float = ZT(a["type"])["r"]
-		var ca := Vector2i(floori(a["x"]), floori(a["y"]))
-		for ox in [-1, 0, 1]:
-			for oy in [-1, 0, 1]:
-				var near = cells.get(ca + Vector2i(ox, oy))
+		var ra: float = radius[i]
+		var cx := floori(a["x"])
+		var cy := floori(a["y"])
+		for ox in range(-1, 2):
+			for oy in range(-1, 2):
+				var near = cells.get(Vector2i(cx + ox, cy + oy))
 				if near == null:
 					continue
 				for j in near:
@@ -1261,7 +1265,7 @@ func update_zombies(dt: float) -> void:
 					var b: Dictionary = zombies[j]
 					var dx: float = b["x"] - a["x"]
 					var dy: float = b["y"] - a["y"]
-					var mn: float = (ra + ZT(b["type"])["r"]) * 1.1
+					var mn: float = (ra + radius[j]) * 1.1
 					var d2 := dx * dx + dy * dy
 					if d2 < mn * mn and d2 > 1e-6:
 						var d := sqrt(d2)
