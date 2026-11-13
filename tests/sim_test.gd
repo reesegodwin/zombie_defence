@@ -100,6 +100,12 @@ func _unit_checks() -> void:
 	prt.buy(cheap)
 	check(Tut.grit_done(prt), "tutorial: done once something's bought there")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_progress_tut.cfg"))
+	var grp = Game.new()
+	grp.walls[0]["hp"] = grp.walls[0]["max_hp"] * 0.94
+	grp.scrap = 20
+	grp.add_survivor("Bea", "pistol", false)
+	check(Tut.step_ready("repair", grp), "tutorial: the repair tip comes once a wall is 5% down")
+	check(absf(grp.crew[1]["u"] - grp.crew[0]["u"]) <= 1.5 and grp.crew[1]["side"] == 0, "the first of the crew stands right beside you on the front wall (%.1f m away)" % absf(grp.crew[1]["u"] - grp.crew[0]["u"]))
 	# Its settings: on/off and what's been done carry over, in their own file.
 	var tpath := "user://test_settings.cfg"
 	var st = load("res://scripts/settings.gd").load_or_detect(tpath)

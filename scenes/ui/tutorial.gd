@@ -49,7 +49,7 @@ static func has_smg(g) -> bool:
 
 static func damaged_wall(g) -> Variant:
 	for w in g.walls:
-		if g.sides_open[w["side"]] and w["hp"] < w["max_hp"] * 0.6 and not w.get("breached", false):
+		if g.sides_open[w["side"]] and w["hp"] < w["max_hp"] * 0.95 and not w.get("breached", false):
 			return w
 	return null
 
@@ -234,13 +234,20 @@ func _target():
 				if s["state"] != "wall" or s["hp"] <= 0.0:
 					continue
 				var d: float = 0.0 if s["side"] == w["side"] and not s.has("post") else 10.0 + absf(s["u"] - D.LANES[w["side"]]["u0"])
+				if s["is_player"]:
+					d += 5.0   # one of the crew, so you keep shooting
+				if s["id"] == main.selected_id:
+					d = -1.0   # already picked: click them again
 				if d < bd:
 					bd = d
 					best = i
 			if best < 0:
 				return null
 			var s: Dictionary = g.crew[best]
-			return main.rig.world_to_screen(Vector3(s["x"], D.DECK_H + 2.0, s["y"]))
+			var p: Vector2 = main.rig.world_to_screen(Vector3(s["x"], D.DECK_H + 2.0, s["y"]))
+			if s["id"] == main.selected_id:
+				p.y -= 64.0   # above the big "Click again to REPAIR"
+			return p
 		"truck":
 			if h._btn_board != null and h._btn_board.visible:
 				return h._btn_board.get_global_rect()

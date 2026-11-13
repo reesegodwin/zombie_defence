@@ -194,6 +194,8 @@ func sync(s: Dictionary, dt: float) -> void:
 	var state: String = s["state"]
 	visible = state != "away" and state != "aboard"
 	_bar.visible = false
+	label.font_size = 40   # (bigger only while picked: see below)
+	label.outline_size = 10
 	# Health, when they're hurt.
 	var hp_frac: float = clampf(s.get("hp", 1.0) / s.get("max_hp", 1.0), 0.0, 1.0)
 	_hp_bar.visible = hp_frac < 0.999 and state != "dead"
@@ -284,10 +286,13 @@ func sync(s: Dictionary, dt: float) -> void:
 		upper.rotation.z = 0.0
 		var reloading: bool = s.get("reload", 0.0) > 0.0
 		if selected:
-			label.text = s["name"] + "  ·  click where to go, or again to repair"
+			# Picked: say how to repair, big, and how to move them, under it.
+			label.text = "Click again to REPAIR\n%s · or click where to go" % s["name"]
 		else:
 			label.text = s["name"] + ("  ·  click to select" if hovered else "")
 		label.modulate = Color(1.0, 0.9, 0.6, 1.0) if hovered or selected else Color(1, 1, 1, 0.8)
+		label.font_size = 72 if selected else 40
+		label.outline_size = 16 if selected else 10
 		if reloading and not selected:
 			label.text = s["name"] + "  ·  reloading"
 		# Sim angle is in the ground plane (x, y) -> world (x, z).
