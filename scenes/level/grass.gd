@@ -12,9 +12,9 @@ const Mountains = preload("res://scenes/level/mountains.gd")
 const SHADER := preload("res://assets/shaders/grass.gdshader")
 
 const AREA := Rect2(-42, -38, 108, 92)   # around the lanes and the base: what the camera sees
-const SPACING := 0.9                     # metres between tufts (before jitter and gaps)
+const SPACING := 0.42                    # metres between tufts (before jitter and gaps): small tufts, lots of them
 const CHUNK := 16.0
-const BLADES := 15
+const BLADES := 8
 
 var _tiles: Array[MultiMeshInstance3D] = []
 
@@ -87,13 +87,13 @@ static func _tuft_mesh(rng: RandomNumberGenerator) -> ArrayMesh:
 	var root_col := Color(0.5, 0.44, 0.24)
 	for b in BLADES:
 		var a := rng.randf() * TAU
-		var r := rng.randf_range(0.0, 0.2)
+		var r := rng.randf_range(0.0, 0.1)
 		var base := Vector3(cos(a) * r, 0.0, sin(a) * r)
 		var out := Vector3(cos(a), 0, sin(a))
 		var side := Vector3(-out.z, 0, out.x)
-		var hgt := rng.randf_range(0.45, 0.85)
-		var lean := rng.randf_range(0.08, 0.3)
-		var wid := rng.randf_range(0.03, 0.05)
+		var hgt := rng.randf_range(0.22, 0.42)
+		var lean := rng.randf_range(0.04, 0.15)
+		var wid := rng.randf_range(0.018, 0.03)
 		var tip_col := Color(0.42, 0.55, 0.2).lerp(Color(0.62, 0.62, 0.3), rng.randf())
 		var mid := base + Vector3(0, hgt * 0.55, 0) + out * lean * 0.35
 		var tip := base + Vector3(0, hgt, 0) + out * lean

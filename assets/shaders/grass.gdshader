@@ -14,8 +14,8 @@ void vertex() {
 	vec3 at = MODEL_MATRIX[3].xyz;
 	float h = max(VERTEX.y, 0.0);
 	float t = TIME * gust + at.x * 0.37 + at.z * 0.23;
-	VERTEX.x += (sin(t) + 0.4 * sin(t * 2.3 + 1.0)) * sway * h * h * 3.0;
-	VERTEX.z += cos(t * 0.8) * sway * 0.5 * h * h * 3.0;
+	VERTEX.x += (sin(t) + 0.4 * sin(t * 2.3 + 1.0)) * sway * h * h * 6.0;
+	VERTEX.z += cos(t * 0.8) * sway * 0.5 * h * h * 6.0;
 	NORMAL = vec3(0.0, 1.0, 0.0);
 }
 
