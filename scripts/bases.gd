@@ -35,12 +35,16 @@ const EXTRAS := {
 	"mill": [["logs", 11.0, 18.0, 0.0]],
 	"marsh": [["duckboards", 6.6, 23.6, 0.0], ["duckboards", 11.2, 17.6, 1.57]],
 	"lodge": [["antlers", 5.2, 26.32, 0.0]],
+	"gasstation": [["gas_canopy", 11.2, 19.4, 0.0], ["gas_sign", 4.0, 23.6, 0.0]],
+	"fueldepot": [["fuel_tank", 8.2, 25.6, 0.0]],
+	"highway": [["pileup", 11.2, 19.0, 0.0], ["jersey", 14.2, 27.0, 0.0], ["jersey", 4.8, 17.0, 0.0]],
 	"military": [["watchtower", 3.8, 17.2, 0.0], ["watchtower", 18.2, 17.2, 0.0], ["jeep", 13.4, 19.0, 0.0],
 		["flag", 11.2, 18.4, 0.0], ["sandbags", 11.2, 17.0, 0.0]],
 }
 const EXTRA_FOOT := {"water_tower": Vector2(1.8, 1.8), "boxcar": Vector2(3.4, 1.4), "watchtower": Vector2(1.3, 1.3),
 	"sandbags": Vector2(2.8, 0.7), "mast": Vector2(0.9, 0.9), "wreck": Vector2(2.6, 1.3), "tyres": Vector2(1.0, 1.0), "logs": Vector2(2.4, 1.0),
-	"jeep": Vector2(2.6, 1.4), "flag": Vector2(0.5, 0.5)}
+	"jeep": Vector2(2.6, 1.4), "flag": Vector2(0.5, 0.5),
+	"gas_canopy": Vector2(3.0, 1.2), "gas_sign": Vector2(0.6, 0.6), "fuel_tank": Vector2(2.8, 1.3), "pileup": Vector2(3.2, 1.8), "jersey": Vector2(2.8, 0.6)}
 
 const BASES := {
 	# The outpost of the first levels: bunker at the front left, huts at the
@@ -133,6 +137,32 @@ const BASES := {
 			"worklamp": [4.4, 22.0, 0.0], "lamp1": [8.4, 22.4, 0.0], "lamp2": [14.0, 25.6, 0.0],
 			"workshop": [8.0, 24.2, 0.0], "research": [17.6, 22.6, 0.0], "woodpile": [6.4, 19.6, 0.0]},
 		"turrets": [Vector2(15.6, 17.4), Vector2(6.4, 17.4)], "radio": Vector2(13.6, 26.6)},
+	# Route 9's gas station: the camp's yard turned the other way, the pumps
+	# under their canopy in the middle of it.
+	"gasstation": {
+		"props": {"bunker": [5.4, 25.8, 0.0], "hut1": [18.2, 18.4, -1.57], "hut2": [18.0, 21.4, -1.2],
+			"crates": [14.2, 26.4, 0.0], "barrel1": [8.8, 18.0, 0.0], "barrel2": [8.0, 18.4, 0.0],
+			"fire": [15.0, 22.0, 0.0], "tent": [17.6, 25.4, -1.57], "generator": [3.8, 21.6, -1.57],
+			"worklamp": [4.4, 19.6, 0.0], "lamp1": [14.0, 19.0, 0.0], "lamp2": [7.8, 22.8, 0.0],
+			"workshop": [5.8, 17.2, 0.0], "research": [15.8, 17.0, 0.0], "woodpile": [8.8, 27.0, 0.0]},
+		"turrets": [Vector2(14.4, 24.4), Vector2(6.6, 20.6)], "radio": Vector2(7.8, 25.0)},
+	# The fuel depot: the outpost's yard turned the other way; the great tanks
+	# stand behind it.
+	"fueldepot": {
+		"props": {"bunker": [17.4, 18.0, 0.0], "hut1": [8.4, 18.0, 0.0], "hut2": [7.0, 19.6, 0.0],
+			"crates": [12.9, 18.6, 0.0], "barrel1": [10.2, 19.4, 0.0], "barrel2": [14.1, 20.3, 0.0],
+			"fire": [9.6, 20.2, 0.0], "tent": [13.5, 20.9, 0.0], "generator": [18.1, 26.6, 0.0],
+			"worklamp": [17.0, 25.6, 0.0], "lamp1": [14.4, 24.5, 0.0], "lamp2": [7.9, 24.5, 0.0],
+			"workshop": [5.4, 27.05, 0.0], "research": [15.0, 26.85, 0.0], "woodpile": [8.2, 27.2, 0.0]},
+		"turrets": [Vector2(15.6, 22.0), Vector2(6.6, 22.6)], "radio": Vector2(4.6, 25.0)},
+	# The interstate truck stop: the lodge's yard turned the other way.
+	"highway": {
+		"props": {"bunker": [17.2, 25.2, 0.0], "hut1": [7.4, 18.0, -0.4], "hut2": [4.6, 19.6, 0.3],
+			"crates": [5.0, 25.4, 0.0], "barrel1": [8.8, 21.8, 0.0], "barrel2": [8.2, 22.6, 0.0],
+			"fire": [14.8, 20.4, 0.0], "tent": [5.8, 22.8, 0.0], "generator": [18.4, 21.6, -1.57],
+			"worklamp": [17.8, 20.2, 0.0], "lamp1": [13.8, 18.0, 0.0], "lamp2": [8.4, 26.4, 0.0],
+			"workshop": [14.8, 22.8, 0.0], "research": [18.0, 17.6, 0.0], "woodpile": [4.0, 27.2, 0.0]},
+		"turrets": [Vector2(16.4, 18.2), Vector2(9.0, 24.4)], "radio": Vector2(13.8, 25.6)},
 	# Fort Harlow, the army base: the HQ bunker at the back left, barracks
 	# huts down the right, the supply tent and an ammo dump of crates, the
 	# vehicle park out front.

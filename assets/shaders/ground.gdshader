@@ -17,6 +17,10 @@ uniform float east_on = 1.0;
 // colour (rgb) by an amount (a), keeping their texture's light and dark.
 uniform vec4 grass_pull = vec4(1.0, 1.0, 1.0, 0.0);
 uniform vec4 soil_pull = vec4(1.0, 1.0, 1.0, 0.0);
+// The Interstate: the lanes are a highway, cracked asphalt with a dashed
+// white centre line and yellow edges (front lane: x 4-18, its middle at 11;
+// the side lanes run east-west, y 16-27, middle at 21.5).
+uniform float road = 0.0;
 
 vec3 pulled(vec3 c, vec4 to) {
 	float lum = dot(c, vec3(0.299, 0.587, 0.114));
@@ -52,6 +56,25 @@ void fragment() {
 	dirt = clamp(dirt + (n - 0.5) * 1.1 * edgeband, 0.0, 1.0);
 	vec3 grass = texture(grass_tex, p * grass_scale).rgb * COLOR.rgb;
 	vec3 soil = texture(dirt_tex, p * dirt_scale).rgb;
-	ALBEDO = mix(pulled(grass, grass_pull), pulled(soil, soil_pull), dirt);
+	vec3 ground = pulled(soil, soil_pull);
+	if (road > 0.0) {
+		float lane_front = UV2.x * front_on;
+		float lane_side = UV2.y * side_on;
+		vec3 asphalt = vec3(0.11, 0.11, 0.12) * (0.8 + 0.5 * noise(p * 3.0)) + vec3(0.04) * step(0.93, noise(p * 9.0));
+		float mark = 0.0;
+		vec3 mark_col = vec3(0.85, 0.85, 0.8);
+		if (lane_front > 0.5 && p.y < 14.2) {
+			mark = step(abs(p.x - 11.0), 0.07) * step(0.5, fract(p.y * 0.2));
+			float edge = step(abs(p.x - 4.6), 0.06) + step(abs(p.x - 17.4), 0.06);
+			if (edge > 0.0) { mark = 1.0; mark_col = vec3(0.8, 0.62, 0.12); }
+		} else if (lane_side > 0.5 && (p.x < 0.8 || p.x > 21.2)) {
+			mark = step(abs(p.y - 21.5), 0.07) * step(0.5, fract(p.x * 0.2));
+			float edge = step(abs(p.y - 16.6), 0.06) + step(abs(p.y - 26.4), 0.06);
+			if (edge > 0.0) { mark = 1.0; mark_col = vec3(0.8, 0.62, 0.12); }
+		}
+		asphalt = mix(asphalt, mark_col * (0.8 + 0.3 * noise(p * 5.0)), mark * 0.9);
+		ground = mix(ground, asphalt, road * clamp(max(lane_front, lane_side) * 1.4 - 0.2, 0.0, 1.0));
+	}
+	ALBEDO = mix(pulled(grass, grass_pull), ground, dirt);
 	ROUGHNESS = 1.0;
 }

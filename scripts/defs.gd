@@ -37,50 +37,72 @@ const LANES := [
 const SIDE_OPEN_AT := [0.0, 590.0, 1150.0]   # day 3 and day 5, half a minute after dawn
 # Levels: which lanes the dead come down, and when each side lane opens
 # (INF: never; its pipe is sealed). grit: how much more Grit a run pays.
+# The biomes: runs of levels in the same country, from the green forests at
+# the start to the snow at the end. Each has its own scavenging map (its own
+# places to loot), its own barrier behind the bases ("back": what keeps the
+# dead from coming round the back) and its levels' bases along one road.
+const BIOMES := [
+	{"key": "forest", "name": "The Pines", "levels": [1, 2, 3, 4], "back": "mountains"},
+	{"key": "farmland", "name": "The Farmlands", "levels": [5, 6, 7], "back": "fence"},
+	{"key": "wasteland", "name": "The Wastes", "levels": [8, 9, 10], "back": "wreckage"},
+	{"key": "snow", "name": "The North", "levels": [11, 12, 13, 14], "back": "snow_mountains"},
+]
 const LEVELS := [
-	{"name": "The Road", "short": "1 lane",
+	# --- The Pines (forest) ---
+	{"name": "The Road", "short": "1 lane", "biome": "forest", "base": "outpost", "palette": "green",
 		"desc": "One way in: the dead only come down the lane in front of your wall. The side pipes are sealed.",
 		"open_at": [0.0, INF, INF], "grit": 1.0},
-	{"name": "The Crossroads", "short": "3 lanes",
-		"desc": "Three walls to hold: the west lane opens on the morning of day 3, the east on day 5.",
+	{"name": "The Crossroads", "short": "3 lanes", "biome": "forest", "base": "lodge", "palette": "green",
+		"desc": "A hunting lodge where three roads meet. Three walls to hold: the west lane opens on the morning of day 3, the east on day 5.",
 		"open_at": SIDE_OPEN_AT, "grit": 1.25},
-	{"name": "The Siege", "short": "3 lanes from day 1",
-		"desc": "All three lanes from the first morning, and the dead come thicker and tougher. The mountain pass at your back stays safe.",
-		"open_at": [0.0, 15.0, 15.0], "grit": 1.5, "spawn": 1.15, "hp": 1.1},
-	{"name": "Frostbite Ridge", "short": "snow, brutes", "base": "ridge", "palette": "snow",
-		"desc": "A camp on a snowy ridge. The front first; the west from day 2, the east from day 4. Big ones come out of the cold more often.",
-		"open_at": [0.0, 300.0, 880.0], "grit": 1.55, "spawn": 1.35, "hp": 1.15, "mix": {"brute": 1.8}},
-	{"name": "Black Marsh", "short": "fog, a slow horde", "base": "marsh", "palette": "marsh",
-		"desc": "A station in the marsh. The mud slows the dead, but there are a great many of them, and the fog never lifts.",
-		"open_at": [0.0, 15.0, 15.0], "grit": 1.6, "spawn": 1.45, "hp": 1.05, "speed": 0.82, "mix": {"runner": 0.5}, "fog": 4.0},
-	{"name": "Dust Bowl", "short": "runners", "base": "farm", "palette": "dust",
-		"desc": "A farmstead in the dry country. Runners, lots of them: keep someone on every wall.",
-		"open_at": [0.0, 15.0, 15.0], "grit": 1.65, "spawn": 1.15, "hp": 1.1, "mix": {"runner": 2.2}},
-	{"name": "Ashwood", "short": "burnt forest", "base": "camp", "palette": "ash",
-		"desc": "A camp in a forest that burned last summer. The dead come thick down the front lane; the sides wake later.",
-		"open_at": [0.0, 590.0, 590.0], "grit": 1.7, "spawn": 1.5, "hp": 1.25, "front": 1.6},
-	{"name": "Hollow Creek", "short": "two lanes, autumn", "base": "mill", "palette": "autumn",
+	{"name": "Hollow Creek", "short": "two lanes", "biome": "forest", "base": "mill", "palette": "green",
 		"desc": "An old mill by the creek. Only the front and west lanes, but they never let up.",
-		"open_at": [0.0, 15.0, INF], "grit": 1.75, "spawn": 1.45, "hp": 1.2},
-	{"name": "Iron Yard", "short": "tough dead", "base": "depot", "palette": "rust",
+		"open_at": [0.0, 15.0, INF], "grit": 1.35, "spawn": 1.25, "hp": 1.05},
+	{"name": "The Siege", "short": "3 lanes from day 1", "biome": "forest", "base": "barricade", "palette": "green",
+		"desc": "A barricaded camp deep in the pines. All three lanes from the first morning, and the dead come thicker and tougher.",
+		"open_at": [0.0, 15.0, 15.0], "grit": 1.5, "spawn": 1.2, "hp": 1.1},
+	# --- The Farmlands (autumn) ---
+	{"name": "Harvest Farm", "short": "runners", "biome": "farmland", "base": "farm", "palette": "autumn",
+		"desc": "A walled farmyard below the old farmhouse. Runners come across the fields, lots of them: keep someone on every wall.",
+		"open_at": [0.0, 15.0, 15.0], "grit": 1.55, "spawn": 1.25, "hp": 1.15, "mix": {"runner": 1.9}},
+	{"name": "Route 9 Gas", "short": "a heavy front", "biome": "farmland", "base": "gasstation", "palette": "dust",
+		"desc": "A gas station on Route 9, fenced in. The dead pile down the road in front; the sides wake on day 3.",
+		"open_at": [0.0, 590.0, 590.0], "grit": 1.6, "spawn": 1.45, "hp": 1.2, "front": 1.6},
+	{"name": "Black Marsh", "short": "fog, a slow horde", "biome": "farmland", "base": "marsh", "palette": "marsh",
+		"desc": "A pumping station where the farmland turns to marsh. The mud slows the dead, but there are a great many of them, and the fog never lifts.",
+		"open_at": [0.0, 15.0, 15.0], "grit": 1.65, "spawn": 1.5, "hp": 1.1, "speed": 0.82, "mix": {"runner": 0.5}, "fog": 4.0},
+	# --- The Wastes ---
+	{"name": "Iron Yard", "short": "tough dead", "biome": "wasteland", "base": "depot", "palette": "rust",
 		"desc": "A rail depot, walled in timber. Fewer of the dead, but they take a lot of killing.",
-		"open_at": [0.0, 15.0, 15.0], "grit": 1.8, "spawn": 1.0, "hp": 1.6, "mix": {"brute": 1.5}, "walls": 1},
-	{"name": "Red Pines", "short": "front and east", "base": "lodge", "palette": "autumn",
-		"desc": "A hunting lodge in the red pines. Front and east from the start; the west wakes on day 3.",
-		"open_at": [0.0, 590.0, 15.0], "grit": 1.85, "spawn": 1.4, "hp": 1.25, "mix": {"runner": 1.4}},
-	{"name": "Whiteout", "short": "snow, everything", "base": "trench", "palette": "snow",
+		"open_at": [0.0, 15.0, 15.0], "grit": 1.7, "spawn": 1.15, "hp": 1.55, "mix": {"brute": 1.5}, "walls": 1},
+	{"name": "Tank Farm", "short": "bloaters", "biome": "wasteland", "base": "fueldepot", "palette": "dust",
+		"desc": "A fuel depot, its great tanks still standing. Bloaters drift in from the wastes: pop them before they reach the wall.",
+		"open_at": [0.0, 15.0, 15.0], "grit": 1.8, "spawn": 1.45, "hp": 1.3, "mix": {"bloater": 2.5}},
+	{"name": "The Interstate", "short": "the big horde", "biome": "wasteland", "base": "highway", "palette": "ash", "road": true,
+		"desc": "A truck stop walled in on the interstate. The dead come up the highway lanes in the biggest hordes yet.",
+		"open_at": [0.0, 15.0, 15.0], "grit": 1.85, "spawn": 1.65, "hp": 1.3, "mix": {"runner": 1.4}},
+	# --- The North (snow) ---
+	{"name": "Frostbite Ridge", "short": "snow, brutes", "biome": "snow", "base": "ridge", "palette": "snow",
+		"desc": "A camp on a snowy ridge. The front first, then the west and east soon after. Big ones come out of the cold more often.",
+		"open_at": [0.0, 15.0, 300.0], "grit": 1.9, "spawn": 1.5, "hp": 1.35, "mix": {"brute": 1.8}},
+	{"name": "Whiteout", "short": "snow, everything", "biome": "snow", "base": "trench", "palette": "snow",
 		"desc": "A timber-walled trench line in deep snow. All three lanes, runners and brutes both, from the first morning.",
-		"open_at": [0.0, 15.0, 15.0], "grit": 1.9, "spawn": 1.4, "hp": 1.3, "mix": {"runner": 1.5, "brute": 1.5}, "walls": 1},
-	{"name": "Floodplain", "short": "the big horde", "base": "barricade", "palette": "marsh",
-		"desc": "A barricaded farm on the floodplain. The biggest hordes yet, slowed a little by the mud.",
-		"open_at": [0.0, 15.0, 15.0], "grit": 1.95, "spawn": 1.7, "hp": 1.25, "speed": 0.9},
-	{"name": "The Long Dark", "short": "the hardest", "base": "fortress", "palette": "ash",
-		"desc": "The old fortress, its stone walls still standing. The hardest of them all before the end: everything, thicker and tougher.",
-		"open_at": [0.0, 15.0, 15.0], "grit": 2.0, "spawn": 1.55, "hp": 1.4, "mix": {"runner": 1.4, "brute": 1.6}, "walls": 2},
-	{"name": "Last Stand: Fort Harlow", "short": "endless, army base", "base": "military", "palette": "military", "garrison": true, "walls": 1,
-		"desc": "An army base, still held by the last of its garrison: four soldiers with assault rifles. No truck comes: hold out as long as you can. Hold out 5 nights there and the run counts as won.",
+		"open_at": [0.0, 15.0, 15.0], "grit": 1.95, "spawn": 1.55, "hp": 1.4, "mix": {"runner": 1.5, "brute": 1.5}, "walls": 1},
+	{"name": "The Long Dark", "short": "the hardest", "biome": "snow", "base": "fortress", "palette": "snow",
+		"desc": "The old fortress in the snow, its stone walls still standing. The hardest of them all before the end: everything, thicker and tougher.",
+		"open_at": [0.0, 15.0, 15.0], "grit": 2.0, "spawn": 1.6, "hp": 1.45, "mix": {"runner": 1.4, "brute": 1.6}, "walls": 2},
+	{"name": "Last Stand: Fort Harlow", "short": "endless, army base", "biome": "snow", "base": "military", "palette": "snow", "garrison": true, "walls": 1,
+		"desc": "An army base in the snow, still held by the last of its garrison: four soldiers with assault rifles. No truck comes: hold out as long as you can. Hold out 5 nights there and the run counts as won.",
 		"open_at": [0.0, 15.0, 15.0], "grit": 2.1, "spawn": 1.75, "hp": 1.5, "endless": true},
 ]
+
+
+## The biome of level lv (1-based), from BIOMES.
+static func biome_of(lv: int) -> Dictionary:
+	for b in BIOMES:
+		if lv in b["levels"]:
+			return b
+	return BIOMES[0]
 # The dead come in at the far end of each lane: v = LANE_START (the wall is at
 # v = WALL_Y, so they walk WALL_Y - LANE_START tiles to reach it).
 const LANE_START := -8.0

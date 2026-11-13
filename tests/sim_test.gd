@@ -277,12 +277,12 @@ func _unit_checks() -> void:
 	var gwl = Game.new()
 	gwl.apply_meta({"levels": {}, "level": 13})
 	var gwl2 = Game.new()
-	gwl2.apply_meta({"levels": {}, "level": 9})
+	gwl2.apply_meta({"levels": {}, "level": 8})
 	var gwl3 = Game.new()
 	gwl3.apply_meta({"levels": {}, "level": 2})
 	check(gwl.walls[0]["stage"] == 2 and gwl2.walls[0]["stage"] == 1 and gwl3.walls[0]["stage"] == 0, "the old fortress has stone walls, the depot timber, the crossroads fences")
 	var gbs0 = Game.new()
-	check(D.BASE == "outpost", "a new game is back at the outpost")
+	check(D.BASE == D.LEVELS[gbs0.level - 1]["base"], "a new game lays out its own level's base")
 	# The crew speak up now and then: a wall giving way, getting hurt.
 	var gbark = Game.new()
 	var bark1: Dictionary = gbark.add_survivor("Marek", "pistol", false)
@@ -946,10 +946,10 @@ func _unit_checks() -> void:
 	g.update_cycle()
 	check(not g.over and g.evac < 0.0 and g.nights_survived() > 3 * D.WIN_NIGHTS + D.WIN_NIGHTS, "where no truck ever comes, and every night counts")
 	var g_l3 = Game.new()
-	g_l3.apply_meta({"levels": {}, "level": 3})
+	g_l3.apply_meta({"levels": {}, "level": 4})
 	g_l3.time = 20.0
 	g_l3.update_sides()
-	check(g_l3.sides_open == [true, true, true], "on level 3 all three lanes open on the first morning")
+	check(g_l3.sides_open == [true, true, true], "on The Siege all three lanes open on the first morning")
 
 	# Saving a run and loading it picks up exactly where it was.
 	g = Game.new()
@@ -1098,8 +1098,9 @@ func _unit_checks() -> void:
 	check(g.salvage({"where": "gear", "s": 0, "g": 0}).has("ok") and g.crew[0]["gear"][0] == null and g.scrap == sc1 + Game.salvage_value("hollow"), "so can carried gear")
 	check(not g.salvage({"where": "weapon", "s": 0}).has("ok"), "but not the gun in someone's hands")
 
-	# Placing buildings.
+	# Placing buildings (at the outpost, level 1's base).
 	g = Game.new()
+	g.apply_meta({"levels": {}, "level": 1})
 	g.researched["turrets"] = true
 	g.scrap = 1000
 	check(not g.build("turret", 11.0, D.WALK_Y).has("ok"), "nothing gets built on a walkway")
@@ -1301,8 +1302,9 @@ func _unit_checks() -> void:
 	g0.time = 400.0
 	g.time = 400.0
 	check(g.horde_size() > g0.horde_size(), "Heat makes hordes bigger")
-	# The radio station.
+	# The radio station (at the outpost, level 1's base).
 	g = Game.new()
+	g.apply_meta({"levels": {}, "level": 1})
 	g.scrap = 500
 	check(not g.buy("radio").has("ok"), "the radio needs research")
 	g.researched["radio"] = true

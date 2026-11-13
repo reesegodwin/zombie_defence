@@ -22,6 +22,9 @@ var _yard_lights: Array = []     # the lamps in the yard (base_props.gd)
 ## lays the yard out as its base (bases.gd) and colours the country.
 func set_level(open_at: Array, def := {}) -> void:
 	apply_base(def.get("base", "outpost"))
+	var gm = $Ground.get_surface_override_material(0)
+	if gm is ShaderMaterial:
+		gm.set_shader_parameter("road", 1.0 if def.get("road", false) else 0.0)   # the Interstate's highway lanes
 	$Ground.set_lanes([open_at[0] != INF, open_at[1] != INF, open_at[2] != INF])
 	# A lane that's never used here: no sewer at its end, just woods.
 	for side in culverts.size():

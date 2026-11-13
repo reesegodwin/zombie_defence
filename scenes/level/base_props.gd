@@ -243,6 +243,11 @@ static func extra(kind: String) -> ArrayMesh:
 			"logs": m = _x_logs()
 			"duckboards": m = _x_duckboards()
 			"jeep": m = _x_jeep()
+			"gas_canopy": m = _x_gas_canopy()
+			"gas_sign": m = _x_gas_sign()
+			"fuel_tank": m = _x_fuel_tank()
+			"pileup": m = _x_pileup()
+			"jersey": m = _x_jersey()
 			"flag": m = _x_flag()
 			_: m = _x_antlers()
 		_extra_cache[kind] = m
@@ -391,6 +396,80 @@ static func _x_jeep() -> ArrayMesh:
 	k.box(Vector3(1.16, 0.6, 0.4), Vector3(0.04, 0.1, 0.18), Color(1.0, 0.95, 0.75))  # headlamps
 	k.box(Vector3(1.16, 0.6, -0.4), Vector3(0.04, 0.1, 0.18), Color(1.0, 0.95, 0.75))
 	k.box(Vector3(0, 0.82, 0.63), Vector3(0.36, 0.2, 0.01), Color(0.85, 0.85, 0.8))    # white star panel
+	return k.mesh()
+
+
+## A gas station's pump island under its canopy: a white roof with an orange
+## band on two posts, three old pumps on a kerbed island beneath.
+static func _x_gas_canopy() -> ArrayMesh:
+	var k := _kit(0.45, 213)
+	var white := Color(0.82, 0.82, 0.8)
+	var orange := Color(0.85, 0.38, 0.12)
+	k.box(Vector3(0, 0.08, 0), Vector3(2.8, 0.16, 0.9), CONCRETE)                # the island
+	for sx in [-1.0, 1.0]:
+		k.box(Vector3(sx, 1.5, 0), Vector3(0.16, 2.9, 0.16), white.darkened(0.15))
+	k.box(Vector3(0, 3.0, 0), Vector3(4.2, 0.22, 2.8), white)                   # the roof
+	k.box(Vector3(0, 2.95, 1.41), Vector3(4.2, 0.16, 0.02), orange)
+	k.box(Vector3(0, 2.95, -1.41), Vector3(4.2, 0.16, 0.02), orange)
+	k.box(Vector3(2.11, 2.95, 0), Vector3(0.02, 0.16, 2.8), orange)
+	k.box(Vector3(-2.11, 2.95, 0), Vector3(0.02, 0.16, 2.8), orange)
+	for i in 3:
+		var x := -0.7 + i * 0.7
+		k.box(Vector3(x, 0.7, 0), Vector3(0.42, 1.0, 0.36), Color(0.62, 0.18, 0.12))   # pump
+		k.box(Vector3(x, 0.95, 0.19), Vector3(0.26, 0.2, 0.01), Color(0.85, 0.85, 0.75))   # its face
+		k.box(Vector3(x + 0.22, 0.6, 0.05), Vector3(0.04, 0.4, 0.04), DARK)                # the hose
+	return k.mesh()
+
+
+## The gas station's tall sign: a pole with the price board and the name.
+static func _x_gas_sign() -> ArrayMesh:
+	var k := _kit(0.4, 214)
+	k.box(Vector3(0, 2.0, 0), Vector3(0.14, 4.0, 0.14), Color(0.6, 0.6, 0.58))
+	k.box(Vector3(0, 4.25, 0), Vector3(1.4, 0.8, 0.12), Color(0.85, 0.82, 0.75))      # the name board
+	k.box(Vector3(0, 4.25, 0.065), Vector3(1.2, 0.4, 0.01), Color(0.85, 0.38, 0.12))  # orange lettering band
+	k.box(Vector3(0, 3.4, 0), Vector3(0.9, 0.7, 0.1), Color(0.55, 0.15, 0.1))         # the price board
+	for i in 3:
+		k.box(Vector3(0.15, 3.6 - i * 0.2, 0.055), Vector3(0.4, 0.12, 0.01), Color(0.95, 0.9, 0.8))
+	return k.mesh()
+
+
+## A fuel tank lying on its cradles, a ladder up the side and a hatch on top.
+static func _x_fuel_tank() -> ArrayMesh:
+	var k := _kit(0.5, 215)
+	var tank := Color(0.7, 0.7, 0.66)
+	k.cyl(Vector3(0, 0.85, 0), 0.62, 2.5, tank, 16, Vector3(0, PI / 2, 0))
+	for sx in [-1.25, 1.25]:
+		k.cyl(Vector3(sx, 0.85, 0), 0.6, 0.06, tank.darkened(0.12), 16, Vector3(0, PI / 2, 0))
+	for sx in [-0.8, 0.8]:
+		k.box(Vector3(sx, 0.3, 0), Vector3(0.2, 0.6, 1.1), CONCRETE)               # cradles
+	k.box(Vector3(0, 1.5, 0), Vector3(0.4, 0.1, 0.4), tank.darkened(0.2))         # the hatch
+	k.box(Vector3(0, 0.9, 0.64), Vector3(1.6, 0.2, 0.02), Color(0.75, 0.6, 0.15)) # the hazard band
+	return k.mesh()
+
+
+## A car pile-up: three wrecks shunted together, one tipped on another.
+static func _x_pileup() -> ArrayMesh:
+	var k := _kit(0.75, 216)
+	var cols := [Color(0.42, 0.18, 0.14), Color(0.25, 0.3, 0.38), Color(0.6, 0.58, 0.5)]
+	var at := [[Vector3(-0.9, 0.0, 0.1), 0.2], [Vector3(0.7, 0.0, -0.2), -0.35], [Vector3(-0.1, 0.9, 0.0), 0.5]]
+	for i in 3:
+		var p: Vector3 = at[i][0]
+		var yaw: float = at[i][1]
+		var tilt := Vector3(0.0 if i < 2 else 0.35, yaw, 0.0 if i < 2 else 0.2)
+		var b := Basis.from_euler(tilt)
+		k.box(p + b * Vector3(0, 0.45, 0), Vector3(1.9, 0.45, 0.95), cols[i], tilt)
+		k.box(p + b * Vector3(-0.1, 0.82, 0), Vector3(1.0, 0.35, 0.85), cols[i].darkened(0.1), tilt)
+		k.box(p + b * Vector3(-0.1, 0.82, 0), Vector3(1.02, 0.22, 0.7), DARK, tilt)   # empty windows
+	return k.mesh()
+
+
+## A row of concrete road barriers.
+static func _x_jersey() -> ArrayMesh:
+	var k := _kit(0.4, 217)
+	for i in 3:
+		var x := -0.95 + i * 0.95
+		k.box(Vector3(x, 0.2, 0), Vector3(0.9, 0.4, 0.5), CONCRETE, Vector3(0, k.rng.randf_range(-0.06, 0.06), 0))
+		k.box(Vector3(x, 0.55, 0), Vector3(0.9, 0.35, 0.22), CONCRETE.lightened(0.05), Vector3(0, k.rng.randf_range(-0.06, 0.06), 0))
 	return k.mesh()
 
 
