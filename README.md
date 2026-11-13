@@ -24,6 +24,12 @@ to repair, build, rearrange and send someone out. When the sun goes down
 (you're warned 20 seconds before) the horde comes, a second wave follows at
 midnight, and the dead keep coming hard until dawn (1:40 later).
 
+The dead come in four kinds: shambling **walkers**; fast, fragile
+**runners**; huge **brutes** that hit the wall hard; and green, swollen
+**bloaters** that burst when they die. Pop a bloater out in the lane and it
+hurts the dead around it; let it die at the wall and it tears at the wall and
+whoever's standing there.
+
 You start alone with a pistol on the walkway behind the wall, with the
 mountains at your back. Thirty seconds in, a survivor comes down the mountain
 pass to join you; after that, strangers only come down the pass if you've lost

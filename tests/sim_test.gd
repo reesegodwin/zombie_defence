@@ -290,6 +290,25 @@ func _unit_checks() -> void:
 	gbark.hurt_survivor(bark2, bark2["max_hp"] * 0.7)
 	check(bark2.get("bark", "") in Game.BARKS["hurt"], "badly hurt, they say so")
 	check(not gbark.crew[0].has("bark"), "you don't get lines put in your mouth")
+	# A bloater bursts when it dies: bad news at the wall, good news out in
+	# the lane among its friends.
+	var gbl = Game.new()
+	var blm: Dictionary = gbl.add_survivor("Kofi", "pistol", false)
+	var bl1: Dictionary = gbl.spawn_zombie("bloater", 1.0, 0.0, 0, D.WALL_Y - 0.4)
+	bl1["x"] = blm["x"]
+	var seg_b: Dictionary = gbl.walls[0]["segs"][Game.seg_at(0, Game.lane_uv(0, Vector2(bl1["x"], bl1["y"])).x)]
+	var seg_hp0: float = seg_b["hp"]
+	var crew_hp0: float = blm["hp"]
+	gbl.damage(bl1, 9999.0)
+	check(seg_b["hp"] < seg_hp0 and blm["hp"] < crew_hp0, "a bloater bursting at the wall tears at it and hurts whoever's close (wall -%d, crew -%d)" % [seg_hp0 - seg_b["hp"], crew_hp0 - blm["hp"]])
+	var gbl2 = Game.new()
+	var bl2: Dictionary = gbl2.spawn_zombie("bloater", 1.0, 0.0, 0, 3.0)
+	var pal: Dictionary = gbl2.spawn_zombie("walker", 1.0, 0.0, 0, 3.0)
+	pal["x"] = bl2["x"] + 1.0; pal["y"] = bl2["y"]
+	var wall_hp_b: float = gbl2.walls[0]["hp"]
+	var pal_hp: float = pal["hp"]
+	gbl2.damage(bl2, 9999.0)
+	check(gbl2.walls[0]["hp"] == wall_hp_b and pal["hp"] < pal_hp, "one popped out in the lane leaves the wall alone and hurts the dead round it")
 	var prl = load("res://scripts/progress.gd").open("user://test_progress_lv.cfg")
 	prl.reset()
 	check(prl.reached == 1, "only level 1 can be picked at first")

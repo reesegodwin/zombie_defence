@@ -215,7 +215,7 @@ static func _look(type: String, model: String, shirt: int, which: int) -> Dictio
 		"top": M["top"], "legs": M["legs"], "feet": M["feet"], "glow": M.get("glow", false),
 		# Mostly the model's own hair, now and then another head of it.
 		"hair": M["hair"] if rng.randf() < 0.6 else ["bald", "thin", "lank"][rng.randi() % 3],
-		"width": 1.25 if type == "brute" else (0.9 if type == "runner" else rng.randf_range(0.95, 1.05)),
+		"width": 1.25 if type == "brute" else (1.7 if type == "bloater" else (0.9 if type == "runner" else rng.randf_range(0.95, 1.05))),
 		"rng": rng, "key": key,
 	}
 

@@ -136,6 +136,10 @@ const HORDE_SIZE := [3, 30.0]         # a nightfall horde is 3 + one more per 30
 const START_SCRAP := 120
 const RUNNERS_FROM := 90.0            # seconds before the first runners can turn up
 const BRUTES_FROM := 200.0            # and the first brutes
+const BLOATERS_FROM := 330.0          # and the first bloaters (they burst when they die)
+# A bloater bursting: everything within BLOAT_R metres is hurt, and the wall
+# section in front of it if it went up at the wall.
+const BLOAT := {"r": 2.2, "crew": 28.0, "zombies": 45.0, "wall": 70.0}
 
 # --- Scavenging, strangers, food -------------------------------------------
 const WALK_SPEED := 2.2                 # tiles per second, walking to and from the pass
@@ -351,7 +355,7 @@ const SHOP_SECTIONS := [
 # Zombie types and weapons live in data/zombies/*.tres and data/weapons/*.tres
 # so they can be tuned in the Inspector. They are read into plain dictionaries
 # here, keyed by file name.
-const ZOMBIE_KEYS := ["walker", "runner", "brute"]
+const ZOMBIE_KEYS := ["walker", "runner", "brute", "bloater"]
 const WEAPON_KEYS := ["pistol", "smg", "shotgun", "rifle", "flamer", "launcher"]
 static var ZTYPES: Dictionary = _load_dir("res://data/zombies/", ZOMBIE_KEYS)
 

@@ -1320,6 +1320,29 @@ func damage(z: Dictionary, amt: float, quiet := false) -> void:
 		zombie_died.emit(z["x"], z["y"], z["type"])
 		burst(z["x"], z["y"], 10 + int(round(T["scale"] * 6)), {"colors": [Color("5a2a26"), Color("7a3a2c"), T["skin"]], "spread": 2.2, "up": 130.0, "life": 0.8, "size": 2.6 * T["scale"], "z": 14.0 * T["scale"]})
 		sound.emit("zdie")
+		if z["type"] == "bloater":
+			_bloat(z)
+
+
+## A bloater bursts: a spray of bile hurting everything close by (other dead
+## too), and the wall section in front of it if it went up at the wall.
+func _bloat(z: Dictionary) -> void:
+	var at := Vector2(z["x"], z["y"])
+	var r: float = D.BLOAT["r"]
+	burst(at.x, at.y, 26, {"colors": [Color("8a9a3a"), Color("6a7a2a"), Color("b0b85a")], "spread": r * 1.4, "up": 150.0, "life": 0.9, "size": 4.0, "z": 16.0})
+	burst(at.x, at.y, 8, {"colors": [Color(0.55, 0.6, 0.3), Color(0.45, 0.5, 0.25)], "spread": r * 0.6, "up": 30.0, "life": 1.6, "size": 9.0, "z": 12.0, "grav": 5.0})
+	sound.emit("boom")
+	shake = maxf(shake, 0.35)
+	for o in zombies:
+		if o != z and o["hp"] > 0 and at.distance_to(Vector2(o["x"], o["y"])) < r:
+			damage(o, D.BLOAT["zombies"], true)
+	for s in crew:
+		if s["hp"] > 0.0 and s["state"] in ["wall", "moving", "arriving", "returning", "boarding"] and at.distance_to(Vector2(s["x"], s["y"])) < r:
+			hurt_survivor(s, D.BLOAT["crew"])
+	if not z.get("inside", false):
+		var uv := lane_uv(z["side"], at)
+		if uv.y > D.WALL_Y - 1.6:
+			hit_wall(z["side"], uv.x, D.BLOAT["wall"])
 
 
 # --- Weapons ----------------------------------------------------------------
@@ -3270,6 +3293,9 @@ func _pick_type(t: float) -> String:
 	var pb: float = minf(0.14, 0.03 + (t - D.BRUTES_FROM) / 2000.0) * mix.get("brute", 1.0) if t > D.BRUTES_FROM else 0.0
 	var pr: float = minf(0.35, 0.08 + (t - D.RUNNERS_FROM) / 700.0) * mix.get("runner", 1.0) if t > D.RUNNERS_FROM else 0.0
 	pr = minf(pr, 0.85 - pb)
+	var pf: float = minf(0.08, 0.02 + (t - D.BLOATERS_FROM) / 3000.0) * mix.get("bloater", 1.0) if t > D.BLOATERS_FROM else 0.0
+	if r > 1.0 - pf:
+		return "bloater"
 	if r < pb:
 		return "brute"
 	if r < pb + pr:
@@ -3287,6 +3313,8 @@ func _spawn_one() -> void:
 			toast.emit("Runners. Fast and fragile. Get them before they reach the wall.", "danger")
 		elif type == "brute":
 			toast.emit("A brute. Slow, huge, and it hits the wall hard.", "danger")
+		elif type == "bloater":
+			toast.emit("A bloater. Shoot it before it reaches the wall: it bursts when it dies.", "danger")
 
 
 ## The run opens with a couple of zombies already partway down the front

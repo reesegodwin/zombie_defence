@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ZombieType" format=3]
+
+[ext_resource type="Script" path="res://data/zombie_type.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Bloater"
+health = 70.0
+speed = 0.42
+wall_damage = 6.0
+seconds_between_hits = 1.2
+radius = 0.3
+model_scale = 1.12
+models = PackedStringArray("shirtless", "open_shirt")
+skin_color = Color(0.56, 0.6, 0.42, 1)
+shirt_colors = PackedColorArray(0.42, 0.40, 0.28, 1)
+eye_color = Color(0.9, 0.85, 0.2, 1)
