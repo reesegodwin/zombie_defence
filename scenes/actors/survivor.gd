@@ -233,8 +233,35 @@ func _legs(hl: float, kl: float, hr: float, kr: float) -> void:
 	j["knee_r"].rotation.x = kr
 
 
+var _bark: Label3D
+
+## A line they say, floating over their name for a moment (game.gd bark).
+func _show_bark(s: Dictionary) -> void:
+	var t: float = s.get("bark_t", 0.0)
+	if t <= 0.0 or not s.has("bark"):
+		if _bark != null:
+			_bark.visible = false
+		return
+	if _bark == null:
+		_bark = Label3D.new()
+		_bark.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_bark.no_depth_test = true
+		_bark.fixed_size = true
+		_bark.pixel_size = 0.0011
+		_bark.font_size = 34
+		_bark.outline_size = 12
+		_bark.outline_modulate = Color(0.05, 0.05, 0.06, 0.9)
+		_bark.modulate = Color(1.0, 0.94, 0.72)
+		_bark.position = Vector3(0, 2.62, 0)
+		add_child(_bark)
+	_bark.text = "\u201c%s\u201d" % s["bark"]
+	_bark.visible = true
+	_bark.modulate.a = clampf(t / 0.4, 0.0, 1.0)
+
+
 func sync(s: Dictionary, dt: float) -> void:
 	_t += dt
+	_show_bark(s)
 	var state: String = s["state"]
 	visible = state != "away" and state != "aboard"
 	_bar.visible = false

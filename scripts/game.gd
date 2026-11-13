@@ -751,6 +751,8 @@ func start_reload(s: Dictionary) -> bool:
 	s["reload"] = t
 	s["reload_max"] = t
 	sound.emit("reload")
+	if randf() < 0.3:
+		bark_kind(s, "reload")
 	# The spent magazine drops out.
 	burst(s["x"], s["y"], 1, {"colors": [Color("2a2a2a")], "spread": 0.4, "up": 40.0, "life": 1.1, "size": 2.4, "z": 26.0})
 	return true
@@ -846,6 +848,12 @@ func hit_wall(side: int, u: float, dmg: float) -> void:
 			burst(p.x, p.y, 12, {"colors": wall_mat()["chips"], "spread": 3.0, "up": 180.0, "life": 1.0, "size": 4.0, "z": 18.0})
 		sound.emit("crash")
 		sum_wall(w)
+		var near = null
+		for c in crew:
+			if not c["is_player"] and c["state"] == "wall" and c["side"] == side and (near == null or absf(c["u"] - mid) < absf(near["u"] - mid)):
+				near = c
+		if near != null:
+			bark_kind(near, "breach", true)
 		wall_breached.emit(side, mid)
 	else:
 		sum_wall(w)
@@ -1090,8 +1098,11 @@ func _next_waypoint(z: Dictionary, goal: Vector2) -> Vector2:
 func hurt_survivor(s: Dictionary, dmg: float) -> void:
 	if s["hp"] <= 0.0:
 		return
+	var was: float = s["hp"]
 	s["hp"] -= dmg
 	s["hurt"] = 0.2
+	if was >= s["max_hp"] * 0.4 and s["hp"] < s["max_hp"] * 0.4 and s["hp"] > 0.0:
+		bark_kind(s, "hurt", true)
 	s["repairing"] = false
 	_stop_fixing(s)
 	burst(s["x"], s["y"], 4, {"colors": [Color("6a2a22"), Color("8a3a2c")], "spread": 0.8, "up": 70.0, "life": 0.4, "size": 2.2, "z": 24.0})
@@ -1740,6 +1751,53 @@ func burst(x: float, y: float, n: int, o: Dictionary) -> void:
 		parts = parts.slice(parts.size() - 900)
 
 
+# --- Barks ---------------------------------------------------------------------
+# Now and then the crew say something (shown above them, survivor.gd): when
+# they reload, when a wall gives way, when they're hurt, when they head out.
+# Each waits a while between lines, and only one speaks every few seconds.
+const BARK_TIME := 2.6       # seconds a line stays up
+const BARK_EACH := 9.0       # seconds before the same one speaks again
+const BARK_GAP := 2.5        # seconds between anyone's lines
+var _bark_gap := 0.0
+const BARKS := {
+	"reload": ["Reloading!", "Changing mags!", "Cover me!"],
+	"breach": ["They're through!", "Wall's down!", "Breach! Breach!"],
+	"hurt": ["I'm hit!", "They got me!", "Ugh, need a hand here!"],
+	"leave": ["Back before dark.", "Wish me luck.", "Keep the gate open."],
+	"night": ["Here they come.", "Lights up. They're coming.", "Long night ahead."],
+}
+
+
+## Has s say txt (if they and everyone else have been quiet long enough,
+## unless force). Not you: you speak for yourself.
+func bark(s: Dictionary, txt: String, force := false) -> void:
+	if s.get("is_player", false) or s["hp"] <= 0.0:
+		return
+	if not force and (_bark_gap > 0.0 or s.get("bark_cd", 0.0) > 0.0):
+		return
+	s["bark"] = txt
+	s["bark_t"] = BARK_TIME
+	s["bark_cd"] = BARK_EACH
+	_bark_gap = BARK_GAP
+
+
+## A line of the kind given (BARKS), from s.
+func bark_kind(s: Dictionary, kind: String, force := false) -> void:
+	bark(s, BARKS[kind].pick_random(), force)
+
+
+func update_barks(dt: float) -> void:
+	_bark_gap = maxf(0.0, _bark_gap - dt)
+	for s in crew:
+		if s.has("bark_t"):
+			s["bark_t"] -= dt
+			s["bark_cd"] = s.get("bark_cd", 0.0) - dt
+			if s["bark_t"] <= 0.0 and s["bark_cd"] <= 0.0:
+				s.erase("bark_t")
+				s.erase("bark")
+				s.erase("bark_cd")
+
+
 func float_text(x: float, y: float, txt: String, color: Color, life := 1.2) -> void:
 	texts.append({"x": x, "y": y, "txt": txt, "color": color, "life": life, "max": life})
 
@@ -2285,6 +2343,8 @@ func send_scavenger(si: int, site_key: String) -> Dictionary:
 	if s["state"] == "arriving":
 		# Just in through the gate: they've joined you, and straight back out.
 		survivor_arrived.emit(s["name"])
+		if D.CHARACTERS.has(s["name"]):
+			bark(s, D.CHARACTERS[s["name"]]["line"], true)
 		toast.emit("%s made it through the pass and joins you. Skills: %s." % [s["name"], skills_text(s)], "good")
 	if s["state"] == "wall":
 		s["route"] = pass_route(s)
@@ -2301,6 +2361,7 @@ func send_scavenger(si: int, site_key: String) -> Dictionary:
 	var gone: float = trip_seconds(s, site_key)
 	trip = {"who": s, "site": site_key, "away": maxf(5.0, gone - walk * 2.0), "t": 0.0, "walk": walk}
 	toast.emit("%s heads out through the pass to the %s." % [s["name"], site["name"]], "info")
+	bark_kind(s, "leave", true)
 	_changed()
 	return {"ok": true}
 
@@ -2402,6 +2463,8 @@ func update_walkers(dt: float) -> void:
 					_deliver_trip()
 				else:
 					survivor_arrived.emit(s["name"])
+					if D.CHARACTERS.has(s["name"]):
+						bark(s, D.CHARACTERS[s["name"]]["line"], true)
 					toast.emit("%s made it through the pass and joins you on the wall. Skills: %s." % [s["name"], skills_text(s)], "good")
 					sound.emit("coin")
 				_changed()
@@ -3354,6 +3417,9 @@ func update_cycle() -> void:
 			next_lull = maxf(next_lull, n * D.CYCLE + 20.0)   # no lulls until after dawn
 			horde_left += horde_size()
 			toast.emit("Night %d. Here they come." % n, "danger")
+			var on_wall := crew.filter(func(c): return not c["is_player"] and c["state"] == "wall" and c["hp"] > 0.0)
+			if not on_wall.is_empty():
+				bark_kind(on_wall.pick_random(), "night", true)
 			sound.emit("horn")
 			shake = maxf(shake, 0.3)
 		if pos >= D.DAY_LENGTH + D.NIGHT_LENGTH / 2.0 and _once("midnight%d" % n):
@@ -3797,3 +3863,4 @@ func step(dt: float) -> void:
 	update_bullets(dt)
 	update_shots(dt)
 	update_parts(dt)
+	update_barks(dt)
