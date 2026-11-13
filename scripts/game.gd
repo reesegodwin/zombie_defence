@@ -1204,7 +1204,7 @@ func auto_target(s: Dictionary, rng: float) -> Variant:
 const BULLET_SPEED := 70.0        # metres a second (a gun can set its own)
 const BULLETS_MAX := 400           # in flight at once; past that the oldest go
 const BULLET_AIM_H := 1.05         # bullets drop toward this height at the aimed distance (a chest)
-const MUZZLE_UP := 1.41            # the muzzle's height above a shooter's feet
+const MUZZLE_UP := 1.41            # the muzzle's height above a shooter's feet (a pistol's; weapons set their own)
 const MUZZLE_SIDE := -0.05         # and how far it's off to the side of their aim
 const TURRET_MUZZLE := Vector2(0.88, 2.0)   # a turret's: forward, height
 const SHOT_MAX := 90.0  # how far a bullet flies (the whole map: no range cap)
@@ -1291,9 +1291,9 @@ static func muzzle_point(s: Dictionary, w: Dictionary, ang: float) -> Vector3:
 		# A turret: the bore, up on its tower.
 		p += fwd * TURRET_MUZZLE.x
 		return Vector3(p.x, TURRET_MUZZLE.y, p.y)
-	p += fwd * w.get("muzzle", 0.9) + side * MUZZLE_SIDE
+	p += fwd * w.get("muzzle", 0.9) + side * w.get("muzzle_side", MUZZLE_SIDE)
 	var ground := D.DECK_H if on_deck(Vector2(s["x"], s["y"])) else 0.0
-	return Vector3(p.x, ground + MUZZLE_UP, p.y)
+	return Vector3(p.x, ground + w.get("muzzle_up", MUZZLE_UP), p.y)
 
 
 ## Moves every bullet in flight; each hits the zombies in its path in turn,

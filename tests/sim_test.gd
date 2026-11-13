@@ -204,7 +204,7 @@ func _unit_checks() -> void:
 	var bt_b0: Dictionary = gb.bullets[0]
 	var bt_out := Vector2(bt_b0["x"] - bt_sh["x"], bt_b0["y"] - bt_sh["y"])
 	check(bt_out.length() > 0.7 and bt_out.length() < 1.0 and bt_out.normalized().dot(Vector2(0, -1)) > 0.99, "a bullet starts at the end of the barrel, not the body (%.2f m out)" % bt_out.length())
-	check(absf(bt_b0["h"] - (D.DECK_H + Game.MUZZLE_UP + Game.Terrain.sample(bt_sh["x"], bt_sh["y"]))) < 0.01, "at gun height, up on the walkway")
+	check(absf(bt_b0["h"] - (D.DECK_H + Game.D.WEAPONS[bt_sh["weapon"]].get("muzzle_up", Game.MUZZLE_UP) + Game.Terrain.sample(bt_sh["x"], bt_sh["y"]))) < 0.01, "at gun height, up on the walkway")
 	# Its path is a straight line, not bobbing over the ground beneath it.
 	var gs = Game.new()
 	gs.fire(gs.crew[0], gs.crew[0]["x"] + 3.0, gs.crew[0]["y"] - 40.0, 1.0)

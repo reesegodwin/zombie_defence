@@ -23,6 +23,8 @@ extends Resource
 @export_group("Presentation")
 @export var barrel_length := 0.45        ## Length of the gun model, in metres.
 @export var muzzle_reach := 0.9          ## How far in front of the shooter the barrel ends (where shots come out), metres. Measured off the model.
+@export var muzzle_height := 1.41        ## How high above the shooter's feet the barrel ends: pistols held out at eye level, long guns shouldered lower.
+@export var muzzle_side := -0.05         ## How far the barrel end is off the line of aim (negative: to the shooter's right).
 @export var sound := "gun"               ## gun, smg, shotgun, rifle or launch.
 @export var slot_label := "PST"          ## Short text shown in inventory slots.
 
@@ -34,6 +36,7 @@ func to_dict() -> Dictionary:
 		"len": barrel_length, "sound": sound, "short": slot_label,
 		"mag": magazine, "reload": reload_seconds, "falloff": accuracy_falloff,
 		"bullet_speed": bullet_speed, "muzzle": muzzle_reach,
+		"muzzle_up": muzzle_height, "muzzle_side": muzzle_side,
 	}
 	if splash_radius > 0.0:
 		d["splash"] = splash_radius

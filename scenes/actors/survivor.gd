@@ -173,9 +173,40 @@ func _ground_height(s: Dictionary) -> float:
 
 # --- Poses --------------------------------------------------------------------
 ## Both hands on the gun, held out in front.
-func _pose_aim(k := 1.0) -> void:
-	_arm("r", Vector3(-1.25, 0.0, -0.3) * k, -0.55 * k)
-	_arm("l", Vector3(-1.45, 0.0, 0.45) * k, -0.25 * k)
+func _pose_aim(_k := 1.0) -> void:
+	# Both hands where they hold this gun (see GRIPS), wherever the gun is.
+	var gp: Array = GRIPS.get(_weapon, GRIPS["pistol"])
+	for i in 2:
+		var at: Vector2 = gp[i]
+		var local := gun.position + Vector3(0.0 if i == 0 else 0.012, -at.y, _rear + at.x * _length)
+		var t: Vector3 = gun_pivot.transform * local
+		_reach("r" if i == 0 else "l", t)
+
+
+## Bends an arm so its hand lands on t (in the spine's space): two-bone IK,
+## the elbow kept down and out.
+func _reach(s: String, t: Vector3) -> void:
+	var sh: Node3D = j["shoulder_" + s]
+	var el: Node3D = j["elbow_" + s]
+	var a: float = el.position.length()                              # upper arm
+	var b: float = (j["hand_" + s] as Node3D).position.length() + 0.05   # forearm, to the middle of the palm
+	var to := t - sh.position
+	var d := clampf(to.length(), absf(a - b) + 0.01, (a + b) * 0.999)
+	var u := to.normalized()
+	var out := signf(sh.position.x) if absf(sh.position.x) > 0.001 else 1.0
+	var pole := Vector3(out * 0.5, -1.0, -0.15).normalized()
+	var w := (pole - u * pole.dot(u)).normalized()
+	var A := acos(clampf((a * a + d * d - b * b) / (2.0 * a * d), -1.0, 1.0))
+	var upper_dir := u * cos(A) + w * sin(A)
+	var elbow_at := sh.position + upper_dir * a
+	var fore := (sh.position + u * d) - elbow_at
+	var z := (fore - upper_dir * fore.dot(upper_dir)).normalized()
+	var y := -upper_dir
+	var x := y.cross(z).normalized()
+	var want := Basis(x, y, x.cross(y)).orthonormalized()
+	sh.quaternion = sh.quaternion.slerp(want.get_rotation_quaternion(), 0.5)
+	var bend := PI - acos(clampf((a * a + b * b - d * d) / (2.0 * a * b), -1.0, 1.0))
+	el.rotation = Vector3(lerpf(el.rotation.x, -bend, 0.5), 0.0, 0.0)
 
 
 func _arm(s: String, shoulder: Vector3, elbow: float) -> void:
@@ -343,14 +374,35 @@ func sync(s: Dictionary, dt: float) -> void:
 	_last = pos
 
 
+## Where each hand goes on the gun (from its rear end, as a share of its
+## length; down from the bore, metres): [right grip, left hand].
+const GRIPS := {
+	"pistol": [Vector2(0.12, 0.045), Vector2(0.14, 0.05)],     # both on the grip
+	"smg": [Vector2(0.36, 0.055), Vector2(0.62, 0.035)],
+	"shotgun": [Vector2(0.24, 0.045), Vector2(0.47, 0.03)],     # left on the pump
+	"rifle": [Vector2(0.2, 0.045), Vector2(0.42, 0.03)],
+	"launcher": [Vector2(0.28, 0.06), Vector2(0.5, 0.045)],
+}
+var _rear := 0.0       # the gun's rear end (z, in the gun pivot)
+var _length := 0.3
+
+
 func _set_weapon(key: String) -> void:
 	_weapon = key
 	var w: Dictionary = D.WEAPONS[key]
 	var g := Guns.get_gun(key, w["len"])
 	gun.mesh = g["mesh"]
 	gun.scale = Vector3.ONE * g["scale"]
-	gun.position = Guns.HOLD
-	muzzle.position = Guns.HOLD + Vector3(0, 0.01, g["muzzle"])
+	_length = w["len"]
+	_rear = g["muzzle"] - _length
+	if key == "pistol":
+		gun.position = Guns.HOLD   # held out in front, both hands
+	else:
+		# Shouldered: the butt in the pocket of the right shoulder.
+		var sh: Vector3 = j["shoulder_r"].position
+		var butt := Vector3(sh.x * 0.62, sh.y - 0.07, 0.07)
+		gun.position = butt - gun_pivot.position - Vector3(0, 0, _rear)
+	muzzle.position = gun.position + Vector3(0, 0.01, g["muzzle"])
 
 
 var _hit_mat: StandardMaterial3D
