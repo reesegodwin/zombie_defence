@@ -302,7 +302,10 @@ func bind_host(g) -> void:
 				_event.rpc(e, [a, b, c]))
 
 
-@rpc("authority", "unreliable_ordered")
+# Reliable: a snapshot is bigger than one network packet as soon as there's a
+# horde (and with the walls' sections, even without), and an unreliable one
+# that size is lost whole if any piece of it is.
+@rpc("authority", "reliable")
 func _snapshot(packed: PackedByteArray, size: int) -> void:
 	var data = bytes_to_var(packed.decompress(size, FileAccess.COMPRESSION_ZSTD))
 	if not data is Dictionary:
@@ -324,6 +327,10 @@ func _snapshot(packed: PackedByteArray, size: int) -> void:
 	var here = Vector2(mine["x"], mine["y"]) if mine != null else null
 	g.from_save(data)
 	g.bullets = bullets
+	# The host's level may have a different base and country from the one
+	# this copy last laid out (on joining, or after the truck): match it.
+	if main.level.base != g.D.BASE:
+		main.level.set_level(g.open_at, g.level_def())
 	# You: where you've walked to here, unless the host has you somewhere else.
 	mine = g.me(my_peer())
 	if mine != null and here != null and here.distance_to(Vector2(mine["x"], mine["y"])) < 1.2:
