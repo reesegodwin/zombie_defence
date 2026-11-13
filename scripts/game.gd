@@ -2197,30 +2197,25 @@ func update_walkers(dt: float) -> void:
 		s["y"] = p.y
 
 
-## Someone walking (back from the pass, to another spot, to the truck) with
-## the dead inside the base and in range: they stop and shoot, and walk on
-## once there's nothing left to shoot. True while they're fighting.
+## Someone walking inside the base (back from the pass, to a spot you sent
+## them to, to the truck) with one of the dead in their gun's range, inside
+## the walls or out: they stop and shoot, and walk on once there's nothing in
+## range. True while they're fighting.
 func _fight_on_the_way(s: Dictionary, dt: float) -> bool:
 	if s["hp"] <= 0.0 or not (in_base(Vector2(s["x"], s["y"])) or on_deck(Vector2(s["x"], s["y"]))):
 		return false
-	var inside := false
-	for z in zombies:
-		if z.get("inside", false) and z["hp"] > 0:
-			inside = true
-			break
-	if not inside:
+	var w: Dictionary = D.WEAPONS[s["weapon"]]
+	var z = auto_target(s, w["range"])
+	if z == null:
 		return false
 	s["cd"] -= dt
 	_check_ammo(s)
 	if _tick_reload(s, dt):
 		return true
-	var w: Dictionary = D.WEAPONS[s["weapon"]]
-	var z = auto_target(s, auto_reach(w))
-	if z == null:
-		return false
 	var ready := swivel(s, atan2(z["y"] - s["y"], z["x"] - s["x"]), D.TURN_RATE, dt)
 	if s["cd"] <= 0.0 and ready:
-		_shoot(s, z["x"], z["y"], survivor_stats(s))
+		var miss := npc_aim_error(s, z) if not s["is_player"] else Vector2.ZERO
+		_shoot(s, z["x"] + miss.x, z["y"] + miss.y, survivor_stats(s))
 	return true
 
 

@@ -355,7 +355,7 @@ func apply_graphics() -> void:
 	RenderingServer.directional_shadow_atlas_set_size({"High": 4096, "Medium": 2048, "Low": 1024, "Very Low": 1024}[q], true)
 	RenderingServer.directional_soft_shadow_filter_set_quality({"High": RenderingServer.SHADOW_QUALITY_SOFT_HIGH,
 		"Medium": RenderingServer.SHADOW_QUALITY_SOFT_LOW, "Low": RenderingServer.SHADOW_QUALITY_HARD, "Very Low": RenderingServer.SHADOW_QUALITY_HARD}[q])
-	moon.directional_shadow_max_distance = 80.0 if q == "High" else 45.0
+	moon.directional_shadow_max_distance = 110.0 if q == "High" else 75.0   # (from the camera, 70 m back)
 	env.ssao_enabled = not low
 	env.glow_enabled = not low
 	level.spot_detail(not low)
@@ -581,8 +581,9 @@ func _darkness() -> float:
 
 
 # Day, dusk and night each have their own light; the cycle blends between them.
-const DAY_MOOD := {"sun": 0.8, "sun_col": Color(1.0, 0.93, 0.82), "amb": 0.5, "fog": Color(0.48, 0.53, 0.58), "exposure": 0.92, "sat": 1.12,
-	"top": Color(0.32, 0.52, 0.85), "horizon": Color(0.72, 0.8, 0.88)}
+# Day is a warm, low evening light (golden sun, rosy haze), not a midday glare.
+const DAY_MOOD := {"sun": 0.8, "sun_col": Color(1.0, 0.79, 0.62), "amb": 0.51, "fog": Color(0.46, 0.42, 0.45), "exposure": 0.97, "sat": 1.06,
+	"top": Color(0.28, 0.34, 0.54), "horizon": Color(0.76, 0.57, 0.53)}
 const DUSK_MOOD := {"sun": 0.8, "sun_col": Color(1.0, 0.7, 0.48), "amb": 0.52, "fog": Color(0.45, 0.34, 0.36), "exposure": 1.0, "sat": 1.02,
 	"top": Color(0.25, 0.22, 0.34), "horizon": Color(0.78, 0.42, 0.3)}
 const NIGHT_MOOD := {"sun": 0.42, "sun_col": Color(0.62, 0.72, 1.0), "amb": 0.32, "fog": Color(0.17, 0.21, 0.3), "exposure": 1.1, "sat": 0.9,
@@ -607,7 +608,7 @@ func _set_mood() -> void:
 	env.adjustment_contrast = lerpf(1.08, 1.0, k)   # a touch more punch by day
 	# Only the faintest haze over everything: the real fog lies on the ground
 	# (scenes/level/ground_fog.gd).
-	env.fog_density = lerpf(0.0012, 0.0035, k)
+	env.fog_density = lerpf(0.0007, 0.002, k)   # (measured from the camera, 70 m back)
 	var sky: ProceduralSkyMaterial = env.sky.sky_material
 	sky.sky_top_color = _mood("top", k)
 	sky.sky_horizon_color = _mood("horizon", k)

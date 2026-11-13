@@ -3,7 +3,10 @@ extends Node3D
 
 @export var yaw_degrees := 45.0
 @export var pitch_degrees := -35.264
-@export var distance := 40.0
+## How far back the camera sits. It's orthographic, so this doesn't change
+## the view; it only has to be far enough to clear the tallest mountains
+## behind the base (any closer and the camera cuts through them as it moves).
+@export var distance := 70.0
 ## Orthographic view height, in metres. Smaller is closer.
 @export var zoom := 23.0
 @export var min_zoom := 7.0

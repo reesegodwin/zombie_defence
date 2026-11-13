@@ -129,13 +129,24 @@ func _unit_checks() -> void:
 	var twk0: float = wk["path_t"]
 	gfw.update_walkers(0.05)
 	var held: bool = wk["path_t"] == twk0 and wk.get("fighting", false)
-	for i in 40:
+	for i in 100:   # (a person's aim: not every shot hits)
 		gfw.update_walkers(0.05)
 		gfw.update_bullets(0.05)
 	check(held and zin["hp"] <= 0, "someone walking back through a breached base stops and shoots the dead in range")
 	for i in 400:
 		gfw.update_walkers(0.05)
 	check(wk["state"] == "wall" and Vector2(wk["x"], wk["y"]).distance_to(spot_w) < 0.1, "then walks on to the wall they were at")
+	# Sent somewhere by you, with one of the dead outside the wall in range:
+	# they stop and shoot it too (no breach needed).
+	var gso = Game.new()
+	var so: Dictionary = gso.add_survivor("Cy", "pistol", false)
+	gso.move_survivor_to(gso.crew.find(so), Vector2(11.0, 25.0))
+	var zso: Dictionary = gso.spawn_zombie("walker", 1.0, 0.0, 0)
+	zso["x"] = so["x"] + 1.0; zso["y"] = so["y"] - 4.0
+	var tso: float = so["path_t"]
+	for i in 30:
+		gso.update_walkers(0.05)
+	check(so["path_t"] == tso and so.get("fighting", false), "someone you sent somewhere stops to shoot the dead in range on the way")
 	var prl = load("res://scripts/progress.gd").open("user://test_progress_lv.cfg")
 	prl.reset()
 	check(prl.reached == 1, "only level 1 can be picked at first")
