@@ -44,11 +44,26 @@ func _process(dt: float) -> void:
 func _wanted() -> bool:
 	if main == null or not main.started or main.game.over:
 		return false
-	if Input.mouse_mode != Input.MOUSE_MODE_VISIBLE:
-		return false
 	if main.pointing():
 		return false   # the hand: picking someone, sending them, placing something
+	if Input.mouse_mode != Input.MOUSE_MODE_VISIBLE:
+		# The cursor hides while you walk, but not your aim while there's
+		# fighting to do: shooting, or the dead within reach.
+		return main._mouse_screen != null and (main.game.input_firing or _fight_near())
 	return get_viewport().gui_get_hovered_control() == main.hud.field
+
+
+## True if any of the dead are within twice your gun's range (or inside).
+func _fight_near() -> bool:
+	var me = main.local_player()
+	if me == null or me["hp"] <= 0.0:
+		return false
+	var reach: float = Game.D.WEAPONS[me["weapon"]]["range"] * 2.0
+	var at := Vector2(me["x"], me["y"])
+	for z in main.game.zombies:
+		if z["hp"] > 0 and (z.get("inside", false) or at.distance_to(Vector2(z["x"], z["y"])) < reach):
+			return true
+	return false
 
 
 ## How far a shot could stray at the aimed spot, in screen pixels.
