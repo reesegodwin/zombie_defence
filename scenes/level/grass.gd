@@ -2,7 +2,7 @@
 # tips) on the forest floor and along the lanes' edges, off the trodden dirt,
 # the yard and the mountains. One tuft shape, scattered from a seed with
 # MultiMesh in square tiles of the map (so tiles off screen aren't drawn).
-# Low graphics draws half of them; Very Low none.
+# Medium graphics draws about two thirds of them, Low a third, Very Low none.
 extends Node3D
 
 const D = preload("res://scripts/defs.gd")
@@ -79,12 +79,17 @@ func set_pull(col: Color, amount: float) -> void:
 		_mat.set_shader_parameter("pull", Vector4(col.r, col.g, col.b, amount))
 
 
-## Graphics: "High"/"Medium" all of it, "Low" half, "Very Low" none.
+## Graphics: "High" all of it, "Medium" about two thirds, "Low" about a
+## third, "Very Low" none. (Each tile's tufts are shuffled, so drawing only
+## the first part of the list thins them evenly.)
+const SHARE := {"High": 1.0, "Medium": 0.65, "Low": 0.35, "Very Low": 0.0}
+
 func set_quality(q: String) -> void:
-	visible = q != "Very Low"
+	var share: float = SHARE.get(q, 0.65)
+	visible = share > 0.0
 	for mi in _tiles:
 		var n := mi.multimesh.instance_count
-		mi.multimesh.visible_instance_count = n / 2 if q == "Low" else -1
+		mi.multimesh.visible_instance_count = -1 if share >= 1.0 else int(n * share)
 
 
 ## A tuft: blades fanning out from a small clump, each a tapered strip bent
