@@ -1448,19 +1448,20 @@ func _flame(w: Dictionary, ang: float, mz: Vector3, dmg_mul: float) -> void:
 		# In the cone, allowing for its body's width at that distance.
 		if d > 0.05 and absf(fwd.angle_to(to)) > half + atan2(r, d):
 			continue
-		damage(z, w["dmg"] * dmg_mul)
+		damage(z, w["dmg"] * dmg_mul, true)   # (quiet: they glow orange with the burn, not white)
 		z["burn"] = maxf(z["burn"], FLAME_BURN)
 	for k: float in [0.4, 0.7, 1.0]:
 		var p: Vector2 = at + fwd * reach * k
 		ignite_slicks(p.x, p.y, reach * k * tan(half))
 	# The stream: tongues of flame further out and wider as they go.
 	var h := mz.y / 0.06   # (particle heights are in 0.06 m steps: effects.gd)
-	for i in 5:
-		var t := randf_range(0.1, 1.0)
-		var a := ang + randf_range(-half, half) * t
-		var p := at + Vector2(cos(a), sin(a)) * reach * t
-		burst(p.x, p.y, 1, {"colors": [Color("fff1a8"), Color("ffcf5a"), Color("ff8a2a"), Color("e8461e")], "spread": 0.4, "up": 30.0,
-			"life": 0.3 + 0.25 * t, "size": 2.0 + 4.5 * t, "z": h * (1.0 - 0.3 * t), "grav": -20.0, "glow": true})
+	for i in 9:
+		var t := pow(randf(), 0.7)
+		var a := ang + randf_range(-half, half) * 0.8 * t
+		var p := at + Vector2(cos(a), sin(a)) * reach * (0.05 + 0.95 * t)
+		var cols: Array = [Color("fff6c8"), Color("ffe08a")] if t < 0.35 else [Color("ffcf5a"), Color("ff8a2a"), Color("e8461e")]
+		burst(p.x, p.y, 1, {"colors": cols, "spread": 0.3 + 0.5 * t, "up": 25.0,
+			"life": 0.18 + 0.3 * t, "size": 6.0 + 13.0 * t, "z": h * (1.0 - 0.3 * t), "grav": -25.0, "glow": true})
 
 
 ## Where a shot leaves the gun (x, height, y in metres): the end of the

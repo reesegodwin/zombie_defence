@@ -153,7 +153,7 @@ static func _launcher(k: Kit) -> Vector2:
 ## light under it, a red fuel tank slung beneath, a pistol grip and trigger at
 ## the back and a fore-grip, and a short stock.
 static func _flamer(k: Kit) -> Vector2:
-	var red := Color(0.55, 0.12, 0.08)
+	var red := Color(0.36, 0.07, 0.05)
 	k.cyl(Vector3(0, 0.012, 0.22), 0.016, 0.44, STEEL, 8)                        # nozzle tube
 	k.cyl(Vector3(0, 0.012, 0.43), 0.02, 0.03, GREY, 8)                          # heat shield ring
 	k.cyl(Vector3(0, 0.012, 0.455), 0.022, 0.03, BLACK, 8, Vector3.ZERO, 0.03)   # flared, scorched tip
