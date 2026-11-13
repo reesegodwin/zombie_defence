@@ -177,9 +177,8 @@ func sync(g, now: float) -> void:
 		var n := look.get_child_count()
 		for k in range(1, n):
 			look.get_child(k).visible = battered < 1.0 - float(k) / n * 0.6
-	var rows := int(ceil(g.mods["wire"] / 8.0))
-	for r in wire_rows.size():
-		wire_rows[r].visible = r < rows
+	for r in wire_rows.size():   # (wire is laid on the ground now: see the wire trap)
+		wire_rows[r].visible = false
 
 
 ## The wall gives way: the blocks round at_x (along the wall, u) topple into

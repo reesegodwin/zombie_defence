@@ -796,9 +796,7 @@ func _refresh_shop() -> void:
 		_shop_labels[id].modulate = Color.WHITE if unlocked else Color(1, 1, 1, 0.4)
 		b.disabled = not chk.has("ok")
 		if id == "wire":
-			var strung := int(round(g.mods["wire"] / 8.0))
-			var held: int = g.storage["items"].filter(func(it): return it["key"] == "wire").size()
-			_shop_labels[id].text = "Wire coil  (%d of 3 strung%s)" % [strung, ", %d in storage" % held if held > 0 else ""]
+			_shop_labels[id].text = "Wire coil  (%d of %d)" % [g.wire_count(), D.WIRE_LIMIT]
 		var desc: String = D.SHOP[id].get("desc", D.item_desc(id) if D.ITEMS.has(id) else "")
 		b.tooltip_text = desc if chk.has("ok") else chk["msg"]
 		_shop_labels[id].tooltip_text = desc if unlocked else desc + "\n" + chk["msg"]

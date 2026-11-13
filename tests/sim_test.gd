@@ -384,11 +384,23 @@ func _unit_checks() -> void:
 	check(g.wall["hp"] == g.wall["max_hp"] and g.repairers() == 0, "repairs stop when the wall is whole")
 	check(not g.toggle_repair(1).has("ok"), "a whole wall can't be repaired")
 
-	# Supplies.
+	# Barbed wire: coils laid on the ground across a lane, up to 3 out.
 	g = Game.new()
-	g.add_to_storage("wire")
-	g.use_supply(0)
-	check(g.mods["wire"] > 0 and g.storage["items"].is_empty(), "wire gets strung along the wall")
+	for k in 4:
+		g.add_to_storage("wire")
+	var bplaced := 0
+	for k in 4:
+		if g.place_trap(0, 6.0 + k * 3.0, 8.0).has("ok"):
+			bplaced += 1
+	check(bplaced == D.WIRE_LIMIT, "up to %d coils of wire on the ground (%d)" % [D.WIRE_LIMIT, bplaced])
+	var bwz: Dictionary = g.spawn_zombie("walker", 100.0, 1.0, 0)
+	bwz["x"] = 6.0 + 1.1; bwz["y"] = 8.0   # near the end of a 2.6 m coil, along the wall
+	var bwhp: float = bwz["hp"]
+	g.update_traps(0.5)
+	check(bwz["slow"] < 1.0 and bwz["hp"] < bwhp, "the wire slows and cuts the dead crossing it, all along the coil")
+	bwz["x"] = 6.0; bwz["y"] = 8.0 + 1.2   # past it, down the lane
+	g.update_traps(0.1)
+	check(bwz["slow"] == 1.0, "but not those that aren't on it (it's a strip, not a circle)")
 
 	# Traps.
 	g = Game.new()

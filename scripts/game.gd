@@ -987,7 +987,6 @@ func knock_back(z: Dictionary, d: float) -> void:
 
 
 func update_zombies(dt: float) -> void:
-	var wire: float = mods["wire"]
 	for z in zombies:
 		if z["hp"] <= 0:
 			continue
@@ -1068,8 +1067,6 @@ func update_zombies(dt: float) -> void:
 					hurt_turret(tt, T["dmg"])
 				else:
 					hit_wall(z["side"], uv.x, T["dmg"])
-			if wire > 0:
-				damage(z, wire * dt, true)
 		var p := lane_point(z["side"], uv.x, uv.y)
 		z["x"] = p.x
 		z["y"] = p.y
@@ -1507,11 +1504,25 @@ func place_trap(i: int, x: float, y: float) -> Dictionary:
 	if not chk.has("ok"):
 		return chk
 	var it: Dictionary = items[i]
+	if it["key"] == "wire" and traps.filter(func(t): return t["key"] == "wire").size() >= D.WIRE_LIMIT:
+		return {"msg": "Only %d coils of wire can be out at once." % D.WIRE_LIMIT}
 	items.remove_at(i)
-	traps.append({"uid": it["uid"], "key": it["key"], "x": x, "y": y, "uses": it["uses"], "max": float(D.ITEMS[it["key"]]["uses"]), "hold": -1, "rearm": 0.0, "t": 0.0})
+	traps.append({"uid": it["uid"], "key": it["key"], "x": x, "y": y, "uses": it["uses"], "max": float(D.ITEMS[it["key"]]["uses"]), "hold": -1, "rearm": 0.0, "t": 0.0,
+		"dir": _strip_dir(x, y)})
 	_changed()
 	sound.emit("build")
 	return {"ok": true}
+
+
+## Coils of wire: out on the ground and in storage.
+func wire_count() -> int:
+	return traps.filter(func(t): return t["key"] == "wire").size() + storage["items"].filter(func(it): return it["key"] == "wire").size()
+
+
+## Which way a strip trap lies at (x, y): along the wall of the lane it's in.
+func _strip_dir(x: float, y: float) -> Vector2:
+	var side := field_side(Vector2(x, y), 0.5)
+	return Vector2(D.LANES[maxi(side, 0)]["t"])
 
 
 func find_trap(tuid: int) -> Variant:
@@ -1532,6 +1543,7 @@ func move_trap(tuid: int, x: float, y: float) -> Dictionary:
 		return chk
 	t["x"] = x
 	t["y"] = y
+	t["dir"] = _strip_dir(x, y)
 	sound.emit("build")
 	return {"ok": true}
 
@@ -1574,7 +1586,14 @@ func ignite_slicks(x: float, y: float, r: float) -> void:
 
 
 func _within(z: Dictionary, t: Dictionary) -> bool:
-	return Vector2(z["x"] - t["x"], z["y"] - t["y"]).length() < D.TRAP_R[t["key"]] + ZT(z["type"])["r"] * 0.6
+	var d := Vector2(z["x"] - t["x"], z["y"] - t["y"])
+	var r: float = ZT(z["type"])["r"] * 0.6
+	if D.TRAP_SIZE.has(t["key"]):
+		# A strip across the lane: a rectangle.
+		var a: Vector2 = t.get("dir", Vector2.RIGHT)
+		var size: Vector2 = D.TRAP_SIZE[t["key"]]
+		return absf(d.dot(a)) < size.x * 0.5 + r and absf(d.dot(Vector2(-a.y, a.x))) < size.y * 0.5 + r
+	return d.length() < D.TRAP_R[t["key"]] + r
 
 
 func _zombie_by_id(id: int) -> Variant:
@@ -1599,6 +1618,15 @@ func update_traps(dt: float) -> void:
 					t["uses"] -= dt * (3.0 if z["type"] == "brute" else 1.0)
 					if randf() < dt * 4.0:
 						burst(z["x"], z["y"], 1, {"colors": [Color("6a2a22")], "spread": 0.6, "up": 40.0, "life": 0.3, "size": 2.0, "z": 4.0})
+			"wire":
+				for z in zombies:
+					if z["hp"] <= 0 or not _within(z, t):
+						continue
+					damage(z, 7.0 * dt, true)
+					z["slow"] = minf(z["slow"], 0.4)
+					t["uses"] -= dt * (2.0 if z["type"] == "brute" else 1.0)
+					if randf() < dt * 3.0:
+						burst(z["x"], z["y"], 1, {"colors": [Color("6a2a22")], "spread": 0.5, "up": 40.0, "life": 0.3, "size": 1.8, "z": 6.0})
 			"beartrap":
 				if t["hold"] >= 0:
 					var z = _zombie_by_id(t["hold"])
@@ -1760,10 +1788,6 @@ func use_supply(i: int) -> Dictionary:
 	if i >= items.size() or D.item_kind(items[i]["key"]) != "supply":
 		return {"msg": ""}
 	var it: Dictionary = items[i]
-	if it["key"] == "wire":
-		if mods["wire"] >= D.WIRE_MAX:
-			return {"msg": "There is no room for more wire along the wall."}
-		mods["wire"] = minf(D.WIRE_MAX, mods["wire"] + 8.0)
 	sound.emit("build")
 	items.remove_at(i)
 	_changed()
@@ -1885,9 +1909,6 @@ func auto_equip() -> void:
 				var c = crowd_centre()
 				if c != null:
 					moved = throw_item(items[i]["uid"], c["x"], c["y"]).has("ok")
-			elif kind == "supply":
-				if key == "wire" and mods["wire"] < D.WIRE_MAX:
-					moved = use_supply(i).has("ok")
 			elif kind == "weapon":
 				var worst := -1
 				var wr: int = RANK[key]
@@ -2665,8 +2686,8 @@ func can_buy(id: String) -> Dictionary:
 		return {"msg": "You need a crew to drill."}
 	if D.ITEMS.has(id) and storage_free() <= 0:
 		return {"msg": "Storage is full."}
-	if id == "wire" and mods["wire"] >= D.WIRE_MAX:
-		return {"msg": "There is no room for more wire."}
+	if id == "wire" and wire_count() >= D.WIRE_LIMIT:
+		return {"msg": "You have %d coils already: that's the most." % D.WIRE_LIMIT}
 	if scrap < cost:
 		return {"msg": "Not enough scrap (%d needed)." % cost}
 	return {"ok": true}

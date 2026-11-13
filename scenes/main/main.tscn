@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" path="res://scenes/actors/zombie.tscn" id="zombie"]
 [ext_resource type="PackedScene" path="res://scenes/actors/survivor.tscn" id="survivor"]
 [ext_resource type="PackedScene" path="res://scenes/traps/spikes.tscn" id="t_spikes"]
+[ext_resource type="PackedScene" path="res://scenes/traps/wire.tscn" id="t_wire"]
 [ext_resource type="PackedScene" path="res://scenes/traps/beartrap.tscn" id="t_bear"]
 [ext_resource type="PackedScene" path="res://scenes/traps/mine.tscn" id="t_mine"]
 [ext_resource type="PackedScene" path="res://scenes/traps/slick.tscn" id="t_slick"]
@@ -136,7 +137,8 @@ trap_scenes = {
 "beartrap": ExtResource("t_bear"),
 "mine": ExtResource("t_mine"),
 "slick": ExtResource("t_slick"),
-"spikes": ExtResource("t_spikes")
+"spikes": ExtResource("t_spikes"),
+"wire": ExtResource("t_wire")
 }
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]

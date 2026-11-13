@@ -72,7 +72,7 @@ const LULL_EVERY := [50.0, 75.0]      # seconds from the end of one lull to the 
 const LULL_LENGTH := [25.0, 35.0]
 const LULL_RATE := 0.2                # zombies a second during a lull (one every 5 s)
 
-const WIRE_MAX := 24.0
+const WIRE_LIMIT := 3        # barbed-wire coils out on the ground at once
 const STORAGE_MAX := 24
 
 # --- Day and night ----------------------------------------------------------
@@ -285,7 +285,7 @@ const SHOP := {
 	"trigger": {"cost": 30, "name": "Hair trigger", "needs": "gunsmith"},
 	"molotov": {"cost": 12, "name": "Molotov", "needs": "firebombs"},
 	"pipebomb": {"cost": 18, "name": "Pipe bomb", "needs": "pipebombs"},
-	"wire": {"cost": 25, "name": "Wire coil", "needs": "barbed", "desc": "Build up to 3 coils and use each one: every coil strings another row of barbed wire, 8 more damage a second to the dead at the wall."},
+	"wire": {"cost": 25, "name": "Wire coil", "needs": "barbed", "desc": "A coil of barbed wire to lay across a lane: the dead crossing it are slowed and cut. Up to 3 out at once."},
 	"spikes": {"cost": 15, "name": "Spike strip", "needs": "spikes"},
 	"beartrap": {"cost": 20, "name": "Bear trap", "needs": "beartraps"},
 	"mine": {"cost": 15, "name": "Landmine", "needs": "explosives"},
@@ -303,7 +303,7 @@ const SHOP_SECTIONS := [
 	["Gear", ["hollow", "trigger"]],
 	["Throwables", ["molotov", "pipebomb"]],
 	["Traps", ["spikes", "beartrap", "mine", "slick"]],
-	["Supplies", ["wire"]],
+	["Traps", ["wire"]],
 ]
 
 # Zombie types and weapons live in data/zombies/*.tres and data/weapons/*.tres
@@ -342,7 +342,7 @@ const ITEMS := {
 	"trigger": {"kind": "mod", "short": "HT", "name": "Hair trigger", "desc": "Whoever carries this fires 15% faster."},
 	"molotov": {"kind": "throw", "short": "MOL", "name": "Molotov", "desc": "One use. Use it, then click where to throw it: the ground there burns for a few seconds."},
 	"pipebomb": {"kind": "throw", "short": "PIPE", "name": "Pipe bomb", "desc": "One use. Use it, then click where to throw it: it blows apart everything nearby."},
-	"wire": {"kind": "supply", "short": "WIRE", "name": "Wire coil", "desc": "Use it to string a row of barbed wire: the dead take 8 more damage a second at the wall. Up to 3 rows, so build and use more coils."},
+	"wire": {"kind": "trap", "short": "WIRE", "uses": 60.0, "name": "Wire coil", "desc": "Drag it onto the ground in a lane: a coil of barbed wire across it. The dead crossing it are slowed hard and cut. Up to 3 out at once. Wears down with use."},
 	"spikes": {"kind": "trap", "short": "SPK", "uses": 40.0, "name": "Spike strip", "desc": "Hurts and slows every zombie that crosses it. Wears down with use."},
 	"beartrap": {"kind": "trap", "short": "BEAR", "uses": 6.0, "name": "Bear trap", "desc": "Snaps shut on the first zombie in and holds it in place. Six snaps before it breaks."},
 	"mine": {"kind": "trap", "short": "MINE", "uses": 1.0, "name": "Landmine", "desc": "Blows up the first zombie that steps on it, and everything around it. One use."},
@@ -365,7 +365,9 @@ const PIPEBOMB := {"dmg": 170.0, "splash": 2.3}
 # Tearing an item down in storage gives back this share of its workshop cost.
 const SALVAGE_SHARE := 0.4
 
-const TRAP_R := {"spikes": 0.6, "beartrap": 0.35, "mine": 0.35, "slick": 0.9}
+const TRAP_R := {"spikes": 0.8, "beartrap": 0.35, "mine": 0.35, "slick": 0.9, "wire": 1.3}
+## Traps laid across a lane as a strip: length (along the wall) and depth, metres.
+const TRAP_SIZE := {"spikes": Vector2(1.6, 0.55), "wire": Vector2(2.6, 0.6)}
 
 # Chip colours by wall tier (fence, wooden wall, stone wall).
 const WALL_MATS := [
