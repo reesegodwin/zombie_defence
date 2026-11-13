@@ -610,7 +610,7 @@ func _set_mood() -> void:
 	env.adjustment_contrast = lerpf(1.08, 1.0, k)   # a touch more punch by day
 	# Only the faintest haze over everything: the real fog lies on the ground
 	# (scenes/level/ground_fog.gd).
-	env.fog_density = lerpf(0.0007, 0.002, k)   # (measured from the camera, 70 m back)
+	env.fog_density = lerpf(0.0007, 0.002, k) * float(game.level_def().get("fog", 1.0))   # (measured from the camera, 70 m back; some levels are foggier)
 	var sky: ProceduralSkyMaterial = env.sky.sky_material
 	sky.sky_top_color = _mood("top", k)
 	sky.sky_horizon_color = _mood("horizon", k) * level.haze

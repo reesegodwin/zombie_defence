@@ -52,7 +52,7 @@ const LEVELS := [
 		"open_at": [0.0, 300.0, 880.0], "grit": 1.55, "spawn": 1.15, "hp": 1.1, "mix": {"brute": 1.8}},
 	{"name": "Black Marsh", "short": "fog, a slow horde", "base": "marsh", "palette": "marsh",
 		"desc": "A station in the marsh. The mud slows the dead, but there are a great many of them, and the fog never lifts.",
-		"open_at": [0.0, 15.0, 15.0], "grit": 1.6, "spawn": 1.45, "hp": 1.05, "speed": 0.82, "mix": {"runner": 0.5}},
+		"open_at": [0.0, 15.0, 15.0], "grit": 1.6, "spawn": 1.45, "hp": 1.05, "speed": 0.82, "mix": {"runner": 0.5}, "fog": 4.0},
 	{"name": "Dust Bowl", "short": "runners", "base": "farm", "palette": "dust",
 		"desc": "A farmstead in the dry country. Runners, lots of them: keep someone on every wall.",
 		"open_at": [0.0, 15.0, 15.0], "grit": 1.65, "spawn": 1.15, "hp": 1.1, "mix": {"runner": 2.2}},
