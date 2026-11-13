@@ -663,7 +663,78 @@ func _bullseye_cursor() -> void:
 ## The hand rather than the crosshair over the field: on a survivor, or while
 ## choosing where to send someone or where to put a building.
 func pointing() -> bool:
-	return hover_survivor >= 0 or selected_id >= 0 or placing != ""
+	return hover_survivor >= 0 or selected_id >= 0 or placing != "" or hover_bench != ""
+
+
+# --- The benches -----------------------------------------------------------
+# The Workshop and Research open from benches in the yard (D.BENCHES): point
+# at one and it glows under the hand; click it and its menu opens.
+var hover_bench := ""
+var _bench_glow: StandardMaterial3D
+
+const BENCH_NODES := {"workshop": "WorkshopBench", "research": "ResearchDesk"}
+
+
+## The bench under screen point p ("workshop", "research"), or "". One of the
+## dead right under the cursor wins: you meant to shoot it.
+func bench_at(p: Vector2) -> String:
+	if not started or game.over:
+		return ""
+	var ppm: float = get_viewport().get_visible_rect().size.y / rig.cam.size   # pixels a metre
+	var best := ""
+	var bd := 0.9 * ppm
+	for id in D.BENCHES:
+		var at: Vector2 = D.BENCHES[id]
+		for h in [0.5, 1.1]:
+			var d: float = rig.world_to_screen(Vector3(at.x, h, at.y)).distance_to(p)
+			if d < bd:
+				bd = d
+				best = id
+	if best != "":
+		for z in game.zombies:
+			if z["hp"] > 0 and rig.world_to_screen(Vector3(z["x"], 0.9, z["y"])).distance_to(p) < 26.0:
+				return ""
+	return best
+
+
+## Where a bench is on screen (for the tutorial's highlight). Off screen, a
+## small box at the edge of the screen in its direction, so the arrow still
+## shows the way.
+func bench_rect(id: String) -> Rect2:
+	var at: Vector2 = D.BENCHES[id]
+	var r := Rect2(rig.world_to_screen(Vector3(at.x, 0.9, at.y)), Vector2.ZERO)
+	for c in [Vector3(-0.9, 0.0, -0.45), Vector3(0.9, 0.0, -0.45), Vector3(-0.9, 1.9, 0.45), Vector3(0.9, 1.9, 0.45), Vector3(-0.9, 0.0, 0.45), Vector3(0.9, 1.9, -0.45)]:
+		r = r.expand(rig.world_to_screen(Vector3(at.x, 0.0, at.y) + c))
+	var view := get_viewport().get_visible_rect().grow(-60.0)
+	if not view.intersects(r):
+		var c2 := Vector2(clampf(r.get_center().x, view.position.x, view.end.x), clampf(r.get_center().y, view.position.y, view.end.y))
+		return Rect2(c2 - Vector2(20, 20), Vector2(40, 40))
+	return r
+
+
+func open_bench(id: String) -> void:
+	game.input_firing = false
+	hover_bench = ""
+	_glow_benches()
+	if id == "workshop":
+		if not hud.workshop.visible:
+			hud.toggle_workshop()
+	elif not hud.research_open():
+		hud.toggle_research()
+
+
+func _glow_benches() -> void:
+	if _bench_glow == null:
+		_bench_glow = StandardMaterial3D.new()
+		_bench_glow.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_bench_glow.albedo_color = Color(1.0, 0.85, 0.35, 0.28)
+		_bench_glow.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	for id in BENCH_NODES:
+		var n = level.get_node_or_null(BENCH_NODES[id])
+		if n is GeometryInstance3D:
+			var want: Material = _bench_glow if id == hover_bench else null
+			if n.material_overlay != want:
+				n.material_overlay = want
 
 
 ## The pointing hand: B outline, W white, D the dark edge that gives it
@@ -958,6 +1029,12 @@ func field_input(event: InputEvent) -> void:
 							group_ids.clear()
 							game.input_firing = false
 							return
+					# A bench: open its menu.
+					if selected_id < 0:
+						var bench := bench_at(event.position)
+						if bench != "":
+							open_bench(bench)
+							return
 					# A press inside the base shoots like anywhere else; only if you
 					# drag does it become a box to pick people with (see the motion).
 					var at := _grid(event.position)
@@ -998,6 +1075,10 @@ func field_input(event: InputEvent) -> void:
 		var hs := survivor_at(event.position)
 		if hs != hover_survivor:
 			hover_survivor = hs
+		var hb := bench_at(event.position) if hs < 0 and placing == "" and throwing < 0 and selected_id < 0 else ""
+		if hb != hover_bench:
+			hover_bench = hb
+			_glow_benches()
 		hud.field.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if pointing() else Control.CURSOR_CROSS
 		if placing != "":
 			var gp := _grid(event.position)

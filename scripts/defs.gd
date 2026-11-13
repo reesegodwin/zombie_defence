@@ -224,11 +224,15 @@ const BLOCKERS := [
 	GATE_PATH,                     # the path to the gate (and where the army truck parks)
 	Rect2(3.6, 26.1, 1.4, 1.0),    # generator
 	Rect2(5.2, 25.4, 0.4, 0.4),    # its work lamp
-	Rect2(16.1, 26.6, 1.8, 0.9),   # workbench
+	Rect2(16.1, 26.6, 1.8, 0.9),   # workbench (the workshop)
+	Rect2(6.7, 26.35, 1.4, 1.0),   # drafting table (research)
 	Rect2(13.4, 26.8, 1.6, 0.8),   # woodpile
 	Rect2(7.8, 24.3, 0.4, 0.4),    # lamp post
 	Rect2(14.3, 24.3, 0.4, 0.4),   # lamp post
 ]
+# The benches you click to open the Workshop and Research (in the yard,
+# base_props.gd): where each stands on the ground.
+const BENCHES := {"workshop": Vector2(17.0, 27.05), "research": Vector2(7.4, 26.85)}
 const TURRET_SPOTS := [Vector2(2.9, 15.0), Vector2(19.1, 15.0), Vector2(6.8, 22.0), Vector2(15.8, 22.6)]
 const TURRET := {"dmg": 9.0, "rate": 0.55, "range": 9.0, "spread": 0.05, "pellets": 1, "pierce": 1, "knock": 0.03, "sound": "smg"}
 

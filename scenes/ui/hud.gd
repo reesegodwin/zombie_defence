@@ -757,7 +757,7 @@ func update_hud() -> void:
 	if g.research_cur != "":
 		research_label.text = "Researching %s." % D.RESEARCH[g.research_cur]["name"]
 	else:
-		research_label.text = "Nothing being researched. Press T."
+		research_label.text = "Nothing being researched. Click the drafting table (T)."
 	research_label.modulate = Color.WHITE if g.research_cur != "" else Color(1, 1, 1, 0.55)
 	btn_research.text = "Research (T)"
 	if research_overlay.visible:
@@ -800,7 +800,7 @@ func update_hud() -> void:
 		elif g.crew.size() == 1 and g.time < D.FIRST_STRANGER_AT:
 			h = "You're alone for now. Keep an eye on the mountain pass behind the base."
 		elif not _hinted_research and not main.settings.tutorial and g.research_cur == "" and g.researched.is_empty() and g.scrap >= 15:
-			h = "Press T to research: it unlocks guns, traps, walls, turrets and better provisions."
+			h = "Click the drafting table in the yard (or press T) to research: it unlocks guns, traps, walls, turrets and better provisions."
 		elif not _hinted_storage and not main.settings.tutorial and g.storage["items"].size() > 0:
 			h = "You have something in storage. Press I to open it and hand it out."
 		elif inv_panel.visible:
@@ -931,6 +931,9 @@ func _build_research() -> void:
 	btn_research.pressed.connect(toggle_research)
 	btn_workshop.get_parent().add_child(btn_research)
 	btn_workshop.get_parent().move_child(btn_research, btn_workshop.get_index() + 1)
+	# Both open from their benches in the yard now (or T and B): no buttons.
+	btn_research.visible = false
+	btn_workshop.visible = false
 	# Grit under the scrap: what's banked, and what this run has earned so far.
 	grit_label = Label.new()
 	grit_label.theme_type_variation = &"HeaderLabel"

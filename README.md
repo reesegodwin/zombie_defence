@@ -171,8 +171,8 @@ the GodotSteam add-on itself (it isn't kept in the repo).
 | Tear an item down for scrap | Select it in storage or a gear slot and press Tear down |
 | Display options (window mode, size, interface size) | O. The game starts maximised to fit your screen |
 | Scavenging map (pauses the game) | M |
-| Research tree (pauses the game) | T |
-| Workshop | B |
+| Research tree (pauses the game) | Click the drafting table in the yard, or T |
+| Workshop | Click the workbench in the yard, or B |
 | Base storage and crew loadouts | I (or Tab) |
 | Move items | Drag between slots; drag traps onto the ground in front of the wall |
 | Use a supply (wire) | Double-click it, or select it and press Use |

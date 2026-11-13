@@ -2723,7 +2723,7 @@ func update_research(dt: float) -> void:
 				unlocked.append(D.SHOP[k]["name"])
 		var text := "Research done: %s." % D.RESEARCH[id]["name"]
 		if unlocked.size() > 0:
-			text += " %s now in the workshop (B)." % " and ".join(unlocked)
+			text += " %s now at the workbench (B)." % " and ".join(unlocked)
 		toast.emit(text, "good")
 		sound.emit("coin")
 		research_done.emit(id)
@@ -2783,7 +2783,7 @@ func hurt_turret(t: Dictionary, dmg: float) -> void:
 		burst(t["x"], t["y"], 16, {"colors": [Color("6b4f33"), Color("3a3f44"), Color("5a6b3a")], "spread": 1.6, "up": 160.0, "life": 0.9, "size": 3.2, "z": 30.0})
 		shake = maxf(shake, 0.5)
 		sound.emit("crash")
-		toast.emit("The dead have torn down a turret! Build another in the workshop (B).", "danger")
+		toast.emit("The dead have torn down a turret! Build another at the workbench (B).", "danger")
 		turret_destroyed.emit(i)
 		_changed()
 

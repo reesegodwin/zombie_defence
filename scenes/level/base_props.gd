@@ -78,6 +78,9 @@ static func _yard(level: Node3D) -> Array:
 		add.call(_lamp_post(false), Vector3(x, 0.0, 24.5))
 		lamp.call(Vector3(x + 0.48, 1.95, 24.5), 8.5, Color(1.0, 0.75, 0.45))
 	add.call(_workbench(), Vector3(17.0, 0.0, 27.05))
+	level.get_child(level.get_child_count() - 1).name = "WorkshopBench"
+	add.call(_drafting_table(), Vector3(7.4, 0.0, 26.85))
+	level.get_child(level.get_child_count() - 1).name = "ResearchDesk"
 	lamp.call(Vector3(17.0, 1.75, 26.9), 6.0, Color(1.0, 0.8, 0.5))
 	add.call(_woodpile(), Vector3(14.2, 0.0, 27.2))
 	return lights
@@ -128,22 +131,96 @@ static func _lamp_post(work: bool) -> ArrayMesh:
 	return k.mesh()
 
 
-## A workbench with a vice, tools and a bulb hanging over it.
+## The workshop bench (click it to open the Workshop): a steel desk with a
+## bank of drawers each side, a pegboard of tools behind with a shelf of
+## cans and jugs, and clutter on top; a bulb hangs under the shelf.
+## 1.8 x 0.8, centred; its front (the drawers) faces +z.
 static func _workbench() -> ArrayMesh:
-	var k := _kit(0.4, 95)
-	k.box(Vector3(0, 0.82, 0), Vector3(1.6, 0.08, 0.7), PLANK.lightened(0.05))
-	for sx in [-0.72, 0.72]:
-		for sz in [-0.28, 0.28]:
-			k.box(Vector3(sx, 0.4, sz), Vector3(0.08, 0.8, 0.08), PLANK.darkened(0.2))
-	k.box(Vector3(0, 0.25, 0), Vector3(1.5, 0.04, 0.6), PLANK.darkened(0.1))   # shelf
-	k.box(Vector3(-0.55, 0.92, 0.25), Vector3(0.18, 0.14, 0.14), STEEL)       # vice
-	k.box(Vector3(0.2, 0.88, 0.05), Vector3(0.4, 0.04, 0.05), STEEL, Vector3(0, 0.4, 0))   # wrench
-	k.box(Vector3(0.45, 0.89, -0.1), Vector3(0.28, 0.06, 0.04), Color(0.6, 0.15, 0.1), Vector3(0, -0.3, 0))   # hammer
-	k.box(Vector3(0.0, 1.7, -0.3), Vector3(1.8, 0.06, 0.06), LOG)            # beam for the bulb
-	for sx in [-0.85, 0.85]:
-		k.box(Vector3(sx, 0.85, -0.32), Vector3(0.07, 1.7, 0.07), LOG)
-	k.box(Vector3(0, 1.58, -0.2), Vector3(0.01, 0.22, 0.01), Color(0.05, 0.05, 0.05))
-	_bulb(k, Vector3(0, 1.43, -0.2))
+	var k := _kit(0.35, 95)
+	var up := Vector3(PI / 2, 0, 0)
+	var green := Color(0.29, 0.35, 0.33)
+	var face := green.lightened(0.08)
+	var steel := Color(0.62, 0.63, 0.62)
+	k.box(Vector3(0, 0.86, 0), Vector3(1.8, 0.06, 0.82), green)                  # the top
+	k.box(Vector3(0, 0.86, 0.41), Vector3(1.82, 0.065, 0.02), steel.darkened(0.3))   # worn front edge
+	for x in [-0.62, 0.62]:
+		k.box(Vector3(x, 0.42, 0), Vector3(0.5, 0.82, 0.74), green)              # a bank of drawers
+		for d in 3:
+			var y := 0.16 + d * 0.24
+			k.box(Vector3(x, y, 0.375), Vector3(0.44, 0.21, 0.02), face)
+			k.box(Vector3(x, y + 0.04, 0.392), Vector3(0.16, 0.02, 0.02), steel)   # handle
+	k.box(Vector3(0, 0.45, -0.34), Vector3(0.74, 0.8, 0.03), green.darkened(0.25))   # back panel
+	k.box(Vector3(0, 0.12, 0.0), Vector3(0.74, 0.03, 0.03), steel.darkened(0.2))     # foot rail
+	# The pegboard and its shelf.
+	for x in [-0.78, 0.78]:
+		k.box(Vector3(x, 1.33, -0.37), Vector3(0.05, 0.92, 0.05), STEEL)
+	k.box(Vector3(0, 1.35, -0.38), Vector3(1.5, 0.74, 0.03), steel)
+	for r in 5:
+		for c in 12:
+			k.box(Vector3(-0.66 + c * 0.12, 1.07 + r * 0.14, -0.364), Vector3(0.018, 0.018, 0.004), DARK)
+	k.box(Vector3(0, 1.77, -0.3), Vector3(1.62, 0.03, 0.2), steel.darkened(0.1))
+	# Tools on the board: a saw, two spanners, a pipe wrench, a square.
+	k.box(Vector3(-0.52, 1.28, -0.355), Vector3(0.11, 0.5, 0.01), Color(0.82, 0.82, 0.8))
+	k.box(Vector3(-0.52, 1.58, -0.355), Vector3(0.15, 0.11, 0.025), Color(0.5, 0.35, 0.2))
+	for i in 2:
+		k.box(Vector3(-0.2 + i * 0.09, 1.36 - i * 0.03, -0.355), Vector3(0.03, 0.26, 0.012), steel.darkened(0.15))
+	k.box(Vector3(0.18, 1.3, -0.355), Vector3(0.05, 0.36, 0.025), Color(0.62, 0.16, 0.12))
+	k.box(Vector3(0.18, 1.46, -0.35), Vector3(0.1, 0.05, 0.03), Color(0.62, 0.16, 0.12))
+	k.box(Vector3(0.52, 1.46, -0.355), Vector3(0.22, 0.035, 0.012), Color(0.55, 0.4, 0.22))
+	k.box(Vector3(0.425, 1.35, -0.355), Vector3(0.035, 0.22, 0.012), Color(0.55, 0.4, 0.22))
+	# On the shelf: spray cans, a jug, a tin, an oil tray.
+	k.cyl(Vector3(-0.66, 1.87, -0.3), 0.04, 0.17, Color(0.2, 0.5, 0.25), 8, up)
+	k.box(Vector3(-0.52, 1.87, -0.3), Vector3(0.1, 0.17, 0.08), Color(0.15, 0.35, 0.75))
+	k.cyl(Vector3(-0.1, 1.85, -0.3), 0.06, 0.13, DARK, 10, up)
+	k.box(Vector3(0.38, 1.83, -0.3), Vector3(0.18, 0.08, 0.11), Color(0.8, 0.42, 0.12))
+	k.box(Vector3(0.58, 1.84, -0.3), Vector3(0.1, 0.1, 0.07), Color(0.15, 0.35, 0.75))
+	# On the bench: a red toolbox, a cutting board, a saw blade, a tin, a tray.
+	k.box(Vector3(-0.58, 0.96, 0.02), Vector3(0.38, 0.14, 0.2), Color(0.6, 0.12, 0.1))
+	k.box(Vector3(-0.58, 1.035, 0.02), Vector3(0.16, 0.02, 0.03), steel)
+	k.box(Vector3(0.02, 0.895, 0.1), Vector3(0.5, 0.012, 0.32), Color(0.72, 0.58, 0.4))
+	k.cyl(Vector3(-0.7, 0.895, 0.28), 0.14, 0.008, steel, 16, up)
+	k.cyl(Vector3(0.28, 0.95, -0.18), 0.05, 0.12, RUST, 10, up)
+	k.box(Vector3(0.56, 0.92, 0.02), Vector3(0.22, 0.06, 0.14), Color(0.8, 0.42, 0.12))
+	k.cyl(Vector3(0.8, 0.98, -0.22), 0.035, 0.18, Color(0.2, 0.5, 0.25), 8, up)
+	k.box(Vector3(0.0, 1.66, -0.2), Vector3(0.01, 0.2, 0.01), DARK)
+	_bulb(k, Vector3(0.0, 1.53, -0.2))
+	return k.mesh()
+
+
+## The research desk (click it to open Research): a drafting table, its board
+## tilted up on a braced X of steel legs, a blueprint pinned to it, a hand
+## wheel to set the tilt and a lamp on an arm with a magnifier ring.
+## About 1.2 x 0.9, centred; the board tilts up toward -z (its ledge at +z).
+static func _drafting_table() -> ArrayMesh:
+	var k := _kit(0.35, 96)
+	var up := Vector3(PI / 2, 0, 0)
+	var frame := Color(0.2, 0.25, 0.32)
+	var steel := Color(0.55, 0.56, 0.55)
+	# Legs: an X each side, feet along z, a stretcher between.
+	for x in [-0.5, 0.5]:
+		k.box(Vector3(x, 0.03, 0), Vector3(0.08, 0.06, 0.8), frame)
+		k.box(Vector3(x, 0.42, 0), Vector3(0.06, 0.06, 0.95), frame, Vector3(0.95, 0, 0))
+		k.box(Vector3(x, 0.42, 0), Vector3(0.06, 0.06, 0.95), frame, Vector3(-0.95, 0, 0))
+		k.box(Vector3(x, 0.78, 0.0), Vector3(0.07, 0.07, 0.3), frame)
+	k.box(Vector3(0, 0.3, 0), Vector3(1.0, 0.05, 0.05), frame)
+	k.box(Vector3(0, 0.3, 0), Vector3(1.0, 0.03, 0.03), frame, Vector3(0.6, 0, 0))
+	# The board: tilted toward the back, wood under a blueprint.
+	var tilt := Vector3(0.42, 0, 0)   # its high edge at the back, the face toward the camera
+	k.box(Vector3(0, 0.95, 0), Vector3(1.2, 0.05, 0.85), Color(0.42, 0.34, 0.26), tilt)
+	k.box(Vector3(0, 0.98, 0.02), Vector3(0.95, 0.01, 0.62), Color(0.2, 0.42, 0.72), tilt)
+	var b := Basis.from_euler(tilt)
+	for i in 4:   # a blueprint's pale lines
+		k.box(Vector3(0, 0.95, 0) + b * Vector3(-0.2 + i * 0.12, 0.044, 0.0), Vector3(0.014, 0.006, 0.5), Color(0.75, 0.85, 0.95), tilt)
+	k.box(Vector3(0, 0.95, 0) + b * Vector3(0.0, 0.044, 0.12), Vector3(0.7, 0.006, 0.014), Color(0.75, 0.85, 0.95), tilt)
+	k.box(Vector3(0, 0.95, 0) + b * Vector3(0.0, 0.03, 0.44), Vector3(1.22, 0.04, 0.04), steel.darkened(0.2), tilt)   # the ledge
+	# The tilt wheel on the right side.
+	k.cyl(Vector3(0.62, 0.72, 0.1), 0.16, 0.04, steel.darkened(0.3), 14, Vector3(0, PI / 2, 0))
+	k.cyl(Vector3(0.62, 0.72, 0.1), 0.06, 0.06, steel, 10, Vector3(0, PI / 2, 0))
+	# The lamp arm, from the back corner over the board, with its ring.
+	k.box(Vector3(-0.55, 1.35, -0.3), Vector3(0.04, 0.6, 0.04), steel)
+	k.box(Vector3(-0.32, 1.62, -0.18), Vector3(0.5, 0.035, 0.035), steel, Vector3(0, 0.5, 0.3))
+	k.cyl(Vector3(-0.1, 1.5, -0.05), 0.12, 0.03, steel.darkened(0.2), 16, Vector3(1.0, 0, 0))
+	k.cyl(Vector3(-0.1, 1.5, -0.05), 0.1, 0.032, Color(0.7, 0.85, 0.9), 16, Vector3(1.0, 0, 0))
 	return k.mesh()
 
 

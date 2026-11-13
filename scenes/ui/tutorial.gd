@@ -303,14 +303,14 @@ func _target():
 			return m.send_button.get_global_rect()
 		"research":
 			if not h.research_open():
-				return h.btn_research.get_global_rect()
+				return main.bench_rect("research")
 			var b: Control = h.research_tree._buttons["firearms"]
 			return b.get_global_rect()
 		"buy_smg":
 			if h.research_open():
-				return h.btn_research.get_global_rect()   # close it first
+				return main.bench_rect("research")   # close it first
 			if not h.workshop.visible:
-				return h.btn_workshop.get_global_rect()
+				return main.bench_rect("workshop")
 			return h._shop_rows["smg"].get_global_rect()
 		"equip":
 			if not h.inventory_open():
@@ -368,7 +368,7 @@ func _target():
 			return main.rig.world_to_screen(Vector3(spot.x, D.DECK_H + 0.2, spot.y))
 		"remind_research":
 			if not h.research_open():
-				return h.btn_research.get_global_rect()
+				return main.bench_rect("research")
 			var rid := research_to_do(g)
 			return h.research_tree._buttons[rid].get_global_rect() if rid != "" else null
 		"remind_scavenge":
@@ -386,15 +386,15 @@ func _target():
 			if pid == "":
 				return null
 			if not h.research_open():
-				return h.btn_research.get_global_rect()
+				return main.bench_rect("research")
 			return h.research_tree._buttons[pid].get_global_rect()
 		"turret", "radio":
 			if main.placing == current:
 				return _free_spot(current)
 			if h.research_open():
-				return h.btn_research.get_global_rect()   # close it first
+				return main.bench_rect("research")   # close it first
 			if not h.workshop.visible:
-				return h.btn_workshop.get_global_rect()
+				return main.bench_rect("workshop")
 			return h._shop_rows[current].get_global_rect()
 		"grit":
 			if h.camp_open():
