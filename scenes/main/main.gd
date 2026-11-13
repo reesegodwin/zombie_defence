@@ -13,6 +13,7 @@ const Saves = preload("res://scripts/saves.gd")
 const Truck = preload("res://scenes/actors/truck.gd")
 const Reticle = preload("res://scenes/ui/reticle.gd")
 const Tutorial = preload("res://scenes/ui/tutorial.gd")
+const Zombie = preload("res://scenes/actors/zombie.gd")
 
 @export var zombie_scene: PackedScene
 @export var survivor_scene: PackedScene
@@ -322,6 +323,8 @@ func _process(dt: float) -> void:
 	_keyboard_walk(minf(dt, 0.05), live)
 	if not live and Input.mouse_mode == Input.MOUSE_MODE_HIDDEN:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE   # menus need the mouse
+	if not live:
+		Zombie.prewarm()   # menus are a good time to get the horde's bodies ready
 	if started:
 		_update_aim()
 		# The world waits while you study the scavenging map.

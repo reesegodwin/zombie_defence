@@ -1,4 +1,5 @@
-# Renders character sheets of the zombie types and the survivors (front,
+# Renders character sheets of every zombie model (zombies.png and one sheet
+# each), the zombie types and the survivors (front,
 # three-quarter, side and back, in an A-pose on white, and close-ups of the
 # faces) to check the models. Needs a display (e.g. xvfb-run):
 #   godot --path . --script res://tests/model_sheet.gd -- <output dir>
@@ -60,6 +61,7 @@ func _run() -> void:
 	cam.size = 2.3
 	cam.position = Vector3(0, 0.92, 10)
 	world.add_child(cam)
+	await _zombie_models(cam)
 	for type in D.ZTYPES:
 		var sc: float = D.ZTYPES[type]["scale"]
 		cam.size = 2.3 * sc
@@ -89,6 +91,55 @@ func _run() -> void:
 	await _guns(cam)
 	await _turret(cam)
 	quit()
+
+
+## Every zombie model side by side (as walkers), then their faces, then each
+## from the front, the side and the back.
+func _zombie_models(cam: Camera3D) -> void:
+	var names: Array = Body.ZOMBIE_MODELS.keys()
+	var models := []
+	for i in names.size():
+		models.append(_zombie("walker", names[i], i, i))
+		models[i].position = Vector3((i - (names.size() - 1) / 2.0) * 0.74, 0, 0)
+		models[i].rotation.y = -0.3
+	root.size = Vector2i(2400, 1000)
+	cam.size = 2.15
+	cam.position = Vector3(0, 0.95, 10)
+	await _shot("zombies")
+	root.size = Vector2i(2400, 420)
+	cam.size = 0.9
+	cam.position = Vector3(0, 1.6, 10)
+	await _shot("zombies_faces")
+	for m in models:
+		m.free()
+	root.size = Vector2i(1600, 800)
+	for i in names.size():
+		models.clear()
+		for v in VIEWS.size():
+			models.append(_zombie("walker", names[i], i, i))
+			models[v].position = Vector3((v - 1.5) * 1.15, 0, 0)
+			models[v].rotation.y = VIEWS[v]
+		cam.size = 2.3
+		cam.position = Vector3(0, 0.92, 10)
+		await _shot("zombie_" + names[i])
+		cam.size = 0.75
+		cam.position = Vector3(-1.725, 1.5, 10)
+		root.size = Vector2i(800, 800)
+		await _shot("zombie_" + names[i] + "_face")
+		root.size = Vector2i(1600, 800)
+		for m in models:
+			m.free()
+
+
+func _zombie(type: String, model: String, id: int, shirt: int) -> Node3D:
+	var z := ZOMBIE.instantiate()
+	root.add_child(z)
+	z.setup({"id": id, "type": type, "shirt": shirt % D.ZTYPES[type]["shirts"].size(), "x": 0.0, "y": 0.0, "t": 0.0,
+		"held": 0, "atk": 0, "v": 999.0, "spd": 1.0, "slow": 1.0, "sway": 0.0,
+		"hit": 0, "burn": 0, "hp": 1.0, "max_hp": 1.0, "side": 0}, model)
+	z.set_process(false)
+	_a_pose(z)
+	return z
 
 
 func _guns(cam: Camera3D) -> void:

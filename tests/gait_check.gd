@@ -47,6 +47,7 @@ func _run() -> void:
 		var zd := {"id": 5, "type": type, "shirt": 0, "x": 11.0, "y": 0.0, "t": 0.0, "held": 0, "atk": 0, "spd": 1.0, "slow": 1.0,
 			"sway": 0.0, "hit": 0, "burn": 0, "hp": 1.0, "max_hp": 1.0, "side": 0}
 		z.setup(zd)
+		z._limp = 1.0   # a sound-legged one: a lame leg drags, as it should
 		var v: float = D.ZTYPES[type]["speed"]
 		var slip := _slip(z, func(dt):
 			zd["y"] += v * dt

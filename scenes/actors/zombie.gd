@@ -37,31 +37,23 @@ var _was_hit := false
 var _stagger_side := 1.0
 var _head_x := 0.0
 var _turn := 0.0               # the way it faces, turning smoothly             # the head's resting nod
+const LOOKS := 2               # how many different bodies each model, shirt and type comes in
 static var _corpses: Array = []   # the bodies lying around, oldest first
 const MAX_CORPSES := 30
 const CORPSE_TIME := Vector2(6.0, 10.0)   # seconds a body lies before sinking away
 
 
-func setup(z: Dictionary) -> void:
+## model: which of Body.ZOMBIE_MODELS to be (else one of its type's, by its id).
+func setup(z: Dictionary, model := "") -> void:
 	zid = z["id"]
 	var T: Dictionary = D.ZTYPES[z["type"]]
 	scale = Vector3.ONE * T["scale"]
 	_runner = z["type"] == "runner"
 	var rng := RandomNumberGenerator.new()
 	rng.seed = int(z["id"]) * 92821 + 7
-	# Skin: the type's pallor, a shade lighter or darker (in steps, so the
-	# materials stay shared).
-	var shade := float(rng.randi_range(-2, 2)) * 0.05
-	var skin: Color = T["skin"].lightened(shade) if shade > 0.0 else T["skin"].darkened(-shade)
-	var shirt: Color = T["shirts"][z["shirt"]]
-	j = Body.zombie(self, {
-		# Clothes faded by sun and rain.
-		"skin": skin, "shirt": shirt.lerp(Color(0.85, 0.85, 0.8), 0.15),
-		"pants": PANTS[rng.randi() % PANTS.size()].lightened(0.12),
-		"eyes": T["eyes"],
-		"width": 1.25 if z["type"] == "brute" else (0.9 if _runner else rng.randf_range(0.95, 1.05)),
-		"rng": rng,
-	})
+	if model == "":
+		model = T["models"][rng.randi() % T["models"].size()]
+	j = Body.zombie(self, _look(z["type"], model, z["shirt"], rng.randi() % LOOKS))
 	meshes = j["meshes"]
 	_lean = rng.randf_range(0.18, 0.42) if not _runner else 0.35
 	_tilt = rng.randf_range(-0.45, 0.45)
@@ -184,6 +176,66 @@ func sync(z: Dictionary, dt: float) -> void:
 			bar.global_basis = cam.global_basis
 		bar_fill.scale.x = maxf(0.001, frac)
 		bar_fill.position.x = -0.25 * (1.0 - frac)
+
+
+## What a body looks like: one of LOOKS of that model in that shirt (which
+## of the type's shirt colours), for that type. The same ones come round
+## again and share their meshes: a horde is built from a few dozen bodies,
+## each made once.
+static func _look(type: String, model: String, shirt: int, which: int) -> Dictionary:
+	var T: Dictionary = D.ZTYPES[type]
+	var M: Dictionary = Body.ZOMBIE_MODELS[model]
+	if M["top"] in ["none", "flayed"]:
+		shirt = 0   # nothing on top to tell them apart by
+	var key := "%s/%s/%d/%d" % [type, model, shirt, which]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(key)
+	# Skin: the type's pallor, a shade lighter or darker.
+	var shade := float(rng.randi_range(-2, 2)) * 0.05
+	var skin: Color = T["skin"].lightened(shade) if shade > 0.0 else T["skin"].darkened(-shade)
+	var pants: Array = M.get("pants", PANTS)
+	var boots: Array = M.get("boots", [Color("5a3524")])
+	return {
+		# Clothes faded by sun and rain.
+		"skin": skin, "shirt": T["shirts"][shirt].lerp(Color(0.85, 0.85, 0.8), 0.15),
+		"pants": pants[rng.randi() % pants.size()].lightened(0.2),
+		"boots": boots[rng.randi() % boots.size()],
+		"eyes": T["eyes"],
+		"top": M["top"], "legs": M["legs"], "feet": M["feet"], "glow": M.get("glow", false),
+		# Mostly the model's own hair, now and then another head of it.
+		"hair": M["hair"] if rng.randf() < 0.6 else ["bald", "thin", "lank"][rng.randi() % 3],
+		"width": 1.25 if type == "brute" else (0.9 if type == "runner" else rng.randf_range(0.95, 1.05)),
+		"rng": rng, "key": key,
+	}
+
+
+static var _to_make = null   # the bodies not made yet: [type, model, shirt, which]
+
+
+## Makes one of the bodies the horde will need, ahead of time (each takes a
+## moment, which would otherwise be a hitch when the first of its kind walks
+## in). Call it while nothing is happening; false once they're all made.
+static func prewarm() -> bool:
+	if _to_make == null:
+		_to_make = []
+		for which in LOOKS:   # one of everything first, then the second of each
+			for type in D.ZTYPES:
+				var done := {}
+				for model in D.ZTYPES[type]["models"]:
+					if not done.has(model):
+						done[model] = true
+						var bare: bool = Body.ZOMBIE_MODELS[model]["top"] in ["none", "flayed"]
+						for shirt in (1 if bare else D.ZTYPES[type]["shirts"].size()):
+							_to_make.append([type, model, shirt, which])
+	if _to_make.is_empty():
+		return false
+	var m: Array = _to_make.pop_front()
+	var look := _look(m[0], m[1], m[2], m[3])
+	if not Body.has_body(look["key"]):
+		var holder := Node3D.new()
+		Body.zombie(holder, look)
+		holder.free()
+	return true
 
 
 static func _flash() -> StandardMaterial3D:
