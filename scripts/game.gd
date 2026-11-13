@@ -585,7 +585,7 @@ func is_reloading(s: Dictionary) -> bool:
 ## Starts a reload, unless they're already reloading or the magazine is full.
 func start_reload(s: Dictionary) -> bool:
 	_check_ammo(s)
-	if is_reloading(s) or s["ammo"] >= int(D.WEAPONS[s["weapon"]]["mag"]) or s["state"] != "wall":
+	if is_reloading(s) or s["ammo"] >= int(D.WEAPONS[s["weapon"]]["mag"]) or not (s["state"] == "wall" or s.get("fighting", false)):
 		return false
 	var t: float = survivor_stats(s)["reload"]
 	s["reload"] = t
@@ -2028,6 +2028,9 @@ func update_walkers(dt: float) -> void:
 		var st: String = s["state"]
 		if st == "wall" or st == "away" or st == "dead" or st == "aboard":
 			continue
+		s["fighting"] = _fight_on_the_way(s, dt)
+		if s["fighting"]:
+			continue   # stood their ground: they walk on once it's clear
 		var length := maxf(0.01, route_length(s["route"]))
 		var dp := D.WALK_SPEED * dt / length
 		if st == "moving":
@@ -2063,6 +2066,33 @@ func update_walkers(dt: float) -> void:
 		var p := route_point(s["route"], minf(1.0, s["path_t"]))
 		s["x"] = p.x
 		s["y"] = p.y
+
+
+## Someone walking (back from the pass, to another spot, to the truck) with
+## the dead inside the base and in range: they stop and shoot, and walk on
+## once there's nothing left to shoot. True while they're fighting.
+func _fight_on_the_way(s: Dictionary, dt: float) -> bool:
+	if s["hp"] <= 0.0 or not (in_base(Vector2(s["x"], s["y"])) or on_deck(Vector2(s["x"], s["y"]))):
+		return false
+	var inside := false
+	for z in zombies:
+		if z.get("inside", false) and z["hp"] > 0:
+			inside = true
+			break
+	if not inside:
+		return false
+	s["cd"] -= dt
+	_check_ammo(s)
+	if _tick_reload(s, dt):
+		return true
+	var w: Dictionary = D.WEAPONS[s["weapon"]]
+	var z = auto_target(s, auto_reach(w))
+	if z == null:
+		return false
+	var ready := swivel(s, atan2(z["y"] - s["y"], z["x"] - s["x"]), D.TURN_RATE, dt)
+	if s["cd"] <= 0.0 and ready:
+		_shoot(s, z["x"], z["y"], survivor_stats(s))
+	return true
 
 
 ## The scavenger didn't make it: they, their gun and their gear are gone.

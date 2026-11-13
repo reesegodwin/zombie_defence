@@ -237,7 +237,7 @@ func sync(s: Dictionary, dt: float) -> void:
 	gun.visible = true
 	upper.rotation.x = 0.0
 
-	if state != "wall":
+	if state != "wall" and not s.get("fighting", false):
 		# Walking: a stride with bending knees, the gun carried low.
 		var step := pos - _last
 		if step.length() > 0.0005:

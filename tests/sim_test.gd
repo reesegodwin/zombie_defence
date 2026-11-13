@@ -111,6 +111,31 @@ func _unit_checks() -> void:
 	gmv.crew[0]["u"] = mid + 2.0   # you've walked off along the wall
 	gmv.add_survivor("Dot", "pistol", false)
 	check(absf(gmv.crew[1]["u"] - mid) <= 2.1, "they still go to the middle, wherever you've walked to")
+	# Walking through the yard with the dead inside: stop, shoot, walk on.
+	var gfw = Game.new()
+	var wk: Dictionary = gfw.add_survivor("Ada", "pistol", false)
+	var spot_w := Vector2(wk["x"], wk["y"])
+	gfw.walls[0]["hp"] = 0.0
+	gfw.walls[0]["breached"] = true
+	gfw.walls[0]["gap"] = 11.0
+	wk["state"] = "moving"
+	wk["route"] = [Vector2(11.2, 26.0), Vector2(11.2, 22.5), spot_w]
+	wk["path_t"] = 0.6
+	var pwk := Game.route_point(wk["route"], 0.6)
+	wk["x"] = pwk.x; wk["y"] = pwk.y
+	var zin: Dictionary = gfw.spawn_zombie("walker", 1.0, 0.0, 0)
+	zin["x"] = pwk.x + 3.0; zin["y"] = pwk.y - 2.0
+	zin["inside"] = true
+	var twk0: float = wk["path_t"]
+	gfw.update_walkers(0.05)
+	var held: bool = wk["path_t"] == twk0 and wk.get("fighting", false)
+	for i in 40:
+		gfw.update_walkers(0.05)
+		gfw.update_bullets(0.05)
+	check(held and zin["hp"] <= 0, "someone walking back through a breached base stops and shoots the dead in range")
+	for i in 400:
+		gfw.update_walkers(0.05)
+	check(wk["state"] == "wall" and Vector2(wk["x"], wk["y"]).distance_to(spot_w) < 0.1, "then walks on to the wall they were at")
 	# Its settings: on/off and what's been done carry over, in their own file.
 	var tpath := "user://test_settings.cfg"
 	var st = load("res://scripts/settings.gd").load_or_detect(tpath)
@@ -170,6 +195,7 @@ func _unit_checks() -> void:
 	check(D.SITES.has("ranger_cabin") and always, "the ranger cabin always has the survivor who radioed for help")
 	var grs = Game.new()
 	var scout: Dictionary = grs.add_survivor("Bea", "pistol", false)
+	grs.death_mul = 0.0   # (they always make it back, for this test)
 	grs.send_scavenger(1, "ranger_cabin")
 	var guard := 0
 	while not grs.crew.any(func(c): return c.get("model", "") == "ranger") and guard < 4000:
