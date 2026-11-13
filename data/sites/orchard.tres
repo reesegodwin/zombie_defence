@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ScavengeSite" format=3]
+
+[ext_resource type="Script" path="res://data/scavenge_site.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Orchard"
+note = "apples rotting on the trees"
+map_position = Vector2(0.42, 0.84)
+icon = "orchard"
+gone_seconds = 55.0
+scrap = 0
+weapon_chance = 0.02
+food_chance = 0.55
+survivor_chance = 0.1
+throwable_chance = 0.05
+biome = "farmland"

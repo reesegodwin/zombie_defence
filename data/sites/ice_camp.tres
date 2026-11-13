@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ScavengeSite" format=3]
+
+[ext_resource type="Script" path="res://data/scavenge_site.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Ice fishing camp"
+note = "fish frozen in the huts"
+map_position = Vector2(0.4, 0.7)
+icon = "tents"
+gone_seconds = 60.0
+scrap = 0
+weapon_chance = 0.04
+food_chance = 0.45
+survivor_chance = 0.12
+throwable_chance = 0.05
+biome = "snow"

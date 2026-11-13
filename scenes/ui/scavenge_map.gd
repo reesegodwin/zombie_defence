@@ -33,8 +33,8 @@ func open() -> void:
 	canvas.main = main
 	visible = true
 	var open_sites: Array = main.game.open_sites()
-	if site == "" or main.game.looted.has(site):
-		site = open_sites[0] if not open_sites.is_empty() else D.SITE_KEYS[0]
+	if site == "" or main.game.looted.has(site) or not main.game.biome_sites().has(site):
+		site = open_sites[0] if not open_sites.is_empty() else main.game.biome_sites()[0]
 	var free: Array = main.game.available_scavengers()
 	if not free.has(who):
 		who = free[0] if not free.is_empty() else -1

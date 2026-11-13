@@ -2349,8 +2349,14 @@ func site_open(site_key: String) -> bool:
 	return not looted.has(site_key) and not (trip != null and trip["site"] == site_key)
 
 
+## The sites on this level's biome map.
+func biome_sites() -> Array:
+	var b: String = D.biome_of(level)["key"]
+	return D.SITE_KEYS.filter(func(k): return D.SITES[k]["biome"] == b)
+
+
 func open_sites() -> Array:
-	return D.SITE_KEYS.filter(func(k): return site_open(k))
+	return biome_sites().filter(func(k): return site_open(k))
 
 
 func can_send(si: int, site_key: String) -> Dictionary:

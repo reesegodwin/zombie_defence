@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ScavengeSite" format=3]
+
+[ext_resource type="Script" path="res://data/scavenge_site.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Truck stop"
+note = "rigs abandoned in the lot"
+map_position = Vector2(0.2, 0.52)
+icon = "shop"
+gone_seconds = 60.0
+scrap = 1
+weapon_chance = 0.08
+food_chance = 0.3
+survivor_chance = 0.12
+throwable_chance = 0.2
+biome = "wasteland"

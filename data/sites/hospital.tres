@@ -14,3 +14,4 @@ weapon_chance = 0.02
 food_chance = 0.2
 survivor_chance = 0.15
 throwable_chance = 0.1
+biome = "farmland"

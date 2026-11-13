@@ -49,6 +49,16 @@ func _unit_checks() -> void:
 	var g = Game.new()
 	check(g.crew.size() == 1 and g.crew[0]["weapon"] == "pistol", "you start alone with a pistol")
 
+	# Each biome has its own scavenging map: only its own sites are on it.
+	var gbio = Game.new()
+	var bio_ok := true
+	for b in D.BIOMES:
+		gbio.level = b["levels"][0]
+		var ss: Array = gbio.open_sites()
+		if ss.size() < 5 or ss.any(func(k): return D.SITES[k]["biome"] != b["key"]):
+			bio_ok = false
+	check(bio_ok and D.SITE_KEYS.all(func(k): return D.BIOMES.any(func(b): return b["key"] == D.SITES[k]["biome"])), "every biome has its own map of at least five places to scavenge")
+
 	# Shooting a walker straight ahead kills it.
 	var z: Dictionary = g.spawn_zombie("walker", 1.0, 1.0)
 	z["x"] = g.crew[0]["x"]; z["y"] = 10.0

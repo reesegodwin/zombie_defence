@@ -390,7 +390,10 @@ const WEAPON_KEYS := ["pistol", "smg", "shotgun", "rifle", "flamer", "launcher",
 static var ZTYPES: Dictionary = _load_dir("res://data/zombies/", ZOMBIE_KEYS)
 
 static var WEAPONS: Dictionary = _load_dir("res://data/weapons/", WEAPON_KEYS)
-const SITE_KEYS := ["gas_station", "farmhouse", "hardware_store", "trailer_park", "radio_tower", "police_station", "rail_yard", "ranger_cabin", "church", "hospital", "quarry", "checkpoint"]
+const SITE_KEYS := ["ranger_cabin", "church", "trailer_park", "hardware_store", "radio_tower", "quarry",
+	"farmhouse", "gas_station", "hospital", "police_station", "grain_elevator", "orchard",
+	"rail_yard", "checkpoint", "truck_stop", "warehouse", "scrapyard", "motel",
+	"ski_lodge", "weather_station", "mine", "ice_camp", "army_depot", "trapper_hut"]   # each on its biome's map (its "biome")
 static var SITES: Dictionary = _load_dir("res://data/sites/", SITE_KEYS)
 
 

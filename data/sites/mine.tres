@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ScavengeSite" format=3]
+
+[ext_resource type="Script" path="res://data/scavenge_site.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Old mine"
+note = "dynamite in the shed"
+map_position = Vector2(0.84, 0.66)
+icon = "quarry"
+gone_seconds = 130.0
+scrap = 2
+weapon_chance = 0.02
+food_chance = 0.05
+survivor_chance = 0.05
+throwable_chance = 0.45
+biome = "snow"

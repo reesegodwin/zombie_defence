@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ScavengeSite" format=3]
+
+[ext_resource type="Script" path="res://data/scavenge_site.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Weather station"
+note = "batteries, wire, a generator"
+map_position = Vector2(0.6, 0.48)
+icon = "tower"
+gone_seconds = 110.0
+scrap = 1
+weapon_chance = 0.03
+food_chance = 0.1
+survivor_chance = 0.08
+throwable_chance = 0.15
+biome = "snow"

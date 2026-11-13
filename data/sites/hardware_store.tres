@@ -13,3 +13,4 @@ scrap = 1
 weapon_chance = 0.08
 food_chance = 0.08
 survivor_chance = 0.15
+biome = "forest"

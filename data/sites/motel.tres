@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ScavengeSite" format=3]
+
+[ext_resource type="Script" path="res://data/scavenge_site.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Motel"
+note = "someone's light was on"
+map_position = Vector2(0.18, 0.86)
+icon = "trailer"
+gone_seconds = 70.0
+scrap = 0
+weapon_chance = 0.06
+food_chance = 0.2
+survivor_chance = 0.2
+throwable_chance = 0.1
+biome = "wasteland"

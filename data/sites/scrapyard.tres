@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ScavengeSite" format=3]
+
+[ext_resource type="Script" path="res://data/scavenge_site.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Scrapyard"
+note = "metal, all you can carry"
+map_position = Vector2(0.62, 0.84)
+icon = "scrap"
+gone_seconds = 120.0
+scrap = 2
+weapon_chance = 0.05
+food_chance = 0.05
+survivor_chance = 0.05
+throwable_chance = 0.25
+biome = "wasteland"

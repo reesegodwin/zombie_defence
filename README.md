@@ -90,21 +90,27 @@ harder than the last, and the hordes keep growing.
 
 Pick the level on the title screen (or at the camp, next to Heat):
 
-1. **The Road**: one way in. The dead only come down the lane in front of
-   your wall; the pipes at the end of the side lanes are bricked up.
-2. **The Crossroads**: three walls to hold. The west lane opens on the morning
-   of day 3 and the east on day 5. Pays 25% more Grit.
-3. **The Siege**: all three lanes from the first morning, and the dead come
-   thicker and tougher. The mountain pass at your back stays safe. Pays 50%
-   more Grit.
-4. **Frostbite Ridge** (snow, more brutes), 5. **Black Marsh** (fog and mud:
-   a slower but bigger horde), 6. **Dust Bowl** (runners), 7. **Ashwood**
-   (burnt forest, a heavy front lane), 8. **Hollow Creek** (two lanes that
-   never let up), 9. **Iron Yard** (fewer, tougher dead), 10. **Red Pines**,
-   11. **Whiteout**, 12. **Floodplain** (the biggest hordes) and 13. **The
-   Long Dark** (the hardest before the end). Each has its own base: the
-   bunker, huts, tent, benches and turret spots stand somewhere different
-   (`scripts/bases.gd`), in its own country (snow and ash fall on some).
+The levels run through four countries (biomes, `D.BIOMES`), a few levels
+each, getting colder and harder as you go north:
+
+- **The Pines** (forest, levels 1–4), with mountains and a pass behind the bases:
+  1. **The Road**: one way in. The dead only come down the lane in front of
+     your wall; the pipes at the end of the side lanes are bricked up.
+  2. **The Crossroads**: three walls to hold. The west lane opens on the
+     morning of day 3 and the east on day 5. Pays 25% more Grit.
+  3. **Hollow Creek** (two lanes that never let up).
+  4. **The Siege**: all three lanes from the first morning, thicker and tougher.
+- **The Farmlands** (levels 5–7), behind a tall corrugated fence with barns and
+  silos beyond: 5. **Harvest Farm** (a Victorian farmhouse; runners),
+  6. **Route 9 Gas** (a gas station with its canopy and pumps) and 7. **Black
+  Marsh** (fog and mud: a slower but bigger horde).
+- **The Wastes** (levels 8–10), walled off by concrete slabs and car heaps:
+  8. **Iron Yard** (fewer, tougher dead), 9. **Tank Farm** (a fuel depot;
+  bloaters) and 10. **The Interstate** (a base on the highway, among pile-ups
+  and jersey barriers).
+- **The North** (snow, levels 11–14), back under snow-capped mountains:
+  11. **Frostbite Ridge**, 12. **Whiteout**, 13. **The Long Dark**, and:
+
 14. **Last Stand: Fort Harlow**: an army base, still held by the last of its
    garrison: four soldiers (Sgt. Reyes, Cpl. Okafor, Pvt. Lund, Pvt. Hale) in
    helmets and vests, with assault rifles, already on the walls when you
@@ -113,6 +119,13 @@ Pick the level on the title screen (or at the camp, next to Heat):
    never stop growing. Hold out 5 nights there and the run counts as won
    (the win's Grit and the next Heat), then keep going for Grit for every
    night until they get in.
+
+Every base is laid out differently (`scripts/bases.gd`) with its own
+landmarks, ground and weather. A gate in the back barrier swings open by
+itself for the crew and the truck. Each country has its own scavenging map
+with its own places to raid (each site's `biome` in `data/sites/`), and the
+map shows the chain of bases through that country: the ones you've held
+crossed out, where you are, and the next stop.
 
 A run is a campaign through the levels from the one you pick. At the dawn
 after night 5 (day 6) an army truck comes down the mountain pass into the

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ScavengeSite" format=3]
+
+[ext_resource type="Script" path="res://data/scavenge_site.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Army depot"
+note = "fenced, padlocked, armed?"
+map_position = Vector2(0.66, 0.86)
+icon = "army"
+gone_seconds = 160.0
+scrap = 2
+weapon_chance = 0.45
+food_chance = 0.2
+survivor_chance = 0.08
+throwable_chance = 0.35
+biome = "snow"
