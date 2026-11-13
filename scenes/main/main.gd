@@ -106,7 +106,7 @@ func _new_game(saved := {}) -> void:
 	game.exploded.connect(func(_x, _y, _r): rig.shake = maxf(rig.shake, 0.6))
 	effects.bind(game)
 	game.level_started.connect(_on_level_started)
-	game.new_day.connect(func(n): hud.banner("DAY %d" % n, D.LEVELS[game.level - 1]["name"]))
+	game.new_day.connect(func(n): hud.banner("DAY %d" % n, level_title()))
 	_clear_scene()
 	selected_id = -1
 	group_ids.clear()
@@ -176,13 +176,19 @@ func _fade_to(a: float) -> void:
 
 
 ## The crew have arrived at the next level's base: clear away the old one.
+## "Level 2: The Crossroads"
+func level_title() -> String:
+	return "Level %d: %s" % [game.level, D.LEVELS[game.level - 1]["name"]]
+
+
 func _on_level_started(_lv: int) -> void:
+	progress.reach(_lv)
 	_clear_scene()
 	if truck != null:
 		truck.queue_free()
 		truck = null
 	_fade_to(1.0)
-	hud.banner("DAY 1", D.LEVELS[game.level - 1]["name"])
+	hud.banner("DAY 1", level_title())
 	var tw := create_tween()
 	tw.tween_interval(0.3)
 	tw.tween_method(_fade_to, 1.0, 0.0, 1.2)
@@ -265,7 +271,7 @@ func start() -> void:
 	hud.close_camp()
 	hud.hide_title()
 	hud.toast("They're coming from the tree line. Hold the wall.")
-	hud.banner("DAY 1", D.LEVELS[game.level - 1]["name"])
+	hud.banner("DAY 1", level_title())
 
 
 ## From the camp, the title or the game-over screen: a fresh run.
@@ -291,7 +297,7 @@ func restart() -> void:
 	paused = false
 	rig.reset()
 	hud.toast("Again. Hold the wall.")
-	hud.banner("DAY 1", D.LEVELS[game.level - 1]["name"])
+	hud.banner("DAY 1", level_title())
 
 
 func toggle_pause() -> void:

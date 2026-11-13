@@ -136,6 +136,13 @@ func _unit_checks() -> void:
 	for i in 400:
 		gfw.update_walkers(0.05)
 	check(wk["state"] == "wall" and Vector2(wk["x"], wk["y"]).distance_to(spot_w) < 0.1, "then walks on to the wall they were at")
+	var prl = load("res://scripts/progress.gd").open("user://test_progress_lv.cfg")
+	prl.reset()
+	check(prl.reached == 1, "only level 1 can be picked at first")
+	prl.reach(2)
+	var prl2 = load("res://scripts/progress.gd").open("user://test_progress_lv.cfg")
+	check(prl2.reached == 2, "once the truck takes you to level 2 it can be picked, and that's kept")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_progress_lv.cfg"))
 	# Its settings: on/off and what's been done carry over, in their own file.
 	var tpath := "user://test_settings.cfg"
 	var st = load("res://scripts/settings.gd").load_or_detect(tpath)

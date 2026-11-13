@@ -11,6 +11,7 @@ var levels := {}          # upgrade id (D.META) -> level bought
 var heat := 0             # the Heat chosen for the next run
 var map_level := 1        # the level chosen for the next run (D.LEVELS, from 1)
 var level_wins := {}      # level -> wins there
+var reached := 1          # the furthest level the truck has carried you to: only those can be picked
 var max_heat := 0         # the highest Heat unlocked
 var runs := 0
 var wins := 0
@@ -33,6 +34,10 @@ func load_file() -> void:
 	heat = cfg.get_value("camp", "heat", 0)
 	map_level = cfg.get_value("camp", "level", 1)
 	level_wins = cfg.get_value("records", "level_wins", {})
+	reached = cfg.get_value("records", "reached", 1)
+	for lv in level_wins:   # (from before this was kept: a win there means the next was reached)
+		reached = maxi(reached, mini(int(lv) + 1, D.LEVELS.size()))
+	map_level = clampi(map_level, 1, reached)
 	max_heat = cfg.get_value("camp", "max_heat", 0)
 	runs = cfg.get_value("records", "runs", 0)
 	wins = cfg.get_value("records", "wins", 0)
@@ -63,6 +68,7 @@ func save() -> void:
 	cfg.set_value("camp", "heat", heat)
 	cfg.set_value("camp", "level", map_level)
 	cfg.set_value("records", "level_wins", level_wins)
+	cfg.set_value("records", "reached", reached)
 	cfg.set_value("camp", "max_heat", max_heat)
 	cfg.set_value("records", "runs", runs)
 	cfg.set_value("records", "wins", wins)
@@ -78,6 +84,7 @@ func reset() -> void:
 	max_heat = 0
 	map_level = 1
 	level_wins = {}
+	reached = 1
 	runs = 0
 	wins = 0
 	best_nights = 0
@@ -135,6 +142,13 @@ func bank(result: Dictionary) -> bool:
 			unlocked = true
 	save()
 	return unlocked
+
+
+## The truck brought you to level lv: from now on it can be picked.
+func reach(lv: int) -> void:
+	if lv > reached:
+		reached = mini(lv, D.LEVELS.size())
+		save()
 
 
 ## What a new run starts with (handed to the game's apply_meta).

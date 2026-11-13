@@ -173,10 +173,7 @@ func _on_slot(slot: String) -> void:
 func _level_picker() -> OptionButton:
 	var ob := OptionButton.new()
 	ob.focus_mode = Control.FOCUS_NONE
-	for i in D.LEVELS.size():
-		var L: Dictionary = D.LEVELS[i]
-		ob.add_item("%d. %s  (%s)" % [i + 1, L["name"], L["short"]])
-		ob.set_item_tooltip(i, L["desc"])
+	_fill_levels(ob)
 	ob.item_selected.connect(func(i):
 		main.progress.map_level = i + 1
 		main.progress.save()
@@ -186,9 +183,36 @@ func _level_picker() -> OptionButton:
 	return ob
 
 
+## Only the levels you've reached (the truck took you there) are listed.
+func _fill_levels(ob: OptionButton) -> void:
+	var n: int = D.LEVELS.size() if main == null or main.progress == null else clampi(main.progress.reached, 1, D.LEVELS.size())
+	if ob.item_count == n:
+		return
+	ob.clear()
+	for i in n:
+		var L: Dictionary = D.LEVELS[i]
+		ob.add_item("Level %d: %s  (%s)" % [i + 1, L["name"], L["short"]])
+		ob.set_item_tooltip(i, L["desc"])
+
+
+## Everything back to a first play: Grit, upgrades, Heat, levels, records,
+## saved runs, and the tutorial.
+func reset_game() -> void:
+	main.progress.reset()
+	for slot in Saves.SLOTS:
+		Saves.erase(slot)
+	main.settings.tutorial = true
+	main.settings.tutorial_done = []
+	main.settings.save()
+	_refresh_title()
+	if _btn_continue != null:
+		_btn_continue.visible = Saves.latest() != ""
+
+
 func _refresh_title() -> void:
 	if _title_level != null and main != null:
-		var lv: int = clampi(main.progress.map_level, 1, D.LEVELS.size())
+		_fill_levels(_title_level)
+		var lv: int = clampi(main.progress.map_level, 1, _title_level.item_count)
 		_title_level.select(lv - 1)
 		var L: Dictionary = D.LEVELS[lv - 1]
 		var w: int = main.progress.level_wins.get(lv, 0)
@@ -221,6 +245,27 @@ func _build_saves() -> void:
 	_btn_load_title.pressed.connect(func(): open_saves("load"))
 	tv.add_child(_btn_load_title)
 	tv.move_child(_btn_load_title, %StartButton.get_index() + 1)
+	# Start over from scratch: click twice.
+	var wipe := Button.new()
+	wipe.text = "Reset game"
+	wipe.custom_minimum_size = Vector2(320, 36)
+	wipe.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	wipe.focus_mode = Control.FOCUS_NONE
+	wipe.modulate = Color(1, 1, 1, 0.7)
+	wipe.pressed.connect(func():
+		if wipe.has_meta("armed"):
+			reset_game()
+			wipe.remove_meta("armed")
+			wipe.text = "Game reset"
+		else:
+			wipe.set_meta("armed", true)
+			wipe.text = "Click again: wipe ALL progress and saves")
+	wipe.mouse_exited.connect(func():
+		if wipe.has_meta("armed"):
+			wipe.remove_meta("armed")
+			wipe.text = "Reset game")
+	tv.add_child(wipe)
+	tv.move_child(wipe, _btn_load_title.get_index() + 1)
 	# The level to play.
 	var lrow := HBoxContainer.new()
 	lrow.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -649,7 +694,7 @@ func update_hud() -> void:
 		research_info.text = "Scrap %d. Research costs scrap up front and takes a while; one project at a time. The game waits while this is open." % g.scrap
 	# Just the day or night: no clocks or counters.
 	var phase: String = ("Night %d" if g.is_night() else "Day %d") % g.day_number()
-	phase += "  ·  " + D.LEVELS[g.level - 1]["name"]
+	phase += "  ·  Level %d: %s" % [g.level, D.LEVELS[g.level - 1]["name"]]
 	for side in range(1, D.LANES.size()):
 		if g.sides_open[side] and not g.side_live(side):
 			phase += "  ·  the %s lane is waking" % D.LANES[side]["name"].to_lower()
@@ -1253,7 +1298,8 @@ func _refresh_camp() -> void:
 		b.disabled = not chk.has("ok")
 		b.tooltip_text = D.META[id]["desc"] + ("" if chk.has("ok") else "\n" + chk.get("msg", ""))
 		r["name"].modulate = Color.WHITE if lv > 0 else Color(1, 1, 1, 0.75)
-	_camp_level.select(clampi(pr.map_level, 1, D.LEVELS.size()) - 1)
+	_fill_levels(_camp_level)
+	_camp_level.select(clampi(pr.map_level, 1, _camp_level.item_count) - 1)
 	_camp_heat.clear()
 	for h in pr.max_heat + 1:
 		_camp_heat.add_item("Heat %d%s" % [h, " (normal)" if h == 0 else ""])
