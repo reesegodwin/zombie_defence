@@ -51,6 +51,7 @@ func make_basic() -> void:
 	streams["crash"] = _boom(1.6)
 	streams["fire"] = _crackle()
 	streams["flame"] = _roar()
+	streams["bloat"] = _bloat()
 	streams["build"] = _tones([220.0, 330.0], 0.07, 0.25)
 	streams["coin"] = _tones([660.0, 990.0], 0.06, 0.2)
 	streams["levelup"] = _tones([392.0, 523.0, 659.0, 784.0], 0.09, 0.25)
@@ -171,6 +172,23 @@ func _squelch_samples() -> PackedFloat32Array:
 		lp += (randf_range(-1, 1) - lp) * 0.12
 		out[i] = (lp * 2.0 + sin(TAU * (180.0 - 400.0 * t) * t) * 0.4) * _env(t, dur, 0.01) * 0.5
 	return out
+
+
+## A bloater bursting: a deep wet pop, a gush, and a spatter after it.
+func _bloat() -> AudioStreamWAV:
+	var dur := 0.7
+	var n := int(dur * RATE)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var lp := 0.0
+	for i in n:
+		var t := float(i) / RATE
+		lp += (randf_range(-1, 1) - lp) * (0.25 if t < 0.08 else 0.07)
+		var pop := sin(TAU * (90.0 - 60.0 * t) * t) * exp(-t * 12.0) * 0.9
+		var gush := lp * 2.2 * exp(-t * 4.0)
+		var spatter := randf_range(-1, 1) * 0.5 if t > 0.15 and randf() < 0.01 * exp(-(t - 0.15) * 5.0) * 40.0 * 0.05 else 0.0
+		out[i] = (pop + gush + spatter) * _env(t, dur, 0.004) * 0.7
+	return _make(out)
 
 
 func _crackle() -> AudioStreamWAV:

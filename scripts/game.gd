@@ -1331,7 +1331,7 @@ func _bloat(z: Dictionary) -> void:
 	var r: float = D.BLOAT["r"]
 	burst(at.x, at.y, 26, {"colors": [Color("8a9a3a"), Color("6a7a2a"), Color("b0b85a")], "spread": r * 1.4, "up": 150.0, "life": 0.9, "size": 4.0, "z": 16.0})
 	burst(at.x, at.y, 8, {"colors": [Color(0.55, 0.6, 0.3), Color(0.45, 0.5, 0.25)], "spread": r * 0.6, "up": 30.0, "life": 1.6, "size": 9.0, "z": 12.0, "grav": 5.0})
-	sound.emit("boom")
+	sound.emit("bloat")
 	shake = maxf(shake, 0.35)
 	for o in zombies:
 		if o != z and o["hp"] > 0 and at.distance_to(Vector2(o["x"], o["y"])) < r:
