@@ -29,7 +29,7 @@ var blocks: Array[Node3D] = []
 var hurt_until: Array[float] = []
 var wire_rows: Array[Node3D] = []
 var _stage := -1
-var _fallen := false
+var _fallen: Array[bool] = []   # per block: toppled with its broken section
 var _flash: StandardMaterial3D
 var _wear := []
 
@@ -52,6 +52,7 @@ func _build() -> void:
 	var u0: float = L["u0"]
 	var u1: float = L["u1"]
 	blocks.clear()
+	_fallen.clear()
 	hurt_until.clear()
 	wire_rows.clear()
 	_wear.clear()
@@ -100,6 +101,7 @@ func _build() -> void:
 			for k in 2:
 				_part(look, merlon, mat, Vector3(-0.25 + k * 0.5, h + 0.13, -thickness / 2))
 		blocks.append(b)
+		_fallen.append(false)
 		hurt_until.append(0.0)
 		_wear.append(rng.randf())
 	# Barbed wire: posts and three strands along the outside.
@@ -155,14 +157,18 @@ func _apply_stage(stage: int) -> void:
 func sync(g, now: float) -> void:
 	var w: Dictionary = g.walls[side]
 	_apply_stage(w["stage"])
-	var frac: float = w["hp"] / w["max_hp"]
+	var segs: Array = w.get("segs", [])
 	var hurt: Array = w["hurt"]
 	for i in blocks.size():
 		if hurt[i] > 0.12:
 			hurt_until[i] = now + 0.12
 		var b := blocks[i]
-		if _fallen:
+		if _fallen[i]:
 			continue
+		var frac := 1.0
+		if not segs.is_empty():
+			var sg: Dictionary = segs[_seg_of(i, segs.size())]
+			frac = sg["hp"] / sg["max_hp"]
 		var flash := now < hurt_until[i]
 		var overlay: Material = _flash if flash else null
 		var look: Node3D = b.get_child(clampi(_stage, 0, 2))
@@ -181,29 +187,60 @@ func sync(g, now: float) -> void:
 		wire_rows[r].visible = false
 
 
-## The wall gives way: the blocks round at_x (along the wall, u) topple into
-## the base, leaving a gap GAP_HALF either side; the rest stands, shaken.
+## Which wall section (of n, as the game's seg_at) block i is part of.
+func _seg_of(i: int, n: int) -> int:
+	var L: Dictionary = D.LANES[side]
+	var sl: float = (L["u1"] - L["u0"]) / n
+	return clampi(floori((blocks[i].position.x - L["u0"]) / sl), 0, n - 1)
+
+
+func _seg_count() -> int:
+	var L: Dictionary = D.LANES[side]
+	return maxi(1, roundi((L["u1"] - L["u0"]) / D.WALL_SEG))
+
+
+## A section of the wall gives way: the blocks of the section at at_x (along
+## the wall, u) topple into the base, leaving a gap; the blocks either side of
+## it shake; the rest stands.
 func collapse(at_x: float) -> void:
-	_fallen = true
-	var lane: Dictionary = D.LANES[side]
-	at_x = clampf(at_x, lane["u0"] + D.GAP_HALF, lane["u1"] - D.GAP_HALF)
+	var n := _seg_count()
+	var L: Dictionary = D.LANES[side]
+	var gone := clampi(floori((at_x - L["u0"]) / ((L["u1"] - L["u0"]) / n)), 0, n - 1)
 	for i in blocks.size():
 		var b := blocks[i]
+		var k := _seg_of(i, n)
+		if _fallen[i]:
+			continue
 		var d := absf(b.position.x - at_x)
-		if d > D.GAP_HALF + 0.3:
+		if k != gone:
+			if absf(k - gone) > 1:
+				continue
 			var shake := create_tween()
 			shake.tween_property(b, "rotation:z", randf_range(-0.06, 0.06), 0.15)
 			shake.tween_property(b, "rotation:x", randf_range(0.0, 0.08), 0.2)
 			continue
+		_fallen[i] = true
 		var tw := create_tween()
 		tw.tween_interval(d * 0.05)
 		tw.tween_property(b, "rotation:x", 1.35 + randf() * 0.2, 0.5).set_ease(Tween.EASE_IN).set_trans(Tween.TRANS_QUAD)
 		tw.parallel().tween_property(b, "rotation:z", randf_range(-0.3, 0.3), 0.5)
 
 
-func reset() -> void:
-	_fallen = false
+## A broken section patched: the blocks of the section at at_x stand again.
+func restore(at_x: float) -> void:
+	var n := _seg_count()
+	var L: Dictionary = D.LANES[side]
+	var k := clampi(floori((at_x - L["u0"]) / ((L["u1"] - L["u0"]) / n)), 0, n - 1)
 	for i in blocks.size():
+		if _seg_of(i, n) == k:
+			_fallen[i] = false
+			blocks[i].rotation = Vector3.ZERO
+			blocks[i].scale = Vector3.ONE
+
+
+func reset() -> void:
+	for i in blocks.size():
+		_fallen[i] = false
 		blocks[i].rotation = Vector3.ZERO
 		blocks[i].scale = Vector3.ONE
 		for look in blocks[i].get_children():

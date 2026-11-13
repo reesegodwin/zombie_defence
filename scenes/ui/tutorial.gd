@@ -49,7 +49,7 @@ static func has_smg(g) -> bool:
 
 static func damaged_wall(g) -> Variant:
 	for w in g.walls:
-		if g.sides_open[w["side"]] and w["hp"] < w["max_hp"] * 0.95 and not w.get("breached", false):
+		if g.sides_open[w["side"]] and g.wall_frac(w) < 0.95 and not w.get("breached", false):
 			return w
 	return null
 
@@ -321,13 +321,19 @@ func _target():
 			if wv == null:
 				return null
 			var w: Dictionary = wv
+			# The worn section: whoever is nearest it on that wall.
+			var worst := 0
+			for k in w["segs"].size():
+				if w["segs"][k]["hp"] / w["segs"][k]["max_hp"] < w["segs"][worst]["hp"] / w["segs"][worst]["max_hp"]:
+					worst = k
+			var mid: float = g.seg_mid(w["side"], worst)
 			var best := -1
 			var bd := INF
 			for i in g.crew.size():
 				var s: Dictionary = g.crew[i]
 				if s["state"] != "wall" or s["hp"] <= 0.0:
 					continue
-				var d: float = 0.0 if s["side"] == w["side"] and not s.has("post") else 10.0 + absf(s["u"] - D.LANES[w["side"]]["u0"])
+				var d: float = absf(s["u"] - mid) if s["side"] == w["side"] and not s.has("post") else 100.0
 				if s["is_player"]:
 					d += 5.0   # one of the crew, so you keep shooting
 				if s["id"] == main.selected_id:

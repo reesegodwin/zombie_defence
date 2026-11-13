@@ -105,7 +105,7 @@ func _new_game(saved := {}) -> void:
 	game.wall_breached.connect(func(side, u):
 		walls[side].collapse(u)
 		rig.shake = maxf(rig.shake, 1.0))
-	game.wall_patched.connect(func(side): walls[side].reset())
+	game.wall_patched.connect(func(side, u): walls[side].restore(u))
 	game.side_opened.connect(func(_side): rig.shake = maxf(rig.shake, 0.3))
 	game.turret_destroyed.connect(func(i):
 		if i < turret_nodes.size():
@@ -130,8 +130,10 @@ func _new_game(saved := {}) -> void:
 	_was_night = game.is_night()
 	# A loaded run's broken walls lie broken.
 	for side in game.walls.size():
-		if game.walls[side].get("breached", false):
-			walls[side].collapse(game.walls[side].get("gap", 11.0))
+		var segs: Array = game.walls[side]["segs"]
+		for k in segs.size():
+			if segs[k]["breached"]:
+				walls[side].collapse(game.seg_mid(side, k))
 
 
 ## Clears the 3D scene of the run's things (the dead, people, traps, turrets,

@@ -202,7 +202,11 @@ const FLANK_CLOSE := 2.0          # and within this, straight for them
 const RETARGET := Vector2(0.8, 1.6)   # seconds between choosing again (random in range)
 const TURRET_REPAIR := 14.0       # turret health restored per second, per repairer
 const TURRET_PER_SCRAP := 5.0     # turret health for each scrap spent
-const GAP_HALF := 1.5             # a broken wall's gap: this far either side of where it gave way
+const GAP_HALF := 1.5             # (old saves: a broken wall's gap, this far either side of where it gave way)
+# Each wall is built in sections about WALL_SEG metres long, each with its own
+# strength (WALL_SEG_HP of the wall tier's), broken and repaired on its own.
+const WALL_SEG := 2.8
+const WALL_SEG_HP := 0.45
 const TURRET_HP := 160.0          # the dead can tear a turret down
 const TURRET_REACH := 1.8         # how close to a turret a zombie at the wall must be to claw at it
 const BUILD_SIZE := {"turret": Vector2(1.2, 1.2), "radio": Vector2(1.6, 1.6)}

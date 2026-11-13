@@ -9,6 +9,19 @@ const D = preload("res://scripts/defs.gd")
 var failures := 0
 
 
+## Wears every section of a wall down to frac of its strength.
+func wear_all(g, side: int, frac: float) -> void:
+	for sg in g.walls[side]["segs"]:
+		sg["hp"] = sg["max_hp"] * frac
+	Game.sum_wall(g.walls[side])
+
+
+## Sets the hp of the section of a wall at u.
+func wear_at(g, side: int, u: float, hp: float) -> void:
+	g.walls[side]["segs"][Game.seg_at(side, u)]["hp"] = hp
+	Game.sum_wall(g.walls[side])
+
+
 func check(cond: bool, label: String) -> void:
 	print(("  PASS " if cond else "  FAIL ") + label)
 	if not cond:
@@ -64,7 +77,7 @@ func _unit_checks() -> void:
 	check(Tut.step_done("buy_smg", gt) and Tut.step_ready("equip", gt) and not Tut.step_done("equip", gt), "tutorial: built: now hand it out")
 	gt.crew[0]["weapon"] = "smg"
 	check(Tut.step_done("equip", gt), "tutorial: done when someone holds it")
-	gt.walls[0]["hp"] = gt.walls[0]["max_hp"] * 0.4
+	wear_all(gt, 0, 0.4)
 	gt.scrap = 50
 	check(Tut.step_ready("repair", gt) and not Tut.step_done("repair", gt), "tutorial: a battered wall: point at someone to repair it")
 	# Building things: research, a turret, the radio; and spending Grit.
@@ -101,7 +114,7 @@ func _unit_checks() -> void:
 	check(Tut.grit_done(prt), "tutorial: done once something's bought there")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_progress_tut.cfg"))
 	var grp = Game.new()
-	grp.walls[0]["hp"] = grp.walls[0]["max_hp"] * 0.94
+	wear_all(grp, 0, 0.94)
 	grp.scrap = 20
 	grp.add_survivor("Bea", "pistol", false)
 	check(Tut.step_ready("repair", grp), "tutorial: the repair tip comes once a wall is 5% down")
@@ -115,9 +128,7 @@ func _unit_checks() -> void:
 	var gfw = Game.new()
 	var wk: Dictionary = gfw.add_survivor("Ada", "pistol", false)
 	var spot_w := Vector2(wk["x"], wk["y"])
-	gfw.walls[0]["hp"] = 0.0
-	gfw.walls[0]["breached"] = true
-	gfw.walls[0]["gap"] = 11.0
+	gfw.break_section(0, 11.0)
 	wk["state"] = "moving"
 	wk["route"] = [Vector2(11.2, 26.0), Vector2(11.2, 22.5), spot_w]
 	wk["path_t"] = 0.6
@@ -174,7 +185,7 @@ func _unit_checks() -> void:
 	check(p2["y"] > D.WALK_Y + 0.5, "and walks on their own")
 	gco.crew[0]["hp"] = 0.0
 	gco.crew[0]["state"] = "dead"
-	gco.walls[0]["breached"] = true
+	gco.break_section(0, 11.0)
 	gco.update_crew(0.05)
 	gco.step(0.05)
 	check(not gco.over, "the run isn't lost while another player still stands")
@@ -422,7 +433,8 @@ func _unit_checks() -> void:
 	# Repairing the wall.
 	g = Game.new()
 	g.add_survivor("Dana", "pistol", false, {})
-	g.wall["hp"] = 100.0
+	wear_at(g, 0, g.crew[1]["u"], 30.0)
+	var rep0: float = g.wall["hp"]
 	g.scrap = 100
 	check(g.toggle_repair(1).has("ok") and g.crew[1]["repairing"], "clicking a survivor sets them repairing")
 	var rz: Dictionary = g.spawn_zombie("walker", 50.0, 0.0)
@@ -431,7 +443,7 @@ func _unit_checks() -> void:
 	for i in 100:                      # 10 seconds
 		g.update_repairs(0.1)
 		g.update_crew(0.1)
-	var gained: float = g.wall["hp"] - 100.0
+	var gained: float = g.wall["hp"] - rep0
 	check(absf(gained - D.REPAIR_PER_SECOND * 10.0) < 1.0, "repairs take time: %d wall in 10 seconds" % int(gained))
 	check(absi((100 - g.scrap) - int(round(gained / D.WALL_PER_SCRAP))) <= 1, "repairs cost scrap: %d spent for %d wall" % [100 - g.scrap, int(gained)])
 	check(rz["hp"] >= rz["max_hp"], "a survivor who is repairing doesn't shoot")
@@ -520,11 +532,11 @@ func _unit_checks() -> void:
 	g = Game.new()
 	g.scrap = 1000
 	_research_all(g)
-	check(g.wall_name() == "Fence" and g.wall["max_hp"] == D.WALL_TIERS[0]["hp"], "the wall starts as a fence")
+	check(g.wall_name() == "Fence" and g.wall["segs"][0]["max_hp"] == roundf(D.WALL_TIERS[0]["hp"] * D.WALL_SEG_HP), "the wall starts as a fence")
 	check(not g.buy("wall_stone").has("ok"), "stone needs the wooden wall first")
-	g.wall["hp"] = 300.0
-	check(g.buy("wall_wood").has("ok") and g.wall_name() == "Wooden wall" and g.wall["max_hp"] == D.WALL_TIERS[1]["hp"], "a wooden wall is tougher")
-	check(g.wall["hp"] == 300.0 + D.WALL_TIERS[1]["hp"] - D.WALL_TIERS[0]["hp"], "rebuilding patches the wall up by the difference")
+	wear_at(g, 0, 11.0, 100.0)
+	check(g.buy("wall_wood").has("ok") and g.wall_name() == "Wooden wall" and g.wall["segs"][0]["max_hp"] == roundf(D.WALL_TIERS[1]["hp"] * D.WALL_SEG_HP), "a wooden wall is tougher")
+	check(g.wall["segs"][Game.seg_at(0, 11.0)]["hp"] == 100.0 + g.seg_hp(1) - g.seg_hp(0), "rebuilding patches each section up by the difference")
 	check(g.buy("wall_stone").has("ok") and g.wall_name() == "Stone wall" and not g.buy("wall_stone").has("ok"), "then stone, and that's the top")
 
 	# Turrets.
@@ -580,7 +592,7 @@ func _unit_checks() -> void:
 	# Once a wall's down, the dead go for the people on it, not past them; round
 	# the buildings to reach someone behind one; and not all for the same person.
 	g = Game.new()
-	g.walls[0]["breached"] = true
+	g.break_section(0, 11.0)
 	you = g.crew[0]
 	you["x"] = 11.0; you["y"] = D.WALK_Y
 	var breacher: Dictionary = g.spawn_zombie("walker", 1.0, 1.0, 0, D.WALL_Y - 1.0)
@@ -620,11 +632,14 @@ func _unit_checks() -> void:
 	# the dead shuffle along the wall to it and squeeze through.
 	g = Game.new()
 	g.crew[0]["x"] = 6.0; g.crew[0]["y"] = 30.0   # out of the way
-	g.walls[0]["hp"] = 1.0
-	g.hit_wall(0, 6.0, 5.0)
-	check(g.walls[0]["breached"] and absf(g.walls[0]["gap"] - 6.0) < 0.01, "a broken wall has a gap where it gave way")
+	var whole0: float = g.walls[0]["segs"][2]["hp"]
+	g.break_section(0, 6.0)
+	check(g.walls[0]["segs"][Game.seg_at(0, 6.0)]["breached"] and g.walls[0]["breached"] and g.walls[0]["segs"][2]["hp"] == whole0, "a wall breaks a section at a time: where it gave way, the rest still standing")
+	# Two sections or more along, they keep at their own bit of the wall.
+	var stays: Dictionary = g.spawn_zombie("walker", 1.0, 1.0, 0, D.WALL_Y - 2.0)
+	stays["x"] = 15.5
 	var far: Dictionary = g.spawn_zombie("walker", 1.0, 1.0, 0, D.WALL_Y - 2.0)
-	far["x"] = 15.0
+	far["x"] = 8.6   # the next section along
 	var crossed_u := -100.0
 	for i in 600:
 		g.update_zombies(0.05)
@@ -632,7 +647,11 @@ func _unit_checks() -> void:
 			crossed_u = Game.lane_uv(0, Vector2(far["x"], far["y"])).x
 			break
 
-	check(far.get("inside", false) and absf(crossed_u - 6.0) <= D.GAP_HALF, "a zombie down the wall from the gap walks along to it and in through it (crossed at u=%.1f)" % crossed_u)
+	var gap_mid: float = Game.seg_mid(0, Game.seg_at(0, 6.0))
+	check(far.get("inside", false) and absf(crossed_u - gap_mid) <= Game.seg_len(0) / 2.0, "a zombie at the next section walks along to the gap and in through it (crossed at u=%.1f)" % crossed_u)
+	for i in 300:   # (time for it to reach the wall and get to work)
+		g.update_zombies(0.05)
+	check(not stays.get("inside", false) and Game.seg_at(0, Game.lane_uv(0, Vector2(stays["x"], stays["y"])).x) == Game.seg_at(0, 15.5) and g.walls[0]["segs"][Game.seg_at(0, 15.5)]["hp"] < g.walls[0]["segs"][Game.seg_at(0, 15.5)]["max_hp"], "one three sections away ignores it and keeps breaking its own section")
 
 	# The crew can repair a damaged turret, for scrap.
 	g = Game.new()
@@ -722,8 +741,7 @@ func _unit_checks() -> void:
 	var warned := [0]
 	var count_warn := func(msg, _kind): if "wall is down" in msg: warned[0] += 1
 	g.toast.connect(count_warn)
-	g.walls[0]["hp"] = 1.0
-	g.hit_wall(0, 7.0, 50.0)
+	g.break_section(0, 7.0)
 	g.step(0.1)
 	g.toast.disconnect(count_warn)
 	check(not g.over and g.walls[0]["breached"], "a wall falling once everyone's in the truck doesn't end the run")
@@ -765,8 +783,7 @@ func _unit_checks() -> void:
 	g.buy("turret")
 	for i in 3000:   # 100 s in
 		g.step(1.0 / 30.0)
-	g.walls[0]["hp"] = 1.0
-	g.hit_wall(0, 9.0, 5.0)
+	g.break_section(0, 9.0)
 	var some_z: Dictionary = g.spawn_zombie("walker", 1.0, 1.0, 0, D.WALK_Y)
 	some_z["inside"] = true
 	g.update_zombies(0.05)
@@ -777,7 +794,7 @@ func _unit_checks() -> void:
 	var gl = Game.new()
 	gl.from_save(bytes_to_var(save_bytes))
 	check(gl.time == g.time and gl.kills == g.kills and gl.scrap == g.scrap and gl.zombies.size() == g.zombies.size() and gl.crew.size() == g.crew.size(), "a loaded run has the same time, kills, scrap, zombies and crew")
-	check(gl.walls[0]["breached"] and gl.walls[0]["gap"] == g.walls[0]["gap"] and gl.turrets.size() == 1 and gl.researched.size() == g.researched.size(), "and the same broken wall, turret and research")
+	check(gl.walls[0]["breached"] and gl.walls[0]["segs"] == g.walls[0]["segs"] and gl.turrets.size() == 1 and gl.researched.size() == g.researched.size(), "and the same broken wall, turret and research")
 	var linked := true
 	for zz in gl.zombies:
 		if zz.has("prey") and not (gl.crew.has(zz["prey"]) or gl.turrets.has(zz["prey"])):
@@ -1091,7 +1108,7 @@ func _unit_checks() -> void:
 	check(me["weapon"] == "smg" and g.scrap == base_scrap + 100 and g.crew.size() == 1 + D.META["kit_survivor"]["costs"].size(), "the starting kit: SMG, scrap and friends")
 	check(g.storage["items"].filter(func(it): return it["key"] == "spikes").size() == 4, "and spike strips")
 	check(g.researched.has("turrets") and g.researched.has("firearms") and g.research_count == 0, "blueprints start researched (and don't count as research done)")
-	check(g.walls[0]["stage"] == 1 and g.walls[2]["max_hp"] == roundf(D.WALL_TIERS[1]["hp"] * 1.3), "wooden walls, made tougher")
+	check(g.walls[0]["stage"] == 1 and g.walls[2]["segs"][0]["max_hp"] == roundf(roundf(D.WALL_TIERS[1]["hp"] * 1.3) * D.WALL_SEG_HP), "wooden walls, made tougher")
 	check(g.pantry and g.food == D.START_FOOD + 8.0 + D.PANTRY["food"] and g.turrets.size() == 1 and g.storage["cap"] == 16, "a pantry, a turret and more shelving")
 	check(g.shop_cost("smg") < base_cost, "the quartermaster gets better prices")
 	var g0 = Game.new()
@@ -1144,7 +1161,7 @@ func _unit_checks() -> void:
 		g.update_walkers(0.1)
 		mt2 += 0.1
 	check(mv["state"] == "wall" and Vector2(mv["x"], mv["y"]).distance_to(Vector2(9.0, 24.0)) < 0.05, "they walk there and stay")
-	g.wall["hp"] = 100.0
+	wear_all(g, 0, 0.3)
 	g.scrap = 100
 	check(not g.toggle_repair(1).has("ok"), "repairing needs them on a walkway")
 	check(g.move_survivor(1, 0, 8.0).has("ok") and not mv.has("post"), "and they can go back up onto one")
@@ -1277,8 +1294,7 @@ func _unit_checks() -> void:
 	# A wall breaks: the dead get in and go for the crew.
 	g = Game.new()
 	g.crew[0]["skills"] = {}
-	g.walls[0]["hp"] = 1.0
-	g.hit_wall(0, 11.0, 5.0)
+	g.break_section(0, 11.0)
 	check(g.walls[0]["breached"] and not g.over, "a broken wall doesn't end the run by itself")
 	var biter: Dictionary = g.spawn_zombie("brute", 50.0, 1.0, 0, D.WALL_Y - 1.0)
 	biter["x"] = g.crew[0]["x"]
@@ -1299,8 +1315,7 @@ func _unit_checks() -> void:
 	check(g.crew[0]["state"] == "dead" and g.over, "when nobody in the base is left alive, the run is over")
 	g = Game.new()
 	var helper: Dictionary = g.add_survivor("Ada", "pistol", false, {})
-	g.walls[0]["hp"] = 1.0
-	g.hit_wall(0, 11.0, 5.0)
+	g.break_section(0, 11.0)
 	g.hurt_survivor(g.crew[0], 9999.0)
 	g.update_health(0.1)
 	check(g.crew[0]["state"] == "dead" and not g.over, "if you fall, the crew fights on")
@@ -1309,15 +1324,15 @@ func _unit_checks() -> void:
 	check(not g.crew.has(helper) and g.over, "until they've all fallen too")
 	g = Game.new()
 	g.add_survivor("Ada", "pistol", false, {"repair": 3})
-	g.walls[0]["hp"] = 1.0
-	g.hit_wall(0, 11.0, 5.0)
+	g.break_section(0, 11.0)
 	g.scrap = 500
 	g.toggle_repair(1)
 	for i in 600:
 		g.update_repairs(0.1)
 		if not g.walls[0]["breached"]:
 			break
-	check(not g.walls[0]["breached"] and g.walls[0]["hp"] >= g.walls[0]["max_hp"] * D.PATCH_AT, "repairing a broken wall far enough closes the gap")
+	var patched: Dictionary = g.walls[0]["segs"][Game.seg_at(0, 11.0)]
+	check(not g.walls[0]["breached"] and patched["hp"] >= patched["max_hp"] * D.PATCH_AT, "repairing a broken section far enough closes the gap")
 	g = Game.new()
 	var hurt: Dictionary = g.crew[0]
 	hurt["hp"] = 40.0
@@ -1343,13 +1358,14 @@ func _unit_checks() -> void:
 		g.update_crew(0.1)
 		g.update_bullets(0.1)
 	check(ez2["hp"] <= 0, "and shoot what comes at their new wall")
-	g.walls[2]["hp"] = 100.0
+	wear_at(g, 2, g.crew[1]["u"], 30.0)
+	var east0: float = g.walls[2]["hp"]
 	g.scrap = 50
 	var front_hp: float = g.walls[0]["hp"]
 	g.toggle_repair(1)
 	for i in 20:
 		g.update_repairs(0.1)
-	check(g.walls[2]["hp"] > 100.0 and g.walls[0]["hp"] == front_hp, "they repair the wall they're on")
+	check(g.walls[2]["hp"] > east0 and g.walls[0]["hp"] == front_hp, "they repair the wall they're on")
 	check(g.move_survivor(0, 0, 6.0).has("ok"), "you can move yourself along the wall too")
 
 	# Lulls.
@@ -1437,12 +1453,13 @@ func _unit_checks() -> void:
 	var ka: Dictionary = g.survivor_stats(ace)
 	check(ka["dmg"] > ks["dmg"] and ka["interval"] < ks["interval"], "sharpshooters hit harder and quick hands shoot faster")
 	var fixer: Dictionary = g.add_survivor("Lev", "pistol", false, {"repair": 2, "thrift": 3})
-	g.wall["hp"] = 100.0
+	wear_at(g, 0, fixer["u"], 10.0)
+	var fix0: float = g.wall["hp"]
 	g.scrap = 100
 	g.toggle_repair(3)
 	for i in 100:
 		g.update_repairs(0.1)
-	var fixed: float = g.wall["hp"] - 100.0
+	var fixed: float = g.wall["hp"] - fix0
 	check(absf(fixed - D.REPAIR_PER_SECOND * 1.5 * 10.0) < 1.0, "a handy survivor repairs faster: %d wall in 10 seconds" % int(fixed))
 	check(100 - g.scrap < int(fixed / D.WALL_PER_SCRAP) - 5, "a thrifty survivor uses less scrap: %d for %d wall" % [100 - g.scrap, int(fixed)])
 	var runner: Dictionary = g.add_survivor("Imke", "pistol", false, {"fleet": 3, "careful": 3})

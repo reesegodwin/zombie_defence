@@ -706,18 +706,18 @@ func _drop_selected() -> void:
 # --- Every frame ------------------------------------------------------------
 func update_hud() -> void:
 	var g = main.game
-	# The bar shows the weakest open wall; the label lists them all.
+	# No health bar: each wall section shows its own wear. The label names the
+	# wall and says where it's broken through.
+	wall_bar.visible = false
 	var w: Dictionary = g.weakest_wall()
-	wall_bar.max_value = w["max_hp"]
-	wall_bar.value = w["hp"]
-	var open_walls: Array = g.walls.filter(func(x): return g.sides_open[x["side"]])
-	if open_walls.size() == 1:
-		wall_label.text = ("Wall  DOWN  ·  %s" % g.wall_name()) if w.get("breached", false) else "Wall  %d / %d  ·  %s" % [ceili(w["hp"]), int(w["max_hp"]), g.wall_name()]
-	else:
-		var parts: PackedStringArray = []
-		for x in open_walls:
-			parts.append("%s %s" % [D.LANES[x["side"]]["name"], "DOWN" if x.get("breached", false) else str(ceili(x["hp"]))])
-		wall_label.text = "%s  ·  %s" % ["   ".join(parts), g.wall_name()]
+	var broken: PackedStringArray = []
+	for x in g.walls:
+		if g.sides_open[x["side"]] and x.get("breached", false):
+			var n := 0
+			for sg in x["segs"]:
+				n += 1 if sg["breached"] else 0
+			broken.append("%s wall broken%s" % [D.LANES[x["side"]]["name"], "" if n == 1 else " in %d places" % n])
+	wall_label.text = g.wall_name() + ("" if broken.is_empty() else "  ·  " + ",  ".join(broken))
 	if g.in_lull():
 		wall_label.text += "  ·  lull"
 	var fixing: int = g.repairers()
@@ -784,15 +784,15 @@ func update_hud() -> void:
 		if g.time < 10 and not main.settings.tutorial:
 			h = "Hold the left mouse button to shoot. Your aim snaps to the zombie under the cursor."
 		elif g.any_breach() and g.evac_go < 0.0:
-			h = "A wall is down and they're getting in. Repair it to a quarter of its strength to close the gap. If everyone in the base falls, the run is over."
+			h = "Part of a wall is down and they're getting in. Repair that section to a quarter of its strength to close the gap. If everyone in the base falls, the run is over."
 		elif main.throwing >= 0:
 			h = "Click where to throw it. Whoever's on the nearest wall throws. Right-click or Esc to cancel."
 		elif main.placing != "":
 			h = "Click in the base to place it (green is clear). Right-click or Esc to cancel."
 		elif main.selected_id >= 0:
 			h = "Click anywhere in the base, or a spot on a walkway, to send them there. Click them again to set them repairing (on a walkway), or click a damaged turret to repair it. Right-click to cancel."
-		elif w["hp"] < w["max_hp"] * 0.7 and g.repairers() == 0 and g.scrap > 0:
-			h = "The %s wall is damaged. Click a survivor on it, then click them again to have them repair it (costs scrap)." % D.LANES[w["side"]]["name"].to_lower()
+		elif g.wall_frac(w) < 0.7 and g.repairers() == 0 and g.scrap > 0:
+			h = "Part of the %s wall is damaged. Click a survivor next to it, then click them again to have them repair it (costs scrap)." % D.LANES[w["side"]]["name"].to_lower()
 		elif g.time < 60 and g.crew.size() > 1:
 			h = "Click a survivor to pick them, then click a walkway or anywhere in the base to move them there."
 		elif not _hinted_map and not main.settings.tutorial and g.trip == null and not g.available_scavengers().is_empty():

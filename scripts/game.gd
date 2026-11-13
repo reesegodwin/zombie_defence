@@ -16,7 +16,7 @@ signal scavenger_lost(name: String, site: String)
 signal research_done(id: String)
 signal run_won
 signal survivor_killed(name: String)
-signal wall_patched(side: int)
+signal wall_patched(side: int, u: float)
 signal exploded(x: float, y: float, radius: float)
 signal zombie_died(x: float, y: float, type: String)
 signal wall_breached(side: int, u: float)
@@ -109,6 +109,7 @@ func _init() -> void:
 		for i in int(L["u1"] - L["u0"]):
 			w["hurt"].append(0.0)
 		walls.append(w)
+		set_wall_stage(w, 0, false)
 	wall = walls[0]
 	add_survivor("You", "pistol", true)
 	crew[0]["peer"] = 1
@@ -164,13 +165,114 @@ static func outward(side: int) -> float:
 	return atan2(-n.y, -n.x)
 
 
-## The weakest wall that's open to the dead.
+## The weakest wall that's open to the dead (by its weakest section).
 func weakest_wall() -> Dictionary:
 	var best: Dictionary = walls[0]
 	for w in walls:
-		if sides_open[w["side"]] and w["hp"] / w["max_hp"] < best["hp"] / best["max_hp"]:
+		if sides_open[w["side"]] and wall_frac(w) < wall_frac(best):
 			best = w
 	return best
+
+
+# --- Wall sections ----------------------------------------------------------
+# Each wall is a row of sections (D.WALL_SEG long), each with its own hp in
+# w["segs"]: {hp, max_hp, breached}. w["hp"], w["max_hp"] and w["breached"]
+# are kept as their totals (and "any broken"), for whatever only needs those.
+
+static func seg_count(side: int) -> int:
+	var L: Dictionary = D.LANES[side]
+	return maxi(1, roundi((L["u1"] - L["u0"]) / D.WALL_SEG))
+
+
+static func seg_len(side: int) -> float:
+	var L: Dictionary = D.LANES[side]
+	return (L["u1"] - L["u0"]) / seg_count(side)
+
+
+## Which section of the wall is at u (along it).
+static func seg_at(side: int, u: float) -> int:
+	return clampi(floori((u - D.LANES[side]["u0"]) / seg_len(side)), 0, seg_count(side) - 1)
+
+
+## The middle of section i, along the wall.
+static func seg_mid(side: int, i: int) -> float:
+	return D.LANES[side]["u0"] + (i + 0.5) * seg_len(side)
+
+
+## How strong a wall's weakest section is, 0 (broken) to 1.
+static func wall_frac(w: Dictionary) -> float:
+	var f := 1.0
+	for sg in w["segs"]:
+		f = minf(f, 0.0 if sg["breached"] else sg["hp"] / sg["max_hp"])
+	return f
+
+
+## Keeps a wall's totals in step with its sections.
+static func sum_wall(w: Dictionary) -> void:
+	var hp := 0.0
+	var mx := 0.0
+	var broken := false
+	for sg in w["segs"]:
+		hp += sg["hp"]
+		mx += sg["max_hp"]
+		broken = broken or sg["breached"]
+	w["hp"] = hp
+	w["max_hp"] = mx
+	w["breached"] = broken
+
+
+## One section's full strength, for a wall tier.
+func seg_hp(stage: int) -> float:
+	return roundf(tier_hp(stage) * D.WALL_SEG_HP)
+
+
+## Sets a wall to a tier. keep: keep its damage (an upgrade adds the extra
+## strength to every section); otherwise it's whole and at full strength.
+func set_wall_stage(w: Dictionary, stage: int, keep := true) -> void:
+	w["stage"] = stage
+	var n := seg_count(w["side"])
+	if not keep or not w.has("segs") or w["segs"].size() != n:
+		w["segs"] = []
+		for i in n:
+			w["segs"].append({"hp": 0.0, "max_hp": 0.0, "breached": false})
+		keep = false
+	var m := seg_hp(stage)
+	for sg in w["segs"]:
+		if keep:
+			sg["hp"] = clampf(sg["hp"] + m - sg["max_hp"], 0.0, m)
+		else:
+			sg["hp"] = m
+			sg["breached"] = false
+		sg["max_hp"] = m
+	sum_wall(w)
+
+
+## The broken section a zombie at u (along its wall) goes through: one right
+## in front of it or the next either side; -1 if none is that close (it keeps
+## on at its own bit of wall).
+func breach_for(side: int, u: float) -> int:
+	var segs: Array = walls[side]["segs"]
+	var i := seg_at(side, u)
+	for k in [i, i - 1, i + 1]:
+		if k >= 0 and k < segs.size() and segs[k]["breached"]:
+			return k
+	return -1
+
+
+## True if something of radius r at u fits through a broken section there.
+func gap_at(side: int, u: float, r: float) -> bool:
+	var segs: Array = walls[side]["segs"]
+	var half := seg_len(side) / 2.0
+	for k in segs.size():
+		if segs[k]["breached"] and absf(u - seg_mid(side, k)) <= half - r:
+			return true
+	return false
+
+
+## Breaks the section at u outright (a wall worn down to nothing there).
+func break_section(side: int, u: float) -> void:
+	var sg: Dictionary = walls[side]["segs"][seg_at(side, u)]
+	hit_wall(side, u, sg["hp"] + 1.0)
 
 
 ## Opens the side lanes as the night goes on, with a warning first.
@@ -707,25 +809,31 @@ func hit_wall(side: int, u: float, dmg: float) -> void:
 		return
 	var w: Dictionary = walls[side]
 	var L: Dictionary = D.LANES[side]
-	w["hp"] -= dmg
+	var i := seg_at(side, u)
+	var sg: Dictionary = w["segs"][i]
+	if sg["breached"]:
+		return   # nothing left there to hit
+	sg["hp"] = maxf(0.0, sg["hp"] - dmg)
 	var seg := clampi(int(floor(u - L["u0"])), 0, w["hurt"].size() - 1)
 	w["hurt"][seg] = 0.15
 	var at := lane_point(side, u, D.WALL_Y - 0.05)
 	burst(at.x, at.y, 3, {"colors": wall_mat()["chips"], "spread": 1.0, "up": 90.0, "life": 0.45, "size": 2.2, "z": 16.0})
 	sound.emit("hit")
-	if w["hp"] <= 0 and not w.get("breached", false):
-		w["hp"] = 0.0
-		w["breached"] = true
-		# The gap: where it gave way, kept clear of the wall's ends.
-		w["gap"] = clampf(u, L["u0"] + D.GAP_HALF, L["u1"] - D.GAP_HALF)
+	if sg["hp"] <= 0.0:
+		# This section gives way; the rest of the wall still stands.
+		sg["breached"] = true
+		var mid := seg_mid(side, i)
 		shake = 1.0
 		if evac_go < 0.0:   # (no warning once everyone's in the truck and away)
-			toast.emit("The %s wall is down! They're getting in. Shoot them, or repair the gap to close it." % L["name"].to_lower(), "danger")
+			toast.emit("Part of the %s wall is down! They're getting in. Shoot them, or repair the gap to close it." % L["name"].to_lower(), "danger")
 		for k in 6:
-			var p := lane_point(side, u + (randf() - 0.5) * 3.0, D.WALL_Y)
+			var p := lane_point(side, mid + (randf() - 0.5) * seg_len(side), D.WALL_Y)
 			burst(p.x, p.y, 12, {"colors": wall_mat()["chips"], "spread": 3.0, "up": 180.0, "life": 1.0, "size": 4.0, "z": 18.0})
 		sound.emit("crash")
-		wall_breached.emit(side, u)
+		sum_wall(w)
+		wall_breached.emit(side, mid)
+	else:
+		sum_wall(w)
 
 
 # --- Inside the base ----------------------------------------------------------
@@ -1050,16 +1158,18 @@ func update_zombies(dt: float) -> void:
 		var front: float = D.WALL_Y - T["r"]
 		var L: Dictionary = D.LANES[z["side"]]
 		var uv := lane_uv(z["side"], Vector2(z["x"], z["y"]))
-		var broken: bool = walls[z["side"]].get("breached", false)
+		var hole := breach_for(z["side"], uv.x)
 		if z["held"] > 0:
 			z["held"] -= dt  # caught in a bear trap
-		elif broken:
-			# Make for the gap and squeeze through it: the rest of the wall still
-			# stands, so those beside it shuffle along the wall to the hole.
-			var gap: float = walls[z["side"]].get("gap", uv.x)
+		elif hole >= 0:
+			# A broken section in front of it or the next one along: make for
+			# the gap and squeeze through it; those beside it shuffle along the
+			# wall to the hole. (Further along, they keep at their own bit.)
+			var gap: float = seg_mid(z["side"], hole)
 			var r: float = T["r"]
-			var lo := gap - D.GAP_HALF + r
-			var hi := gap + D.GAP_HALF - r
+			var half := seg_len(z["side"]) / 2.0
+			var lo := gap - half + r
+			var hi := gap + half - r
 			var in_gap := uv.x >= lo - 0.05 and uv.x <= hi + 0.05
 			var aim := Vector2(clampf(uv.x, lo + 0.25, hi - 0.25), D.WALL_Y + 1.0)
 			if not in_gap and uv.y > front - 1.2:
@@ -1156,9 +1266,8 @@ func update_zombies(dt: float) -> void:
 			z["v"] = uv.y
 			continue
 		uv.x = clampf(uv.x, L["u0"] + r, L["u1"] - r)
-		var wl: Dictionary = walls[z["side"]]
-		if not wl.get("breached", false) or absf(uv.x - wl.get("gap", uv.x)) > D.GAP_HALF - r:
-			uv.y = minf(uv.y, D.WALL_Y - r)   # only the gap lets them through
+		if not gap_at(z["side"], uv.x, r):
+			uv.y = minf(uv.y, D.WALL_Y - r)   # only a gap lets them through
 		var p := lane_point(z["side"], uv.x, uv.y)
 		z["x"] = p.x
 		z["y"] = p.y
@@ -2317,6 +2426,24 @@ func repair_rate() -> float:
 	return r
 
 
+## The section someone repairing works on: of the one they're at and the
+## next either side, a broken one first, else the most worn; -1 if all three
+## are whole.
+func repair_seg(s: Dictionary) -> int:
+	var segs: Array = walls[s["side"]]["segs"]
+	var i := seg_at(s["side"], s["u"])
+	var best := -1
+	var bf := 1.0
+	for k in [i, i - 1, i + 1]:
+		if k < 0 or k >= segs.size():
+			continue
+		var f: float = -1.0 if segs[k]["breached"] else segs[k]["hp"] / segs[k]["max_hp"]
+		if f < bf - 0.001:
+			bf = f
+			best = k
+	return best
+
+
 func toggle_repair(i: int) -> Dictionary:
 	if i < 0 or i >= crew.size():
 		return {"msg": ""}
@@ -2328,9 +2455,8 @@ func toggle_repair(i: int) -> Dictionary:
 		return {"msg": s["name"] + " isn't on the wall right now."}
 	if s.has("post"):
 		return {"msg": ("You need" if s["is_player"] else s["name"] + " needs") + " to be on a walkway to repair the wall."}
-	var w: Dictionary = walls[s["side"]]
-	if w["hp"] >= w["max_hp"]:
-		return {"msg": "This wall doesn't need repairs."}
+	if repair_seg(s) < 0:
+		return {"msg": "This part of the wall doesn't need repairs."}
 	if scrap <= 0 and _repair_debt <= 0.0:
 		return {"msg": "No scrap to repair with."}
 	s["repairing"] = true
@@ -2426,31 +2552,37 @@ func update_repairs(dt: float) -> void:
 			s["repairing"] = false
 			continue
 		var w: Dictionary = walls[s["side"]]
-		if w["hp"] >= w["max_hp"]:
+		var k := repair_seg(s)
+		if k < 0:
 			s["repairing"] = false
-			toast.emit(("You finish" if s["is_player"] else s["name"] + " finishes") + " repairing. The %s wall is at full strength." % D.LANES[s["side"]]["name"].to_lower(), "good")
+			toast.emit(("You finish" if s["is_player"] else s["name"] + " finishes") + " repairing. That stretch of the %s wall is at full strength." % D.LANES[s["side"]]["name"].to_lower(), "good")
 			continue
+		var sg: Dictionary = w["segs"][k]
 		if scrap <= 0:
 			s["repairing"] = false
 			toast.emit("Out of scrap. Repairs have stopped.", "danger")
 			continue
-		var gain := minf(D.REPAIR_PER_SECOND * D.skill_fx(s, "repair") * dt, w["max_hp"] - w["hp"])
-		w["hp"] += gain
+		var gain := minf(D.REPAIR_PER_SECOND * D.skill_fx(s, "repair") * dt, sg["max_hp"] - sg["hp"])
+		sg["hp"] += gain
 		_repair_debt += gain / (D.WALL_PER_SCRAP * D.skill_fx(s, "thrift"))
 		while _repair_debt >= 1.0 and scrap > 0:
 			_repair_debt -= 1.0
 			scrap -= 1
-		# A broken wall built back up far enough closes the gap.
-		if w.get("breached", false) and w["hp"] >= w["max_hp"] * D.PATCH_AT:
-			w["breached"] = false
-			toast.emit("The %s wall is patched. The gap is closed." % D.LANES[s["side"]]["name"].to_lower(), "good")
+		# A broken section built back up far enough closes the gap.
+		if sg["breached"] and sg["hp"] >= sg["max_hp"] * D.PATCH_AT:
+			sg["breached"] = false
+			toast.emit("The gap in the %s wall is patched." % D.LANES[s["side"]]["name"].to_lower(), "good")
 			sound.emit("build")
-			wall_patched.emit(s["side"])
+			sum_wall(w)
+			wall_patched.emit(s["side"], seg_mid(s["side"], k))
+		sum_wall(w)
 		# Sparks where they're working, and the odd hammer blow.
 		s["repair_fx"] -= dt
 		if s["repair_fx"] <= 0.0:
 			s["repair_fx"] = 0.35 + randf() * 0.2
-			var sp := lane_point(s["side"], s["u"] + randf_range(-0.3, 0.3), D.WALL_Y + D.WALL_T)
+			var half := seg_len(s["side"]) / 2.0
+			var at_u := clampf(s["u"], seg_mid(s["side"], k) - half, seg_mid(s["side"], k) + half)
+			var sp := lane_point(s["side"], at_u + randf_range(-0.3, 0.3), D.WALL_Y + D.WALL_T)
 			burst(sp.x, sp.y, 4, {"colors": [Color("ffe08a"), Color("ffb347")], "spread": 0.8, "up": 90.0, "life": 0.35, "size": 1.6, "z": 14.0, "glow": true})
 			sound.emit("hit")
 
@@ -2820,10 +2952,7 @@ func buy(id: String) -> Dictionary:
 			"wall_wood", "wall_stone":
 				var stage := 1 if id == "wall_wood" else 2
 				for w in walls:
-					w["stage"] = stage
-					var add: float = tier_hp(stage) - w["max_hp"]
-					w["max_hp"] += add
-					w["hp"] += add
+					set_wall_stage(w, stage)
 
 	purchases.append(D.SHOP[id]["name"])
 	sound.emit("build")
@@ -2865,11 +2994,25 @@ func auto_repair() -> void:
 		if s.get("repairing", false):
 			busy += 1
 	var w := weakest_wall()
-	if w["hp"] < w["max_hp"] * 0.6 and busy == 0 and scrap >= 5:
+	if wall_frac(w) < 0.6 and busy == 0 and scrap >= 5:
+		# The weakest section: whoever on that wall is nearest repairs it,
+		# going over to it first if it's out of their reach.
+		var worst := 0
+		for k in w["segs"].size():
+			if (0.0 if w["segs"][k]["breached"] else w["segs"][k]["hp"] / w["segs"][k]["max_hp"]) < (0.0 if w["segs"][worst]["breached"] else w["segs"][worst]["hp"] / w["segs"][worst]["max_hp"]):
+				worst = k
+		var mid := seg_mid(w["side"], worst)
+		var who := -1
 		for i in range(crew.size() - 1, -1, -1):
-			if crew[i]["state"] == "wall" and crew[i]["side"] == w["side"]:
-				toggle_repair(i)
-				return
+			var c: Dictionary = crew[i]
+			if c["state"] in ["wall", "moving"] and c["side"] == w["side"] and not c.has("post") and (who < 0 or absf(c["u"] - mid) < absf(crew[who]["u"] - mid)):
+				who = i
+		if who < 0 or crew[who]["state"] != "wall":
+			return
+		if absf(seg_at(w["side"], crew[who]["u"]) - worst) > 1:
+			move_survivor(who, w["side"], mid)
+		else:
+			toggle_repair(who)
 
 
 # The order the balance-test bot researches things in.
@@ -2887,7 +3030,7 @@ func auto_shop() -> void:
 		var worst := 99
 		for c in crew:
 			worst = mini(worst, RANK[c["weapon"]])
-		if weakest_wall()["hp"] < weakest_wall()["max_hp"] * 0.6:
+		if wall_frac(weakest_wall()) < 0.6:
 			break   # save scrap for repairs
 		# Research the next thing on the list when it can be afforded;
 		# until then, only buy what matters most.
@@ -3162,9 +3305,7 @@ func apply_meta(m: Dictionary) -> void:
 	var stage := 1 if lv.get("base_wood", 0) > 0 else 0
 	start_stage = stage
 	for w in walls:
-		w["stage"] = stage
-		w["max_hp"] = tier_hp(stage)
-		w["hp"] = w["max_hp"]
+		set_wall_stage(w, stage, false)
 	storage["cap"] = mini(D.STORAGE_MAX, storage["cap"] + 4 * lv.get("base_shelves", 0))
 	if lv.get("base_pantry", 0) > 0:
 		pantry = true
@@ -3205,8 +3346,10 @@ func apply_live(id: String, lv: int) -> bool:
 			var old := wall_mul
 			wall_mul = 1.0 + 0.1 * lv
 			for w in walls:
-				w["max_hp"] = tier_hp(w["stage"])
-				w["hp"] = minf(w["max_hp"], w["hp"] * wall_mul / old)
+				for sg in w["segs"]:
+					sg["max_hp"] = seg_hp(w["stage"])
+					sg["hp"] = minf(sg["max_hp"], sg["hp"] * wall_mul / old)
+				sum_wall(w)
 		"quartermaster":
 			price_mul = 1.0 - 0.08 * lv
 		"salvager":
@@ -3264,6 +3407,18 @@ func from_save(data: Dictionary) -> void:
 		if key != "_version" and key in self:
 			set(key, data[key])
 	wall = walls[0]
+	for w in walls:
+		if not w.has("segs"):   # a save from before walls had sections
+			var f: float = w["hp"] / maxf(1.0, w["max_hp"])
+			set_wall_stage(w, w["stage"], false)
+			for sg in w["segs"]:
+				sg["hp"] *= f
+			if w.get("breached", false):
+				var bs: Dictionary = w["segs"][seg_at(w["side"], w.get("gap", seg_mid(w["side"], 0)))]
+				bs["hp"] = 0.0
+				bs["breached"] = true
+			w.erase("gap")
+			sum_wall(w)
 	for z in zombies:
 		if z.has("prey_ref"):
 			var r: Array = z["prey_ref"]
@@ -3449,10 +3604,7 @@ func advance_level() -> void:
 	trip = null
 	_repair_debt = 0.0
 	for w in walls:
-		w["stage"] = start_stage
-		w["max_hp"] = tier_hp(start_stage)
-		w["hp"] = w["max_hp"]
-		w["breached"] = false
+		set_wall_stage(w, start_stage, false)
 		w.erase("gap")
 		for i in w["hurt"].size():
 			w["hurt"][i] = 0.0
