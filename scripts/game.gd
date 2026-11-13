@@ -3282,6 +3282,13 @@ static func spd_mul(t: float) -> float:
 	return 1.0 + minf(0.35, t / D.SPEED_RAMP)
 
 
+## The wall tier this base starts with: the camp's (Wooden walls), or better
+## where the base already has them (D.LEVELS "walls": the depot's timber, the
+## old fortress's stone).
+func base_stage() -> int:
+	return maxi(start_stage, int(level_def().get("walls", 0)))
+
+
 ## This level's settings (D.LEVELS).
 func level_def() -> Dictionary:
 	return D.LEVELS[clampi(level, 1, D.LEVELS.size()) - 1]
@@ -3516,6 +3523,7 @@ func apply_meta(m: Dictionary) -> void:
 	# Base.
 	var stage := 1 if lv.get("base_wood", 0) > 0 else 0
 	start_stage = stage
+	stage = base_stage()
 	for w in walls:
 		set_wall_stage(w, stage, false)
 	storage["cap"] = mini(D.STORAGE_MAX, storage["cap"] + 4 * lv.get("base_shelves", 0))
@@ -3818,7 +3826,7 @@ func advance_level() -> void:
 	trip = null
 	_repair_debt = 0.0
 	for w in walls:
-		set_wall_stage(w, start_stage, false)
+		set_wall_stage(w, base_stage(), false)
 		w.erase("gap")
 		for i in w["hurt"].size():
 			w["hurt"][i] = 0.0

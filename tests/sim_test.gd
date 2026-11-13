@@ -274,6 +274,13 @@ func _unit_checks() -> void:
 				bad_bases.append("%d: %s on the gate path" % [lv_i + 1, str(blk)])
 	check(bad_bases.is_empty(), "every level's base has room for turrets and the radio, and a clear way to the gate %s" % str(bad_bases))
 	check(Bases.BASES.size() >= 11 and D.LEVELS.size() == 14, "fourteen levels, eleven bases")
+	var gwl = Game.new()
+	gwl.apply_meta({"levels": {}, "level": 13})
+	var gwl2 = Game.new()
+	gwl2.apply_meta({"levels": {}, "level": 9})
+	var gwl3 = Game.new()
+	gwl3.apply_meta({"levels": {}, "level": 2})
+	check(gwl.walls[0]["stage"] == 2 and gwl2.walls[0]["stage"] == 1 and gwl3.walls[0]["stage"] == 0, "the old fortress has stone walls, the depot timber, the crossroads fences")
 	var gbs0 = Game.new()
 	check(D.BASE == "outpost", "a new game is back at the outpost")
 	# The crew speak up now and then: a wall giving way, getting hurt.
