@@ -484,6 +484,7 @@ func _process(dt: float) -> void:
 		get_tree().create_timer(1.6 if game.won else 2.5).timeout.connect(func(): if game.over: hud.show_game_over(result))
 	rig.shake = maxf(rig.shake, game.shake * 0.6)
 	_sync_scene(dt)
+	hud.field.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if pointing() else Control.CURSOR_CROSS
 	level.weather.follow(rig.position)
 	_sync_bench_signs()
 	_sync_truck()
@@ -666,7 +667,16 @@ func _bullseye_cursor() -> void:
 ## The hand rather than the crosshair over the field: on a survivor, or while
 ## choosing where to send someone or where to put a building.
 func pointing() -> bool:
-	return hover_survivor >= 0 or selected_id >= 0 or placing != "" or hover_bench != ""
+	return hover_survivor >= 0 or selected_id >= 0 or placing != "" or hover_bench != "" or _no_gun()
+
+
+## You've no gun to aim right now: fallen, out scavenging or in the truck.
+## (Then the battlefield shows the hand, not the crosshair.)
+func _no_gun() -> bool:
+	if not started:
+		return false
+	var me = local_player()
+	return me == null or me["hp"] <= 0.0 or me["state"] in ["away", "aboard"]
 
 
 # --- The benches -----------------------------------------------------------

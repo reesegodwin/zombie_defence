@@ -46,6 +46,9 @@ func _wanted() -> bool:
 		return false
 	if main.pointing():
 		return false   # the hand: picking someone, sending them, placing something
+	var me = main.local_player()
+	if me == null or me["hp"] <= 0.0 or me["state"] in ["away", "aboard"]:
+		return false   # fallen, or in the truck: no gun to aim, the plain arrow
 	if Input.mouse_mode != Input.MOUSE_MODE_VISIBLE:
 		# The cursor hides while you walk, but not your aim while there's
 		# fighting to do: shooting, or the dead within reach.
