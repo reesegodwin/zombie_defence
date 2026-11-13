@@ -172,6 +172,18 @@ func _unit_checks() -> void:
 	gmeta.apply_meta({"levels": {"p_aim": 2, "kit_smg": 1}})
 	check(gmeta.me(2)["skills"].get("aim", 0) == 2 and gmeta.me(2)["weapon"] == "smg", "the camp's upgrades are the whole team's")
 
+	# Reminders: idle research or someone free to scavenge, in a quiet moment.
+	var grm = Game.new()
+	grm.time = 40.0
+	grm.zombies.clear()
+	grm.scrap = 100
+	check(Tut.reminder_ready("remind_research", grm), "reminder: idle research gets pointed out by day")
+	grm.start_research("firearms")
+	check(not Tut.reminder_ready("remind_research", grm), "not once something's being researched")
+	grm.add_survivor("Ada", "pistol", false)
+	check(Tut.reminder_ready("remind_scavenge", grm), "reminder: someone free to go scavenging")
+	grm.time = D.DAY_LENGTH + 10.0
+	check(not Tut.reminder_ready("remind_scavenge", grm), "but not at night")
 	# Its settings: on/off and what's been done carry over, in their own file.
 	var tpath := "user://test_settings.cfg"
 	var st = load("res://scripts/settings.gd").load_or_detect(tpath)

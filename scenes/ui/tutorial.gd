@@ -156,8 +156,88 @@ func _process(dt: float) -> void:
 				if not main.settings.tutorial_done.has(id) and _ready_now(id):
 					current = id
 					break
+			if current == "" and playing:
+				current = _reminder(dt)
 	if current != "" or was != "":
 		queue_redraw()
+
+
+# --- Reminders ------------------------------------------------------------------
+# Not one-time like the steps: whenever something worth doing has been left
+# undone for a while in a quiet moment (by day, in a lull or with only a few
+# of the dead about), the same highlights point it out again: research
+# sitting idle, someone free to go scavenging and back before dark.
+const REMIND_AFTER := 20.0     # seconds left undone before the reminder
+const REMIND_SHOW := 15.0      # how long it shows
+const REMIND_REST := 90.0      # then quiet this long before it can come again
+const REMINDERS := ["remind_research", "remind_scavenge"]
+var _undone := {}              # reminder -> seconds it's been ready
+var _shown := {}               # reminder -> seconds it's been showing
+var _rest := {}                # reminder -> seconds of quiet left
+
+
+## A quiet moment: daytime, and a lull or only a few of the dead about.
+static func quiet(g) -> bool:
+	return not g.is_night() and (g.in_lull() or g.zombies.size() <= 4) and g.evac < 0.0
+
+
+## The research worth pointing at: the cheapest open project you can afford.
+static func research_to_do(g) -> String:
+	if g.research_cur != "":
+		return ""
+	var best := ""
+	for id in D.RESEARCH:
+		if g.research_state(id) == "open" and g.scrap >= D.RESEARCH[id]["cost"]:
+			if best == "" or D.RESEARCH[id]["cost"] < D.RESEARCH[best]["cost"]:
+				best = id
+	return best
+
+
+## The site worth pointing at: the nearest still to pick over that the first
+## free survivor can get to and back from before dark.
+static func site_to_do(g) -> String:
+	if g.trip != null:
+		return ""
+	var free: Array = g.available_scavengers()
+	if free.is_empty():
+		return ""
+	var best := ""
+	for k in g.open_sites():
+		if g.back_before_dark(g.crew[free[0]], k) and (best == "" or D.SITES[k]["gone"] < D.SITES[best]["gone"]):
+			best = k
+	return best
+
+
+static func reminder_ready(id: String, g) -> bool:
+	if not quiet(g):
+		return false
+	match id:
+		"remind_research":
+			return research_to_do(g) != ""
+		"remind_scavenge":
+			return site_to_do(g) != ""
+	return false
+
+
+## The reminder to show this frame, or "".
+func _reminder(dt: float) -> String:
+	var g = main.game
+	var pick := ""
+	for id in REMINDERS:
+		_rest[id] = maxf(0.0, _rest.get(id, 0.0) - dt)
+		if not reminder_ready(id, g):
+			_undone[id] = 0.0
+			_shown[id] = 0.0
+			continue
+		_undone[id] = _undone.get(id, 0.0) + dt
+		if pick == "" and _undone[id] >= REMIND_AFTER and _rest[id] <= 0.0:
+			_shown[id] = _shown.get(id, 0.0) + dt
+			if _shown[id] >= REMIND_SHOW:
+				_rest[id] = REMIND_REST   # enough: quiet for a while
+				_shown[id] = 0.0
+			else:
+				pick = id
+	return pick
 
 
 func _check_done() -> void:
@@ -280,6 +360,21 @@ func _target():
 			var u: float = clampf(picked["u"] + (4.0 if picked["u"] < (L["u0"] + L["u1"]) / 2.0 else -4.0), L["u0"] + 1.0, L["u1"] - 1.0)
 			var spot: Vector2 = g.lane_point(0, u, D.WALK_Y)
 			return main.rig.world_to_screen(Vector3(spot.x, D.DECK_H + 0.2, spot.y))
+		"remind_research":
+			if not h.research_open():
+				return h.btn_research.get_global_rect()
+			var rid := research_to_do(g)
+			return h.research_tree._buttons[rid].get_global_rect() if rid != "" else null
+		"remind_scavenge":
+			if not h.map_open():
+				return h.btn_map.get_global_rect()
+			var m = h.scav_map
+			var site := site_to_do(g)
+			if site != "" and m.site != site and not g.site_open(m.site):
+				return m.site_rect(site)
+			if m.who < 0 and m.who_row.get_child_count() > 0:
+				return m.who_row.get_child(0).get_global_rect()
+			return m.send_button.get_global_rect()
 		"research_build":
 			var pid := build_project(g)
 			if pid == "":
