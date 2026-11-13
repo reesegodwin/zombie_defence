@@ -15,7 +15,9 @@ const GOLD := Color(1.0, 0.8, 0.25)
 const INK := Color(0.05, 0.05, 0.05, 0.9)
 
 ## In order: the first one that's ready and not done is shown.
-const STEPS := ["walk", "shoot", "rescue", "research", "buy_smg", "equip", "repair", "truck"]
+const STEPS := ["walk", "shoot", "rescue", "research", "buy_smg", "equip", "research_build", "turret", "radio", "repair", "truck", "grit"]
+## Steps that can show over the game-over screen and the camp.
+const CAMP_STEPS := ["grit"]
 const CABIN := "ranger_cabin"
 
 var main
@@ -52,8 +54,38 @@ static func damaged_wall(g) -> Variant:
 	return null
 
 
+## The building project to point out: Auto-turrets if its needs are met,
+## else the Radio; "" if neither is open and affordable.
+static func build_project(g) -> String:
+	for id in ["turrets", "radio"]:
+		if g.research_state(id) == "open" and g.scrap >= D.RESEARCH[id]["cost"]:
+			return id
+	return ""
+
+
+## Grit: worth a visit to the camp once it buys something and nothing has
+## been bought there yet.
+static func grit_ready(pr) -> bool:
+	if not pr.levels.is_empty():
+		return false
+	for id in D.META:
+		if pr.can_buy(id).has("ok"):
+			return true
+	return false
+
+
+static func grit_done(pr) -> bool:
+	return not pr.levels.is_empty()
+
+
 static func step_ready(id: String, g) -> bool:
 	match id:
+		"research_build":
+			return g.research_cur == "" and build_project(g) != ""
+		"turret":
+			return g.researched.has("turrets") and g.turrets.is_empty() and g.can_buy("turret").has("ok")
+		"radio":
+			return g.researched.has("radio") and g.radio == null and g.can_buy("radio").has("ok")
 		"rescue":
 			return g.trip == null and not g.looted.has(CABIN) and not g.available_scavengers().is_empty()
 		"research":
@@ -71,6 +103,12 @@ static func step_ready(id: String, g) -> bool:
 
 static func step_done(id: String, g) -> bool:
 	match id:
+		"research_build":
+			return g.researched.has("turrets") or g.researched.has("radio") or g.research_cur in ["turrets", "radio"]
+		"turret":
+			return not g.turrets.is_empty()
+		"radio":
+			return g.radio != null
 		"rescue":
 			return g.looted.has(CABIN) or (g.trip != null and g.trip["site"] == CABIN)
 		"research":
@@ -91,11 +129,18 @@ func _process(dt: float) -> void:
 	_t += dt
 	var was := current
 	current = ""
-	if on() and main.started and not main.game.over:
-		_run_time += dt
-		_check_done()
+	if on() and main.started:
+		var playing: bool = not main.game.over and not main.hud.camp_open()
+		if playing:
+			_run_time += dt
+			_check_done()
+		elif not main.settings.tutorial_done.has("grit") and grit_done(main.progress):
+			main.settings.tutorial_done.append("grit")
+			main.settings.save()
 		if _showable():
 			for id in STEPS:
+				if not playing and not id in CAMP_STEPS:
+					continue
 				if not main.settings.tutorial_done.has(id) and _ready_now(id):
 					current = id
 					break
@@ -125,6 +170,8 @@ func _done_now(id: String, g) -> bool:
 			return Vector2(me["x"], me["y"]).distance_to(_walk_from) > 2.0 or _run_time > 25.0
 		"shoot":
 			return me.get("flash", 0.0) > 0.0 and g.input_firing or _run_time > 40.0
+		"grit":
+			return grit_done(main.progress)
 	return step_done(id, g)
 
 
@@ -133,13 +180,15 @@ func _ready_now(id: String) -> bool:
 	match id:
 		"walk", "shoot":
 			return g.crew[0]["is_player"] and g.crew[0]["hp"] > 0.0
+		"grit":
+			return grit_ready(main.progress)
 	return step_ready(id, g)
 
 
 ## Not over the options, the camp or the title.
 func _showable() -> bool:
 	var h = main.hud
-	return not h.options_open() and not h.camp_open() and not h.saves_open() and not main.paused
+	return not h.options_open() and not h.saves_open() and (not main.paused or h.camp_open())
 
 
 # --- What to point at -----------------------------------------------------------
@@ -195,6 +244,46 @@ func _target():
 		"truck":
 			if h._btn_board != null and h._btn_board.visible:
 				return h._btn_board.get_global_rect()
+		"research_build":
+			var pid := build_project(g)
+			if pid == "":
+				return null
+			if not h.research_open():
+				return h.btn_research.get_global_rect()
+			return h.research_tree._buttons[pid].get_global_rect()
+		"turret", "radio":
+			if main.placing == current:
+				return _free_spot(current)
+			if h.research_open():
+				return h.btn_research.get_global_rect()   # close it first
+			if not h.workshop.visible:
+				return h.btn_workshop.get_global_rect()
+			return h._shop_rows[current].get_global_rect()
+		"grit":
+			if h.camp_open():
+				var best = null
+				var bc := 1 << 30
+				for id in h._camp_rows:
+					if main.progress.can_buy(id).has("ok") and main.progress.next_cost(id) < bc:
+						bc = main.progress.next_cost(id)
+						best = id
+				return h._camp_rows[best]["button"].get_global_rect() if best != null else null
+			if g.over and h._btn_camp_over != null and h._btn_camp_over.is_visible_in_tree():
+				return h._btn_camp_over.get_global_rect()
+			return h.btn_camp.get_global_rect()
+	return null
+
+
+## A good free spot in the yard for a building (behind the front wall), on
+## screen, for the arrow while you're placing it.
+func _free_spot(id: String):
+	var g = main.game
+	var y := D.WALK_Y + 2.2
+	while y < D.BASE_Y1 - 2.0:
+		for x in [8.0, 14.0, 6.0, 16.0, 4.0, 18.0, 11.0]:
+			if g.can_build_at(id, x, y).has("ok"):
+				return main.rig.world_to_screen(Vector3(x, 0.3, y))
+		y += 1.5
 	return null
 
 
@@ -250,8 +339,8 @@ func _highlight(r: Rect2) -> void:
 	var size := get_viewport_rect().size
 	var c := r.get_center()
 	var dir: Vector2
-	if c.y < size.y * 0.3:
-		dir = Vector2.UP          # under a top button, pointing up at it
+	if c.y < size.y * 0.1:
+		dir = Vector2.UP          # under a top-bar button, pointing up at it
 	elif c.x > size.x * 0.55:
 		dir = Vector2.RIGHT       # to its left, pointing right
 	else:

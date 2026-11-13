@@ -67,6 +67,39 @@ func _unit_checks() -> void:
 	gt.walls[0]["hp"] = gt.walls[0]["max_hp"] * 0.4
 	gt.scrap = 50
 	check(Tut.step_ready("repair", gt) and not Tut.step_done("repair", gt), "tutorial: a battered wall: point at someone to repair it")
+	# Building things: research, a turret, the radio; and spending Grit.
+	var gb2 = Game.new()
+	gb2.researched["firearms"] = true
+	gb2.researched["carpentry"] = true
+	gb2.scrap = 500
+	check(Tut.step_ready("research_build", gb2) and Tut.build_project(gb2) == "turrets", "tutorial: with carpentry done, point out the auto-turret research")
+	gb2.start_research("turrets")
+	check(Tut.step_done("research_build", gb2), "tutorial: done once it starts")
+	gb2.research_cur = ""
+	gb2.researched["turrets"] = true
+	gb2.researched["radio"] = true
+	check(Tut.step_ready("turret", gb2) and not Tut.step_done("turret", gb2), "tutorial: turrets researched: show how to build one")
+	check(Tut.step_ready("radio", gb2) and not Tut.step_done("radio", gb2), "tutorial: the radio station too")
+	var tspot := Vector2.ZERO
+	for x in [8.0, 14.0, 6.0]:
+		if gb2.can_build_at("turret", x, D.WALK_Y + 2.2).has("ok"):
+			tspot = Vector2(x, D.WALK_Y + 2.2)
+			break
+	check(gb2.build("turret", tspot.x, tspot.y).has("ok"), "a turret can be put up where the arrow points")
+	check(Tut.step_done("turret", gb2), "tutorial: done once a turret stands")
+	var prt = load("res://scripts/progress.gd").open("user://test_progress_tut.cfg")
+	prt.reset() if prt.has_method("reset") else null
+	prt.grit = 0
+	check(not Tut.grit_ready(prt), "tutorial: no camp hint with no Grit")
+	prt.grit = 500
+	check(Tut.grit_ready(prt) and not Tut.grit_done(prt), "tutorial: Grit to spend: point at the camp")
+	var cheap := ""
+	for id in D.META:
+		if prt.can_buy(id).has("ok") and (cheap == "" or prt.next_cost(id) < prt.next_cost(cheap)):
+			cheap = id
+	prt.buy(cheap)
+	check(Tut.grit_done(prt), "tutorial: done once something's bought there")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_progress_tut.cfg"))
 	# Its settings: on/off and what's been done carry over, in their own file.
 	var tpath := "user://test_settings.cfg"
 	var st = load("res://scripts/settings.gd").load_or_detect(tpath)

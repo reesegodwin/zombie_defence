@@ -609,6 +609,10 @@ func update_hud() -> void:
 	if fixing > 0:
 		wall_label.text += "  ·  repairing +%d/s" % int(g.repair_rate())
 	resources_label.text = "Scrap %d" % g.scrap
+	_grit_t -= get_process_delta_time()
+	if _grit_t <= 0.0 and grit_label != null:
+		_grit_t = 0.5
+		grit_label.text = "Grit %d   +%d" % [main.progress.grit, g.run_result()["total"]]
 	var you: Dictionary = g.crew[0]
 	var wname: String = D.WEAPONS[you["weapon"]]["name"]
 	# Just your gun, and a word while it reloads (no round count).
@@ -814,11 +818,21 @@ func _build_research() -> void:
 	btn_research.pressed.connect(toggle_research)
 	btn_workshop.get_parent().add_child(btn_research)
 	btn_workshop.get_parent().move_child(btn_research, btn_workshop.get_index() + 1)
+	# Grit under the scrap: what's banked, and what this run has earned so far.
+	grit_label = Label.new()
+	grit_label.theme_type_variation = &"HeaderLabel"
+	grit_label.add_theme_font_size_override("font_size", 17)
+	grit_label.add_theme_color_override("font_color", Color(0.95, 0.78, 0.4))
+	grit_label.tooltip_text = "Grit: spend it at the camp (C) on upgrades that last. The + is what this run has earned so far; it's banked when the run ends."
+	grit_label.mouse_filter = Control.MOUSE_FILTER_PASS
+	resources_label.get_parent().add_child(grit_label)
+	resources_label.get_parent().move_child(grit_label, resources_label.get_index() + 1)
 	# Your ammo, under the scrap.
 	ammo_label = Label.new()
 	ammo_label.add_theme_font_size_override("font_size", 15)
 	resources_label.get_parent().add_child(ammo_label)
 	resources_label.get_parent().move_child(ammo_label, resources_label.get_index() + 1)
+	resources_label.get_parent().move_child(grit_label, resources_label.get_index() + 1)   # Grit right under Scrap
 	# A line in the stats panel under the trip.
 	research_label = Label.new()
 	research_label.add_theme_font_size_override("font_size", 15)
@@ -896,6 +910,9 @@ const FOG_QUALITIES := ["Off", "Low", "Medium", "High"]
 var _opt_fog: OptionButton
 var _opt_gfx: OptionButton
 var _opt_tut: OptionButton
+var btn_camp: Button          # "Camp (C)" on the top bar
+var grit_label: Label         # Grit under Scrap: banked, and what this run adds so far
+var _grit_t := 0.0
 
 
 func _build_options() -> void:
@@ -1198,6 +1215,7 @@ func _build_camp() -> void:
 	cb.tooltip_text = "Spend Grit on upgrades. The run waits while you're there."
 	cb.pressed.connect(toggle_camp)
 	btn_pause.get_parent().add_child(cb)
+	btn_camp = cb
 	btn_pause.get_parent().move_child(cb, btn_pause.get_index())
 
 
