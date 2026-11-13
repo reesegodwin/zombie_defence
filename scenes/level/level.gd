@@ -9,11 +9,13 @@ const GroundFog = preload("res://scenes/level/ground_fog.gd")
 const Grass = preload("res://scenes/level/grass.gd")
 const BaseProps = preload("res://scenes/level/base_props.gd")
 const Weather = preload("res://scenes/level/weather.gd")
+const Backdrop = preload("res://scenes/level/backdrop.gd")
 const Guns = preload("res://scenes/actors/guns.gd")
 
 var ground_fog: Node3D
 var grass: Node3D
 var weather: Node3D
+var backdrop: Node3D
 var culverts: Array = []
 var _yard_lights: Array = []     # the lamps in the yard (base_props.gd)
 
@@ -22,6 +24,7 @@ var _yard_lights: Array = []     # the lamps in the yard (base_props.gd)
 ## lays the yard out as its base (bases.gd) and colours the country.
 func set_level(open_at: Array, def := {}) -> void:
 	apply_base(def.get("base", "outpost"))
+	apply_back(D.biome(def.get("biome", "forest"))["back"], def.get("base", "outpost"))
 	var gm = $Ground.get_surface_override_material(0)
 	if gm is ShaderMaterial:
 		gm.set_shader_parameter("road", 1.0 if def.get("road", false) else 0.0)   # the Interstate's highway lanes
@@ -108,6 +111,18 @@ func _place(nm: String, at: Array, was: Array) -> void:
 		return
 	var t: Transform3D = _home[nm]
 	n.transform = Transform3D(Basis(Vector3.UP, float(at[2])) * t.basis, Vector3(at[0], t.origin.y, at[1]))
+
+
+## What keeps the dead from coming round the back: the mountains (snow-capped
+## low down in the north), or where there are none, the biome's barrier and
+## the country beyond it (backdrop.gd).
+func apply_back(back: String, base_key: String) -> void:
+	var mts := $Mountains
+	mts.visible = back in ["mountains", "snow_mountains"]
+	var rock = mts.rock_material
+	if rock is ShaderMaterial:
+		rock.set_shader_parameter("snow_line", 2.5 if back == "snow_mountains" else 10.0)
+	backdrop.build(back if not mts.visible else "", base_key)
 
 
 ## Colours the ground, grass and trees as the level's country (bases.gd
@@ -289,6 +304,10 @@ func _ready() -> void:
 	grass = Grass.new()
 	grass.name = "Grass"
 	add_child(grass)
+	# What lies behind the base where there are no mountains.
+	backdrop = Backdrop.new()
+	backdrop.name = "Backdrop"
+	add_child(backdrop)
 	# Snow or ash falling, on some levels.
 	weather = Weather.new()
 	weather.name = "Weather"

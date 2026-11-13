@@ -97,6 +97,14 @@ const LEVELS := [
 ]
 
 
+## The biome with this key ("forest", ...), from BIOMES.
+static func biome(key: String) -> Dictionary:
+	for b in BIOMES:
+		if b["key"] == key:
+			return b
+	return BIOMES[0]
+
+
 ## The biome of level lv (1-based), from BIOMES.
 static func biome_of(lv: int) -> Dictionary:
 	for b in BIOMES:
