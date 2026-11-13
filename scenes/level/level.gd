@@ -71,6 +71,21 @@ func apply_base(key: String) -> void:
 	var home_props: Dictionary = Bases.BASES["outpost"]["props"]
 	for prop in PROP_NODES:
 		_place(PROP_NODES[prop], props[prop], home_props[prop])
+	# The base's own landmark(s): a water tower, a boxcar, watchtowers...
+	var ex := get_node_or_null("BaseExtras")
+	if ex == null:
+		ex = Node3D.new()
+		ex.name = "BaseExtras"
+		add_child(ex)
+	for c in ex.get_children():
+		c.queue_free()
+	for e in Bases.EXTRAS.get(key, []):
+		var mi := MeshInstance3D.new()
+		mi.mesh = BaseProps.extra(e[0])
+		mi.material_override = Culvert._material()
+		mi.position = Vector3(e[1], 0.0, e[2])
+		mi.rotation.y = float(e[3])
+		ex.add_child(mi)
 	# The crates move as a stack, turned about its middle.
 	var at: Array = props["crates"]
 	var was: Array = home_props["crates"]

@@ -22,6 +22,23 @@ const FOOT := {
 }
 const CORNER_TURRETS := [Vector2(2.9, 15.0), Vector2(19.1, 15.0)]
 
+## Each base's own landmark (base_props.gd builds them): [kind, x, z, yaw].
+## The solid ones block the ground (EXTRA_FOOT); duckboards and antlers don't.
+const EXTRAS := {
+	"farm": [["water_tower", 14.0, 18.0, 0.0]],
+	"depot": [["boxcar", 11.0, 18.0, 0.0]],
+	"fortress": [["watchtower", 3.8, 20.8, 0.0], ["watchtower", 18.2, 21.0, 0.0]],
+	"trench": [["sandbags", 8.2, 22.6, 0.0], ["sandbags", 16.4, 25.0, 0.0]],
+	"ridge": [["mast", 11.0, 18.0, 0.0]],
+	"camp": [["wreck", 16.4, 23.4, 0.3]],
+	"barricade": [["tyres", 11.0, 18.4, 0.0], ["tyres", 15.6, 19.0, 0.0]],
+	"mill": [["logs", 11.0, 18.0, 0.0]],
+	"marsh": [["duckboards", 6.6, 23.6, 0.0], ["duckboards", 11.2, 17.6, 1.57]],
+	"lodge": [["antlers", 5.2, 26.32, 0.0]],
+}
+const EXTRA_FOOT := {"water_tower": Vector2(1.8, 1.8), "boxcar": Vector2(3.4, 1.4), "watchtower": Vector2(1.3, 1.3),
+	"sandbags": Vector2(2.8, 0.7), "mast": Vector2(0.9, 0.9), "wreck": Vector2(2.6, 1.3), "tyres": Vector2(1.0, 1.0), "logs": Vector2(2.4, 1.0)}
+
 const BASES := {
 	# The outpost of the first levels: bunker at the front left, huts at the
 	# front right, the tent and crates between, the benches at the back.
@@ -166,6 +183,10 @@ static func blockers(key: String, gate_path: Rect2) -> Array:
 	var props: Dictionary = BASES[key]["props"]
 	for p in props:
 		out.append(foot_rect(p, props[p]))
+	for e in EXTRAS.get(key, []):
+		if EXTRA_FOOT.has(e[0]):
+			var f: Vector2 = EXTRA_FOOT[e[0]]
+			out.append(Rect2(Vector2(e[1], e[2]) - f / 2.0, f))
 	out.append(gate_path)
 	return out
 

@@ -225,6 +225,164 @@ static func _drafting_table() -> ArrayMesh:
 	return k.mesh()
 
 
+# --- Each base's landmark (bases.gd EXTRAS) ---------------------------------------
+static var _extra_cache := {}
+
+## The mesh for a landmark kind, made once.
+static func extra(kind: String) -> ArrayMesh:
+	if not _extra_cache.has(kind):
+		var m: ArrayMesh
+		match kind:
+			"water_tower": m = _x_water_tower()
+			"boxcar": m = _x_boxcar()
+			"watchtower": m = _x_watchtower()
+			"sandbags": m = _x_sandbags()
+			"mast": m = _x_mast()
+			"wreck": m = _x_wreck()
+			"tyres": m = _x_tyres()
+			"logs": m = _x_logs()
+			"duckboards": m = _x_duckboards()
+			_: m = _x_antlers()
+		_extra_cache[kind] = m
+	return _extra_cache[kind]
+
+
+## A farm's water tower: four legs braced, a round wooden tank, a cone roof.
+static func _x_water_tower() -> ArrayMesh:
+	var k := _kit(0.4, 201)
+	var up := Vector3(PI / 2, 0, 0)
+	for sx in [-0.6, 0.6]:
+		for sz in [-0.6, 0.6]:
+			k.box(Vector3(sx, 1.3, sz), Vector3(0.1, 2.6, 0.1), LOG.darkened(0.1))
+	for h in [0.8, 1.8]:
+		k.box(Vector3(0, h, -0.6), Vector3(1.3, 0.06, 0.06), LOG)
+		k.box(Vector3(0, h, 0.6), Vector3(1.3, 0.06, 0.06), LOG)
+		k.box(Vector3(-0.6, h, 0), Vector3(0.06, 0.06, 1.3), LOG)
+		k.box(Vector3(0.6, h, 0), Vector3(0.06, 0.06, 1.3), LOG)
+	k.cyl(Vector3(0, 3.1, 0), 0.82, 1.0, PLANK, 14, up)
+	for h in [2.75, 3.1, 3.45]:
+		k.cyl(Vector3(0, h, 0), 0.84, 0.05, STEEL, 14, up)
+	k.cyl(Vector3(0, 3.85, 0), 0.05, 0.5, OLD_PLANK, 14, up, 0.92)
+	k.box(Vector3(0.7, 1.7, 0.7), Vector3(0.05, 2.4, 0.05), STEEL)   # ladder rails
+	k.box(Vector3(0.85, 1.7, 0.55), Vector3(0.05, 2.4, 0.05), STEEL)
+	return k.mesh()
+
+
+## A rusted railway boxcar, off its wheels, its door slid half open.
+static func _x_boxcar() -> ArrayMesh:
+	var k := _kit(0.7, 202)
+	var red := Color(0.42, 0.18, 0.12)
+	k.box(Vector3(0, 1.05, 0), Vector3(3.3, 1.5, 1.3), red)
+	k.box(Vector3(0, 1.84, 0), Vector3(3.36, 0.08, 1.36), red.darkened(0.25))
+	for i in 9:
+		k.box(Vector3(-1.6 + i * 0.4, 1.05, 0.66), Vector3(0.05, 1.5, 0.03), red.darkened(0.2))   # ribs
+	k.box(Vector3(0.2, 0.95, 0.68), Vector3(0.9, 1.2, 0.04), red.lightened(0.08))                    # the door
+	k.box(Vector3(-0.35, 0.95, 0.67), Vector3(0.2, 1.2, 0.02), DARK)                                  # the gap
+	k.box(Vector3(0, 0.25, 0), Vector3(3.0, 0.2, 1.0), DARK)                                          # the frame
+	for sx in [-1.1, 1.1]:
+		for sz in [-0.45, 0.45]:
+			k.cyl(Vector3(sx, 0.18, sz), 0.18, 0.12, STEEL, 10)
+	return k.mesh()
+
+
+## A watchtower: four posts, a railed platform, a little tin roof.
+static func _x_watchtower() -> ArrayMesh:
+	var k := _kit(0.4, 203)
+	for sx in [-0.5, 0.5]:
+		for sz in [-0.5, 0.5]:
+			k.box(Vector3(sx, 1.7, sz), Vector3(0.1, 3.4, 0.1), LOG)
+	k.box(Vector3(0, 2.4, 0), Vector3(1.25, 0.08, 1.25), PLANK)
+	for sz in [-0.58, 0.58]:
+		k.box(Vector3(0, 2.85, sz), Vector3(1.2, 0.05, 0.05), LOG)
+		k.box(Vector3(sz, 2.85, 0), Vector3(0.05, 0.05, 1.2), LOG)
+	k.box(Vector3(0, 3.45, 0), Vector3(1.5, 0.05, 1.5), TIN, Vector3(0.12, 0, 0))
+	k.box(Vector3(0.35, 1.2, 0.55), Vector3(0.05, 2.4, 0.05), STEEL)   # ladder
+	return k.mesh()
+
+
+## Two rows of sandbags, a low wall to duck behind.
+static func _x_sandbags() -> ArrayMesh:
+	var k := _kit(0.2, 204)
+	for row in 3:
+		for i in 6 - row % 2:
+			var c := SANDBAG.lerp(SANDBAG.darkened(0.2), k.rng.randf())
+			k.box(Vector3(-1.15 + i * 0.46 + (row % 2) * 0.23, 0.11 + row * 0.2, 0), Vector3(0.44, 0.2, 0.55), c, Vector3(0, k.rng.randf_range(-0.08, 0.08), 0))
+	return k.mesh()
+
+
+## A radio mast: a tall lattice, an aerial and guy wires to the ground.
+static func _x_mast() -> ArrayMesh:
+	var k := _kit(0.3, 205)
+	var up := Vector3(PI / 2, 0, 0)
+	for sx in [-0.18, 0.18]:
+		for sz in [-0.18, 0.18]:
+			k.box(Vector3(sx, 2.4, sz), Vector3(0.05, 4.8, 0.05), STEEL)
+	for i in 12:
+		k.box(Vector3(0, 0.2 + i * 0.4, 0.18), Vector3(0.38, 0.03, 0.03), STEEL, Vector3(0, 0, 0.6 if i % 2 == 0 else -0.6))
+		k.box(Vector3(0.18, 0.2 + i * 0.4, 0), Vector3(0.03, 0.03, 0.38), STEEL, Vector3(0.6 if i % 2 == 0 else -0.6, 0, 0))
+	k.cyl(Vector3(0, 5.3, 0), 0.02, 1.0, STEEL, 6, up)
+	k.box(Vector3(0, 4.9, 0), Vector3(0.5, 0.04, 0.04), Color(0.7, 0.15, 0.1))
+	return k.mesh()
+
+
+## A burnt-out car: blackened body and cab, no wheels left.
+static func _x_wreck() -> ArrayMesh:
+	var k := _kit(0.8, 206)
+	var burnt := Color(0.16, 0.14, 0.13)
+	k.box(Vector3(0, 0.45, 0), Vector3(2.4, 0.5, 1.15), burnt)
+	k.box(Vector3(-0.15, 0.9, 0), Vector3(1.2, 0.45, 1.05), burnt.lightened(0.05))
+	k.box(Vector3(-0.15, 0.9, 0), Vector3(1.22, 0.3, 0.9), DARK)   # empty windows
+	for sx in [-0.8, 0.8]:
+		for sz in [-0.55, 0.55]:
+			k.cyl(Vector3(sx, 0.14, sz), 0.14, 0.1, RUST, 8)
+	return k.mesh()
+
+
+## A stack of old tyres.
+static func _x_tyres() -> ArrayMesh:
+	var k := _kit(0.1, 207)
+	var up := Vector3(PI / 2, 0, 0)
+	for i in 4:
+		k.cyl(Vector3(k.rng.randf_range(-0.04, 0.04), 0.12 + i * 0.22, k.rng.randf_range(-0.04, 0.04)), 0.4, 0.2, Color(0.08, 0.08, 0.09), 14, up)
+	k.cyl(Vector3(0, 0.9, 0), 0.2, 0.02, DARK, 10, up)
+	return k.mesh()
+
+
+## Big logs from the mill, stacked between stakes.
+static func _x_logs() -> ArrayMesh:
+	var k := _kit(0.2, 208)
+	for row in 2:
+		for i in 3 - row:
+			k.cyl(Vector3(0, 0.22 + row * 0.38, -0.4 + i * 0.4 + row * 0.2), 0.2, 2.2, LOG.lerp(PLANK, k.rng.randf() * 0.4), 9, Vector3(0, PI / 2, 0))
+	for sx in [-1.0, 1.0]:
+		k.box(Vector3(sx, 0.45, 0.5), Vector3(0.07, 0.9, 0.07), LOG.darkened(0.2))
+		k.box(Vector3(sx, 0.45, -0.5), Vector3(0.07, 0.9, 0.07), LOG.darkened(0.2))
+	return k.mesh()
+
+
+## Duckboards over the marsh mud: planks on two runners, flat on the ground.
+static func _x_duckboards() -> ArrayMesh:
+	var k := _kit(0.3, 209)
+	for sx in [-0.3, 0.3]:
+		k.box(Vector3(sx, 0.03, 0), Vector3(0.06, 0.05, 3.0), OLD_PLANK.darkened(0.2))
+	for i in 15:
+		k.box(Vector3(0, 0.07, -1.4 + i * 0.2), Vector3(0.8, 0.03, 0.15), OLD_PLANK.lerp(PLANK, k.rng.randf() * 0.5), Vector3(0, k.rng.randf_range(-0.05, 0.05), 0))
+	return k.mesh()
+
+
+## A pair of antlers over the lodge's door.
+static func _x_antlers() -> ArrayMesh:
+	var k := _kit(0.1, 210)
+	var bone := Color(0.78, 0.72, 0.6)
+	k.box(Vector3(0, 1.75, 0), Vector3(0.24, 0.3, 0.06), PLANK.darkened(0.2))   # the plaque
+	k.box(Vector3(0, 1.78, 0.06), Vector3(0.1, 0.12, 0.1), bone)
+	for side in [-1.0, 1.0]:
+		k.box(Vector3(side * 0.16, 1.92, 0.08), Vector3(0.03, 0.3, 0.03), bone, Vector3(0, 0, -side * 0.7))
+		k.box(Vector3(side * 0.3, 2.08, 0.08), Vector3(0.025, 0.22, 0.025), bone, Vector3(0, 0, -side * 0.2))
+		k.box(Vector3(side * 0.22, 2.1, 0.08), Vector3(0.02, 0.16, 0.02), bone, Vector3(0, 0, side * 0.3))
+	return k.mesh()
+
+
 ## Split logs stacked between two stakes.
 static func _woodpile() -> ArrayMesh:
 	var k := _kit(0.2, 97)
