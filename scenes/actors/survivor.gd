@@ -290,7 +290,7 @@ func sync(s: Dictionary, dt: float) -> void:
 			# Picked: say how to repair, big, and how to move them, under it.
 			label.text = "Click again to REPAIR\n%s · or click where to go" % s["name"]
 		else:
-			label.text = s["name"] + ("  ·  click to select" if hovered else "")
+			label.text = s["name"] + (("  ·  click to repair" if s["is_player"] else "  ·  click to select") if hovered else "")
 		label.modulate = Color(1.0, 0.9, 0.6, 1.0) if hovered or selected else Color(1, 1, 1, 0.8)
 		label.font_size = 72 if selected else 40
 		label.outline_size = 16 if selected else 10

@@ -57,6 +57,7 @@ var progress                   # Grit and camp upgrades (scripts/progress.gd)
 
 var _mouse_screen = null   # last cursor position over the battlefield
 var _press_trap := false
+var _boxing := false            # the press inside the base turned into a drag (a pick box)
 var _over_handled := false
 var hover_survivor := -1
 var _clock := 0.0
@@ -691,7 +692,8 @@ func field_input(event: InputEvent) -> void:
 					if who >= 0:
 						game.input_firing = false
 						group_ids.clear()
-						if game.crew[who]["id"] == selected_id or game.crew[who].get("repairing", false):
+						if game.crew[who]["is_player"] or game.crew[who]["id"] == selected_id or game.crew[who].get("repairing", false):
+							# (You walk with WASD: clicking yourself just starts or stops repairing.)
 							# Clicking the selected survivor again: repair here.
 							selected_id = -1
 							var r: Dictionary = game.toggle_repair(who)
@@ -739,15 +741,20 @@ func field_input(event: InputEvent) -> void:
 							group_ids.clear()
 							game.input_firing = false
 							return
-					# A drag that starts inside the base picks people with a box.
+					# A press inside the base shoots like anywhere else; only if you
+					# drag does it become a box to pick people with (see the motion).
 					var at := _grid(event.position)
 					if Game.in_base(at) or not Game.deck_spot(rig.screen_to_ground(event.position, D.DECK_H)).is_empty():
 						_box_start = event.position
+						_boxing = false
+				if not event.pressed and _box_start != null:
+					var was_box := _boxing
+					_boxing = false
+					if was_box:
+						_finish_box(event.position)
 						game.input_firing = false
 						return
-				if not event.pressed and _box_start != null:
-					_finish_box(event.position)
-					return
+					_box_start = null
 				if event.pressed:
 					var gp := _grid(event.position)
 					_press_trap = hud.inventory_open() and game.trap_at(gp.x, gp.y) != null
@@ -766,7 +773,11 @@ func field_input(event: InputEvent) -> void:
 					rig.zoom_by(1 / 1.1)
 	elif event is InputEventMouseMotion:
 		if _box_start != null:
-			_draw_box(_box_start, event.position)
+			if not _boxing and event.position.distance_to(_box_start) > 14.0 and game.zombies.filter(func(z): return z.get("inside", false)).is_empty():
+				_boxing = true             # a drag: picking people, not shooting
+				game.input_firing = false
+			if _boxing:
+				_draw_box(_box_start, event.position)
 		var hs := survivor_at(event.position)
 		if hs != hover_survivor:
 			hover_survivor = hs
@@ -836,7 +847,7 @@ func _finish_box(end: Vector2) -> void:
 		return   # just a click
 	var picked: Array = []
 	for s in game.crew:
-		if not s["state"] in ["wall", "moving"]:
+		if s["is_player"] or not s["state"] in ["wall", "moving"]:
 			continue
 		var sp: Vector2 = rig.world_to_screen(Vector3(s["x"], D.DECK_H + 0.9, s["y"]))
 		if r.grow(12.0).has_point(sp):
