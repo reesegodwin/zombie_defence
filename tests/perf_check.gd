@@ -92,9 +92,9 @@ func _run() -> void:
 		["spotlights off", func(): level.spots_enabled(false)],
 	]
 	print("Graphics presets, 150 zombies at night (avg ms / worst 5%):")
-	for q in ["High", "Medium", "Low"]:
+	for q in ["High", "Medium", "Low", "Very Low"]:
 		main.settings.graphics = q
-		main.settings.fog = q
+		main.settings.fog = "Low" if q == "Very Low" else q
 		main.apply_graphics()
 		main.apply_fog()
 		for i in 5:

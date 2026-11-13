@@ -8,6 +8,8 @@ const MODES := ["Windowed", "Maximized", "Fullscreen"]
 # Window sizes offered in windowed mode (only those that fit the screen show).
 const SIZES := [Vector2i(1280, 720), Vector2i(1600, 900), Vector2i(1920, 1080), Vector2i(2560, 1440), Vector2i(3200, 1800), Vector2i(3840, 2160)]
 const UI_SCALES := [0.75, 0.9, 1.0, 1.15, 1.3, 1.5]
+## Graphics presets, cheapest first ("Very Low" is for the oldest PCs: see main.apply_graphics).
+const GRAPHICS := ["Very Low", "Low", "Medium", "High"]
 
 var mode := "Maximized"
 var size := Vector2i(1600, 900)
@@ -60,7 +62,7 @@ func detect() -> void:
 func pick_graphics() -> void:
 	var t := RenderingServer.get_video_adapter_type()
 	graphics = "High" if t == RenderingDevice.DEVICE_TYPE_DISCRETE_GPU and not OS.has_feature("web") else "Low"
-	fog = {"High": "High", "Medium": "Medium", "Low": "Low"}[graphics]
+	fog = {"High": "High", "Medium": "Medium", "Low": "Low", "Very Low": "Low"}[graphics]
 
 
 func save() -> void:

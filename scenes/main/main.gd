@@ -245,17 +245,22 @@ func _apply_settings() -> void:
 ## anti-aliasing, the fog, the spotlights and the sun's shadows cost the most.
 func apply_graphics() -> void:
 	var q: String = settings.graphics
+	if not q in Settings.GRAPHICS:
+		q = "Low"
+	var low: bool = q == "Low" or q == "Very Low"
 	var vp := get_viewport()
 	vp.msaa_3d = Viewport.MSAA_2X if q == "High" else Viewport.MSAA_DISABLED
-	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED if q == "High" else Viewport.SCREEN_SPACE_AA_FXAA
-	vp.scaling_3d_scale = 0.8 if q == "Low" else 1.0
-	RenderingServer.directional_shadow_atlas_set_size({"High": 4096, "Medium": 2048, "Low": 1024}[q], true)
+	# Very Low: no smoothing at all, drawn at 65% and scaled up, no sun shadows.
+	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED if q in ["High", "Very Low"] else Viewport.SCREEN_SPACE_AA_FXAA
+	vp.scaling_3d_scale = {"Very Low": 0.65, "Low": 0.8}.get(q, 1.0)
+	moon.shadow_enabled = q != "Very Low"
+	RenderingServer.directional_shadow_atlas_set_size({"High": 4096, "Medium": 2048, "Low": 1024, "Very Low": 1024}[q], true)
 	RenderingServer.directional_soft_shadow_filter_set_quality({"High": RenderingServer.SHADOW_QUALITY_SOFT_HIGH,
-		"Medium": RenderingServer.SHADOW_QUALITY_SOFT_LOW, "Low": RenderingServer.SHADOW_QUALITY_HARD}[q])
+		"Medium": RenderingServer.SHADOW_QUALITY_SOFT_LOW, "Low": RenderingServer.SHADOW_QUALITY_HARD, "Very Low": RenderingServer.SHADOW_QUALITY_HARD}[q])
 	moon.directional_shadow_max_distance = 80.0 if q == "High" else 45.0
-	env.ssao_enabled = q != "Low"
-	env.glow_enabled = q != "Low"
-	level.spot_detail(q != "Low")
+	env.ssao_enabled = not low
+	env.glow_enabled = not low
+	level.spot_detail(not low)
 
 
 ## Rebuilds the ground fog at the quality picked in Options.
@@ -571,13 +576,13 @@ func _input(event: InputEvent) -> void:
 const LIGHT_ZOOM := 14.0
 
 func _zombie_detail() -> void:
-	var want: bool = settings.graphics == "Low" or rig.zoom > LIGHT_ZOOM
+	var want: bool = settings.graphics in ["Low", "Very Low"] or rig.zoom > LIGHT_ZOOM
 	if want == Body.light:
 		return
 	Body.light = want
-	for node in zombie_nodes.values():
-		for mi in node.meshes:
-			if mi is MeshInstance3D and mi.has_meta("lo"):
+	for node in zombie_nodes.values() + crew_nodes.values():
+		for mi in node.find_children("*", "MeshInstance3D", true, false):
+			if mi.has_meta("lo"):
 				mi.mesh = mi.get_meta("lo" if want else "hi")
 
 

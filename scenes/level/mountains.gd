@@ -35,6 +35,7 @@ func _ready() -> void:
 	_build()
 
 
+
 func _dist_to_path(p: Vector2) -> float:
 	var pts: Array = D.PASS_PATH
 	var best := INF
@@ -91,18 +92,28 @@ func _build() -> void:
 	cone.height = 1.0
 	cone.radial_segments = 6
 	cone.rings = 1
-	var rocks := _multimesh(cone, rock_material, peaks.size(), true)
-	# Mountains don't cast shadows: on their own big, steep faces that showed
-	# as wavy stripes, and it saves drawing them all again for the sun.
-	rocks.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	for i in peaks.size():
-		var p: Vector3 = peaks[i][0]
-		var r: float = peaks[i][1]
-		var h: float = peaks[i][2]
-		var basis := Basis(Vector3.UP, peaks[i][3]).scaled(Vector3(r, h, r * peaks[i][4]))
-		rocks.multimesh.set_instance_transform(i, Transform3D(basis, p + Vector3(0, h * 0.5, 0)))
-		var c := Color(0.27, 0.24, 0.21).lerp(Color(0.4, 0.35, 0.3), rng.randf())
-		rocks.multimesh.set_instance_color(i, c)
+	# In square tiles of the map, each its own batch, so those off screen
+	# aren't drawn.
+	var tiles := {}
+	for pk in peaks:
+		var key := Vector2i(floori(pk[0].x / 24.0), floori(pk[0].z / 24.0))
+		if not tiles.has(key):
+			tiles[key] = []
+		tiles[key].append(pk)
+	for key in tiles:
+		var tp: Array = tiles[key]
+		var rocks := _multimesh(cone, rock_material, tp.size(), true)
+		# Mountains don't cast shadows: on their own big, steep faces that showed
+		# as wavy stripes, and it saves drawing them all again for the sun.
+		rocks.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		for i in tp.size():
+			var p: Vector3 = tp[i][0]
+			var r: float = tp[i][1]
+			var h: float = tp[i][2]
+			var basis := Basis(Vector3.UP, tp[i][3]).scaled(Vector3(r, h, r * tp[i][4]))
+			rocks.multimesh.set_instance_transform(i, Transform3D(basis, p + Vector3(0, h * 0.5, 0)))
+			var c := Color(0.27, 0.24, 0.21).lerp(Color(0.4, 0.35, 0.3), rng.randf())
+			rocks.multimesh.set_instance_color(i, c)
 	# (The snow on the high peaks is painted on by the rock shader: see snow_line.)
 
 	# Boulders and cliff faces lining the pass make it feel narrow.

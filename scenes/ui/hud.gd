@@ -994,7 +994,7 @@ func _build_options() -> void:
 	for k in Settings.UI_SCALES:
 		_opt_scale.add_item("%d%%" % int(round(k * 100)))
 	_opt_gfx = _option_row(box, "Graphics")
-	for q in ["Low", "Medium", "High"]:
+	for q in Settings.GRAPHICS:
 		_opt_gfx.add_item(q)
 	_opt_tut = _option_row(box, "Tutorial")
 	_opt_tut.add_item("On")
@@ -1028,10 +1028,10 @@ func _build_options() -> void:
 		main.settings.ui_scale = Settings.UI_SCALES[i]
 		_apply_options())
 	_opt_gfx.item_selected.connect(func(i):
-		var q: String = ["Low", "Medium", "High"][i]
+		var q: String = Settings.GRAPHICS[i]
 		main.settings.graphics = q
-		main.settings.fog = q   # the fog to match; it can still be set on its own
-		_opt_fog.select(FOG_QUALITIES.find(q))
+		main.settings.fog = "Low" if q == "Very Low" else q   # the fog to match; it can still be set on its own
+		_opt_fog.select(FOG_QUALITIES.find(main.settings.fog))
 		main.apply_graphics()
 		main.apply_fog()
 		main.settings.save())
@@ -1055,7 +1055,7 @@ func _fill_options() -> void:
 	_opt_size.disabled = st.mode != "Windowed"
 	_opt_fog.select(maxi(0, FOG_QUALITIES.find(st.fog)))
 	_opt_tut.select(0 if st.tutorial else 1)
-	_opt_gfx.select(maxi(0, ["Low", "Medium", "High"].find(st.graphics)))
+	_opt_gfx.select(maxi(0, Settings.GRAPHICS.find(st.graphics)))
 	var si: int = Settings.UI_SCALES.find(st.ui_scale)
 	_opt_scale.select(si if si >= 0 else Settings.UI_SCALES.find(1.0))
 

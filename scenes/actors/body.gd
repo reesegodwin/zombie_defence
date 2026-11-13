@@ -633,11 +633,10 @@ static func _skin_over(j: Dictionary, root: Node3D, bones: Array, rng: RandomNum
 			_noise.frequency = 7.0
 		var seed_off := Vector3(rng.randf() * 100.0, rng.randf() * 100.0, rng.randf() * 100.0)
 		var hi := _skin_mesh(j, bones, at, seed_off, dirt)
-		var lo := hi
-		if dirt >= 1.0:   # the dead come in numbers: a light body too, for when they're small on screen
-			detail = LIGHT
-			lo = _skin_mesh(j, bones, at, seed_off, dirt)
-			detail = 1.0
+		# A light body too, for when they're small on screen (or on Low graphics).
+		detail = LIGHT
+		var lo := _skin_mesh(j, bones, at, seed_off, dirt)
+		detail = 1.0
 		mi.mesh = lo if light else hi
 		mi.set_meta("hi", hi)
 		mi.set_meta("lo", lo)

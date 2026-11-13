@@ -105,7 +105,22 @@ func set_wooded(side: int, on: bool) -> void:
 		n.visible = on
 
 
+## Plants trees at spots, in square tiles of the map (CHUNK metres): each
+## tile is its own batch, so the ones off screen aren't drawn at all.
+const CHUNK := 16.0
+
 func _plant(parent: Node3D, spots: Array, rng: RandomNumberGenerator, far := false) -> void:
+	var tiles := {}
+	for sp in spots:
+		var key := Vector2i(floori(sp.x / CHUNK), floori(sp.z / CHUNK))
+		if not tiles.has(key):
+			tiles[key] = []
+		tiles[key].append(sp)
+	for key in tiles:
+		_plant_tile(parent, tiles[key], rng, far)
+
+
+func _plant_tile(parent: Node3D, spots: Array, rng: RandomNumberGenerator, far := false) -> void:
 	if spots.is_empty():
 		return
 	var trunk := CylinderMesh.new()
