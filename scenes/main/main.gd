@@ -359,6 +359,7 @@ func apply_graphics() -> void:
 	env.ssao_enabled = not low
 	env.glow_enabled = not low
 	level.spot_detail(not low)
+	level.grass.set_quality(q)
 
 
 ## Rebuilds the ground fog at the quality picked in Options.

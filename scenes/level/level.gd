@@ -6,10 +6,12 @@ extends Node3D
 const D = preload("res://scripts/defs.gd")
 const Culvert = preload("res://scenes/level/culvert.gd")
 const GroundFog = preload("res://scenes/level/ground_fog.gd")
+const Grass = preload("res://scenes/level/grass.gd")
 const BaseProps = preload("res://scenes/level/base_props.gd")
 const Guns = preload("res://scenes/actors/guns.gd")
 
 var ground_fog: Node3D
+var grass: Node3D
 var culverts: Array = []
 var _yard_lights: Array = []     # the lamps in the yard (base_props.gd)
 
@@ -189,6 +191,10 @@ func _ready() -> void:
 	# Fog lying low on the ground, round the dead's shins.
 	ground_fog = GroundFog.new()
 	add_child(ground_fog)
+	# Tufts of grass on the forest floor and along the lanes.
+	grass = Grass.new()
+	grass.name = "Grass"
+	add_child(grass)
 	# The sewer pipes at the far end of every lane.
 	for side in D.LANES.size():
 		var c := Culvert.new()
