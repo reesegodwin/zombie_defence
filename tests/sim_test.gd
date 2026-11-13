@@ -251,6 +251,31 @@ func _unit_checks() -> void:
 	var grng = Game.new()
 	var cab: Dictionary = grng._roll_loot("ranger_cabin")
 	check(cab["survivor"] == D.RANGER, "the ranger cabin's survivor is Hollis")
+	# Every level's base: its turret spots and the radio's spot can be built
+	# on, nothing stands on the path to the gate, and it's laid out on load.
+	var Bases = load("res://scripts/bases.gd")
+	var bad_bases: PackedStringArray = []
+	for lv_i in D.LEVELS.size():
+		var gbs = Game.new()
+		gbs.scrap = 5000
+		_research_all(gbs)
+		gbs.apply_meta({"levels": {}, "level": lv_i + 1})
+		var bkey: String = D.LEVELS[lv_i].get("base", "outpost")
+		if D.BASE != bkey or not Bases.BASES.has(bkey):
+			bad_bases.append("%d: base %s not set" % [lv_i + 1, bkey])
+			continue
+		for sp in D.TURRET_SPOTS:
+			if not gbs.can_build_at("turret", sp.x, sp.y).has("ok"):
+				bad_bases.append("%d: turret spot %s blocked (%s)" % [lv_i + 1, str(sp), gbs.can_build_at("turret", sp.x, sp.y).get("msg", "")])
+		if not gbs.can_build_at("radio", D.RADIO_SPOT.x, D.RADIO_SPOT.y).has("ok"):
+			bad_bases.append("%d: radio spot blocked" % (lv_i + 1))
+		for blk in D.BLOCKERS:
+			if blk != D.GATE_PATH and blk.intersects(D.GATE_PATH):
+				bad_bases.append("%d: %s on the gate path" % [lv_i + 1, str(blk)])
+	check(bad_bases.is_empty(), "every level's base has room for turrets and the radio, and a clear way to the gate %s" % str(bad_bases))
+	check(Bases.BASES.size() >= 11 and D.LEVELS.size() == 14, "fourteen levels, eleven bases")
+	var gbs0 = Game.new()
+	check(D.BASE == "outpost", "a new game is back at the outpost")
 	var prl = load("res://scripts/progress.gd").open("user://test_progress_lv.cfg")
 	prl.reset()
 	check(prl.reached == 1, "only level 1 can be picked at first")
@@ -850,7 +875,7 @@ func _unit_checks() -> void:
 	check(g.crew.any(func(c): return c["name"] == "Bea" and c["weapon"] == "smg") and g.researched.has("firearms") and g.kills >= 50, "with the crew, their guns, research and kills (%s)" % str(g.crew.map(func(c): return [c["name"], c["weapon"], c["hp"]])))
 	check(g.turrets.is_empty() and g.walls.all(func(w): return w["hp"] == w["max_hp"]), "at a fresh base")
 	check(g.nights_survived() == D.WIN_NIGHTS, "the nights held so far carry over")
-	for lv in [3, 4]:
+	for lv in range(3, D.LEVELS.size() + 1):
 		g.time = D.WIN_NIGHTS * D.CYCLE - 0.05
 		for i in 600:
 			g.step(0.1)
@@ -860,7 +885,7 @@ func _unit_checks() -> void:
 			if g.level == lv:
 				break
 		check(g.level == lv and not g.over, "the truck takes them on to level %d" % lv)
-	check(g.is_endless() and g.sides_open[0], "level 4 is the endless last stand")
+	check(g.is_endless() and g.sides_open[0], "the last level is the endless last stand")
 	g.time = D.WIN_NIGHTS * D.CYCLE * 2.0
 	g.update_cycle()
 	check(not g.over and g.evac < 0.0 and g.nights_survived() > 3 * D.WIN_NIGHTS + D.WIN_NIGHTS, "where no truck ever comes, and every night counts")

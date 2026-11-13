@@ -17,6 +17,7 @@ const CHUNK := 16.0
 const BLADES := 8
 
 var _tiles: Array[MultiMeshInstance3D] = []
+var _mat: ShaderMaterial
 
 
 func _ready() -> void:
@@ -29,6 +30,7 @@ func _build() -> void:
 	var mesh := _tuft_mesh(rng)
 	var mat := ShaderMaterial.new()
 	mat.shader = SHADER
+	_mat = mat
 	var patches := FastNoiseLite.new()   # grass grows in patches, thicker and thinner
 	patches.seed = 7
 	patches.frequency = 0.08
@@ -69,6 +71,12 @@ func _build() -> void:
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(mi)
 		_tiles.append(mi)
+
+
+## The level's country: tufts tinted toward col by amount.
+func set_pull(col: Color, amount: float) -> void:
+	if _mat:
+		_mat.set_shader_parameter("pull", Vector4(col.r, col.g, col.b, amount))
 
 
 ## Graphics: "High"/"Medium" all of it, "Low" half, "Very Low" none.

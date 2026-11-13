@@ -16,8 +16,10 @@ var culverts: Array = []
 var _yard_lights: Array = []     # the lamps in the yard (base_props.gd)
 
 
-## Bricks up the pipes of lanes that never open on this level (open_at INF).
-func set_level(open_at: Array) -> void:
+## Bricks up the pipes of lanes that never open on this level (open_at INF),
+## lays the yard out as its base (bases.gd) and colours the country.
+func set_level(open_at: Array, def := {}) -> void:
+	apply_base(def.get("base", "outpost"))
 	$Ground.set_lanes([open_at[0] != INF, open_at[1] != INF, open_at[2] != INF])
 	# A lane that's never used here: no sewer at its end, just woods.
 	for side in culverts.size():
@@ -34,6 +36,71 @@ func set_level(open_at: Array) -> void:
 		_on_t[side] = 0.0
 	_seen_frames = 0
 	_apply_spots(0.0)
+	apply_palette(def.get("palette", "green"))
+
+
+# --- The base's yard and the country ----------------------------------------------
+const Bases = preload("res://scripts/bases.gd")
+## Each prop in bases.gd and the node(s) it moves here.
+const PROP_NODES := {"bunker": "Bunker", "hut1": "Hut1", "hut2": "Hut2", "barrel1": "Barrel1", "barrel2": "Barrel2",
+	"fire": "FireBarrel", "tent": "Tent", "generator": "Generator", "worklamp": "WorkLamp", "lamp1": "LampPost1",
+	"lamp2": "LampPost2", "workshop": "WorkshopBench", "research": "ResearchDesk", "woodpile": "Woodpile"}
+const CRATES := ["Crate1", "Crate2", "Crate3", "Crate4"]
+var _home := {}          # node name -> its transform as built (the outpost's layout)
+var base := ""
+
+
+## Moves the yard's buildings and clutter to where they stand in base key.
+func apply_base(key: String) -> void:
+	if not Bases.BASES.has(key):
+		key = "outpost"
+	if _home.is_empty():
+		for nm in PROP_NODES.values() + CRATES:
+			var n := get_node_or_null(nm) as Node3D
+			if n:
+				_home[nm] = n.transform
+	base = key
+	var props: Dictionary = Bases.BASES[key]["props"]
+	var home_props: Dictionary = Bases.BASES["outpost"]["props"]
+	for prop in PROP_NODES:
+		_place(PROP_NODES[prop], props[prop], home_props[prop])
+	# The crates move as a stack, turned about its middle.
+	var at: Array = props["crates"]
+	var was: Array = home_props["crates"]
+	var turn := Basis(Vector3.UP, float(at[2]))
+	for nm in CRATES:
+		var n := get_node_or_null(nm) as Node3D
+		if n == null:
+			continue
+		var t: Transform3D = _home[nm]
+		var off := turn * (t.origin - Vector3(was[0], t.origin.y, was[1]))
+		n.transform = Transform3D(turn * t.basis, Vector3(at[0], t.origin.y, at[1]) + Vector3(off.x, 0.0, off.z))
+
+
+func _place(nm: String, at: Array, was: Array) -> void:
+	var n := get_node_or_null(nm) as Node3D
+	if n == null or not _home.has(nm):
+		return
+	var t: Transform3D = _home[nm]
+	n.transform = Transform3D(Basis(Vector3.UP, float(at[2])) * t.basis, Vector3(at[0], t.origin.y, at[1]))
+
+
+## Colours the ground, grass and trees as the level's country (bases.gd
+## PALETTES), and remembers its haze for the sky (main.gd).
+var haze := Color.WHITE
+
+func apply_palette(key: String) -> void:
+	var g: Array = Bases.pull(key, "grass")
+	var so: Array = Bases.pull(key, "soil")
+	var gm = $Ground.get_surface_override_material(0)
+	if gm is ShaderMaterial:
+		gm.set_shader_parameter("grass_pull", Vector4(g[0].r, g[0].g, g[0].b, g[1]))
+		gm.set_shader_parameter("soil_pull", Vector4(so[0].r, so[0].g, so[0].b, so[1]))
+	var tu: Array = Bases.pull(key, "tufts")
+	grass.set_pull(tu[0], tu[1])
+	var tr: Array = Bases.pull(key, "trees")
+	$Forest.set_pull(tr[0], tr[1])
+	haze = Bases.PALETTES.get(key, {}).get("haze", Color.WHITE)
 
 
 # --- Spotlights -------------------------------------------------------------------

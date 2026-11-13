@@ -47,9 +47,39 @@ const LEVELS := [
 	{"name": "The Siege", "short": "3 lanes from day 1",
 		"desc": "All three lanes from the first morning, and the dead come thicker and tougher. The mountain pass at your back stays safe.",
 		"open_at": [0.0, 15.0, 15.0], "grit": 1.5, "spawn": 1.15, "hp": 1.1},
+	{"name": "Frostbite Ridge", "short": "snow, brutes", "base": "ridge", "palette": "snow",
+		"desc": "A camp on a snowy ridge. The front first; the west from day 2, the east from day 4. Big ones come out of the cold more often.",
+		"open_at": [0.0, 300.0, 880.0], "grit": 1.55, "spawn": 1.15, "hp": 1.1, "mix": {"brute": 1.8}},
+	{"name": "Black Marsh", "short": "fog, a slow horde", "base": "marsh", "palette": "marsh",
+		"desc": "A station in the marsh. The mud slows the dead, but there are a great many of them, and the fog never lifts.",
+		"open_at": [0.0, 15.0, 15.0], "grit": 1.6, "spawn": 1.45, "hp": 1.05, "speed": 0.82, "mix": {"runner": 0.5}},
+	{"name": "Dust Bowl", "short": "runners", "base": "farm", "palette": "dust",
+		"desc": "A farmstead in the dry country. Runners, lots of them: keep someone on every wall.",
+		"open_at": [0.0, 15.0, 15.0], "grit": 1.65, "spawn": 1.15, "hp": 1.1, "mix": {"runner": 2.2}},
+	{"name": "Ashwood", "short": "burnt forest", "base": "camp", "palette": "ash",
+		"desc": "A camp in a forest that burned last summer. The dead come thick down the front lane; the sides wake later.",
+		"open_at": [0.0, 590.0, 590.0], "grit": 1.7, "spawn": 1.3, "hp": 1.2, "front": 1.6},
+	{"name": "Hollow Creek", "short": "two lanes, autumn", "base": "mill", "palette": "autumn",
+		"desc": "An old mill by the creek. Only the front and west lanes, but they never let up.",
+		"open_at": [0.0, 15.0, INF], "grit": 1.75, "spawn": 1.45, "hp": 1.2},
+	{"name": "Iron Yard", "short": "tough dead", "base": "depot", "palette": "rust",
+		"desc": "A rail depot. Fewer of the dead, but they take a lot of killing.",
+		"open_at": [0.0, 15.0, 15.0], "grit": 1.8, "spawn": 1.0, "hp": 1.6, "mix": {"brute": 1.5}},
+	{"name": "Red Pines", "short": "front and east", "base": "lodge", "palette": "autumn",
+		"desc": "A hunting lodge in the red pines. Front and east from the start; the west wakes on day 3.",
+		"open_at": [0.0, 590.0, 15.0], "grit": 1.85, "spawn": 1.4, "hp": 1.25, "mix": {"runner": 1.4}},
+	{"name": "Whiteout", "short": "snow, everything", "base": "trench", "palette": "snow",
+		"desc": "A trench line in deep snow. All three lanes, runners and brutes both, from the first morning.",
+		"open_at": [0.0, 15.0, 15.0], "grit": 1.9, "spawn": 1.4, "hp": 1.3, "mix": {"runner": 1.5, "brute": 1.5}},
+	{"name": "Floodplain", "short": "the big horde", "base": "barricade", "palette": "marsh",
+		"desc": "A barricaded farm on the floodplain. The biggest hordes yet, slowed a little by the mud.",
+		"open_at": [0.0, 15.0, 15.0], "grit": 1.95, "spawn": 1.7, "hp": 1.25, "speed": 0.9},
+	{"name": "The Long Dark", "short": "the hardest", "base": "fortress", "palette": "ash",
+		"desc": "The old fortress. The hardest of them all before the end: everything, thicker and tougher.",
+		"open_at": [0.0, 15.0, 15.0], "grit": 2.0, "spawn": 1.55, "hp": 1.4, "mix": {"runner": 1.4, "brute": 1.6}},
 	{"name": "Last Stand", "short": "endless",
 		"desc": "No truck is coming. All three lanes, and the waves never end: hold out as long as you can. Grit for every night held.",
-		"open_at": [0.0, 15.0, 15.0], "grit": 1.75, "spawn": 1.2, "hp": 1.15, "endless": true},
+		"open_at": [0.0, 15.0, 15.0], "grit": 2.1, "spawn": 1.6, "hp": 1.4, "endless": true},
 ]
 # The dead come in at the far end of each lane: v = LANE_START (the wall is at
 # v = WALL_Y, so they walk WALL_Y - LANE_START tiles to reach it).
@@ -210,30 +240,32 @@ const WALL_SEG_HP := 0.45
 const TURRET_HP := 160.0          # the dead can tear a turret down
 const TURRET_REACH := 1.8         # how close to a turret a zombie at the wall must be to claw at it
 const BUILD_SIZE := {"turret": Vector2(1.2, 1.2), "radio": Vector2(1.6, 1.6)}
-const RADIO_SPOT := Vector2(17.8, 25.0)       # where the test bot puts the radio
+static var RADIO_SPOT := Vector2(17.8, 25.0)       # where the test bot puts the radio
+
+
+## Lays the yard out as the base key in bases.gd: what's in the way, where the
+## turrets, benches and the bot's radio go.
+static func use_base(key: String) -> void:
+	if not Bases.BASES.has(key):
+		key = "outpost"
+	BASE = key
+	BLOCKERS = Bases.blockers(key, GATE_PATH)
+	TURRET_SPOTS = Bases.turret_spots(key)
+	var props: Dictionary = Bases.BASES[key]["props"]
+	BENCHES = {"workshop": Vector2(props["workshop"][0], props["workshop"][1]), "research": Vector2(props["research"][0], props["research"][1])}
+	RADIO_SPOT = Bases.BASES[key]["radio"]
 const RADIO_EVERY := 180.0                    # a survivor hears the radio about this often (seconds, on average)
 const GATE_PATH := Rect2(9.9, 20.8, 2.6, 7.6)
-const BLOCKERS := [
-	Rect2(3.6, 16.8, 2.8, 2.4),    # bunker
-	Rect2(13.2, 17.3, 1.7, 1.4),   # hut
-	Rect2(14.5, 18.7, 1.9, 1.8),   # hut
-	Rect2(8.6, 17.8, 1.8, 1.8),    # crates
-	Rect2(11.8, 19.0, 0.8, 0.8),   # barrel
-	Rect2(12.3, 19.7, 1.0, 1.0),   # fire barrel
-	Rect2(7.9, 19.8, 2.0, 2.2),    # tent and barrel
-	GATE_PATH,                     # the path to the gate (and where the army truck parks)
-	Rect2(3.6, 26.1, 1.4, 1.0),    # generator
-	Rect2(5.2, 25.4, 0.4, 0.4),    # its work lamp
-	Rect2(16.1, 26.6, 1.8, 0.9),   # workbench (the workshop)
-	Rect2(6.7, 26.35, 1.4, 1.0),   # drafting table (research)
-	Rect2(13.4, 26.8, 1.6, 0.8),   # woodpile
-	Rect2(7.8, 24.3, 0.4, 0.4),    # lamp post
-	Rect2(14.3, 24.3, 0.4, 0.4),   # lamp post
-]
+# What's in the way in the yard (buildings and clutter, and the path to the
+# gate kept clear): set for the base of the level being played (bases.gd,
+# use_base below).
+const Bases = preload("res://scripts/bases.gd")
+static var BASE := "outpost"
+static var BLOCKERS: Array = Bases.blockers("outpost", GATE_PATH)
 # The benches you click to open the Workshop and Research (in the yard,
 # base_props.gd): where each stands on the ground.
-const BENCHES := {"workshop": Vector2(17.0, 27.05), "research": Vector2(7.4, 26.85)}
-const TURRET_SPOTS := [Vector2(2.9, 15.0), Vector2(19.1, 15.0), Vector2(6.8, 22.0), Vector2(15.8, 22.6)]
+static var BENCHES := {"workshop": Vector2(17.0, 27.05), "research": Vector2(7.4, 26.85)}
+static var TURRET_SPOTS: Array = Bases.turret_spots("outpost")
 const TURRET := {"dmg": 9.0, "rate": 0.55, "range": 9.0, "spread": 0.05, "pellets": 1, "pierce": 1, "knock": 0.03, "sound": "smg"}
 
 # --- Research ---------------------------------------------------------------

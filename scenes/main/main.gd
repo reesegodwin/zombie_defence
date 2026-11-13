@@ -157,7 +157,7 @@ func _clear_scene() -> void:
 	effects.clear()
 	for w in walls:
 		w.reset()
-	level.set_level(game.open_at)
+	level.set_level(game.open_at, game.level_def())
 
 
 # --- Saving and loading -----------------------------------------------------------
@@ -604,7 +604,7 @@ func _set_mood() -> void:
 	moon.light_energy = _mood("sun", k)
 	moon.light_color = _mood("sun_col", k)
 	env.ambient_light_energy = _mood("amb", k)
-	env.fog_light_color = _mood("fog", k)
+	env.fog_light_color = _mood("fog", k) * level.haze   # (the level's country tints the haze)
 	env.tonemap_exposure = _mood("exposure", k)
 	env.adjustment_saturation = _mood("sat", k)
 	env.adjustment_contrast = lerpf(1.08, 1.0, k)   # a touch more punch by day
@@ -613,7 +613,7 @@ func _set_mood() -> void:
 	env.fog_density = lerpf(0.0007, 0.002, k)   # (measured from the camera, 70 m back)
 	var sky: ProceduralSkyMaterial = env.sky.sky_material
 	sky.sky_top_color = _mood("top", k)
-	sky.sky_horizon_color = _mood("horizon", k)
+	sky.sky_horizon_color = _mood("horizon", k) * level.haze
 	sky.ground_horizon_color = sky.sky_horizon_color
 	sky.ground_bottom_color = Color(0.05, 0.05, 0.06)
 

@@ -13,6 +13,15 @@ uniform float dirt_scale = 0.12;
 uniform float front_on = 1.0;
 uniform float west_on = 1.0;
 uniform float east_on = 1.0;
+// The level's country (bases.gd PALETTES): grass and dirt pulled toward a
+// colour (rgb) by an amount (a), keeping their texture's light and dark.
+uniform vec4 grass_pull = vec4(1.0, 1.0, 1.0, 0.0);
+uniform vec4 soil_pull = vec4(1.0, 1.0, 1.0, 0.0);
+
+vec3 pulled(vec3 c, vec4 to) {
+	float lum = dot(c, vec3(0.299, 0.587, 0.114));
+	return mix(c, to.rgb * (0.65 + 1.0 * lum), to.a);
+}
 
 varying vec3 world;
 
@@ -43,6 +52,6 @@ void fragment() {
 	dirt = clamp(dirt + (n - 0.5) * 1.1 * edgeband, 0.0, 1.0);
 	vec3 grass = texture(grass_tex, p * grass_scale).rgb * COLOR.rgb;
 	vec3 soil = texture(dirt_tex, p * dirt_scale).rgb;
-	ALBEDO = mix(grass, soil, dirt);
+	ALBEDO = mix(pulled(grass, grass_pull), pulled(soil, soil_pull), dirt);
 	ROUGHNESS = 1.0;
 }

@@ -113,6 +113,7 @@ func _init() -> void:
 		walls.append(w)
 		set_wall_stage(w, 0, false)
 	wall = walls[0]
+	D.use_base(level_def().get("base", "outpost"))
 	add_survivor("You", "pistol", true)
 	crew[0]["peer"] = 1
 
@@ -3191,10 +3192,17 @@ static func spd_mul(t: float) -> float:
 	return 1.0 + minf(0.35, t / D.SPEED_RAMP)
 
 
+## This level's settings (D.LEVELS).
+func level_def() -> Dictionary:
+	return D.LEVELS[clampi(level, 1, D.LEVELS.size()) - 1]
+
+
 func _pick_type(t: float) -> String:
 	var r := randf()
-	var pb := minf(0.14, 0.03 + (t - D.BRUTES_FROM) / 2000.0) if t > D.BRUTES_FROM else 0.0
-	var pr := minf(0.35, 0.08 + (t - D.RUNNERS_FROM) / 700.0) if t > D.RUNNERS_FROM else 0.0
+	var mix: Dictionary = level_def().get("mix", {})   # some levels bring more runners, or brutes
+	var pb: float = minf(0.14, 0.03 + (t - D.BRUTES_FROM) / 2000.0) * mix.get("brute", 1.0) if t > D.BRUTES_FROM else 0.0
+	var pr: float = minf(0.35, 0.08 + (t - D.RUNNERS_FROM) / 700.0) * mix.get("runner", 1.0) if t > D.RUNNERS_FROM else 0.0
+	pr = minf(pr, 0.85 - pb)
 	if r < pb:
 		return "brute"
 	if r < pb + pr:
@@ -3204,7 +3212,7 @@ func _pick_type(t: float) -> String:
 
 func _spawn_one() -> void:
 	var type := _pick_type(time)
-	spawn_zombie(type, hp_mul(time) * (1.0 + D.HEAT_HP * heat) * D.LEVELS[level - 1].get("hp", 1.0), spd_mul(time), _pick_side())
+	spawn_zombie(type, hp_mul(time) * (1.0 + D.HEAT_HP * heat) * level_def().get("hp", 1.0), spd_mul(time) * level_def().get("speed", 1.0), _pick_side())
 	spawned += 1
 	if not seen.has(type):
 		seen[type] = true
@@ -3231,13 +3239,14 @@ func side_live(side: int) -> bool:
 ## Which open lane the next zombie comes down, weighted by the lanes' sizes.
 func _pick_side() -> int:
 	var total := 0.0
+	var front: float = level_def().get("front", 1.0)   # some levels pile them down the front lane
 	for side in D.LANES.size():
 		if side_live(side):
-			total += D.LANES[side]["weight"]
+			total += D.LANES[side]["weight"] * (front if side == 0 else 1.0)
 	var r := randf() * total
 	for side in D.LANES.size():
 		if side_live(side):
-			r -= D.LANES[side]["weight"]
+			r -= D.LANES[side]["weight"] * (front if side == 0 else 1.0)
 			if r < 0.0:
 				return side
 	return 0
@@ -3394,6 +3403,7 @@ func apply_meta(m: Dictionary) -> void:
 	heat = int(m.get("heat", 0))
 	level = clampi(int(m.get("level", 2)), 1, D.LEVELS.size())
 	open_at = D.LEVELS[level - 1]["open_at"].duplicate()
+	D.use_base(level_def().get("base", "outpost"))
 	# Your skills (in co-op, every player's: the camp's upgrades are the team's).
 	for p in crew.filter(func(c): return c["is_player"]):
 		for id in _PLAYER_SKILLS:
@@ -3511,6 +3521,7 @@ func from_save(data: Dictionary) -> void:
 		if key != "_version" and key in self:
 			set(key, data[key])
 	wall = walls[0]
+	D.use_base(level_def().get("base", "outpost"))
 	for w in walls:
 		if not w.has("segs"):   # a save from before walls had sections
 			var f: float = w["hp"] / maxf(1.0, w["max_hp"])
@@ -3679,6 +3690,7 @@ func advance_level() -> void:
 	nights_before += D.WIN_NIGHTS
 	level += 1
 	open_at = D.LEVELS[level - 1]["open_at"].duplicate()
+	D.use_base(level_def().get("base", "outpost"))   # the next base: its own yard
 	evac = -1.0
 	evac_go = -1.0
 	time = 0.0

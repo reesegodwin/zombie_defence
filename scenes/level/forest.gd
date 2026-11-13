@@ -156,6 +156,31 @@ func _plant_tile(parent: Node3D, spots: Array, rng: RandomNumberGenerator, far :
 			var t := Transform3D(Basis(Vector3.UP, yaw + k).scaled(Vector3(ks, 1.0, ks) * s), spots[i] + Vector3(0, (0.95 + k * 0.62) * s, 0))
 			cones.multimesh.set_instance_transform(i * 3 + k, t)
 			cones.multimesh.set_instance_color(i * 3 + k, tint.lightened(k * 0.04))
+	_cones.append([cones.multimesh, _colors_of(cones.multimesh)])
+
+
+var _cones: Array = []   # [the needles' MultiMesh, their own colours]
+var _pull := [Color.WHITE, 0.0]
+
+
+static func _colors_of(mm: MultiMesh) -> PackedColorArray:
+	var out := PackedColorArray()
+	out.resize(mm.instance_count)
+	for i in mm.instance_count:
+		out[i] = mm.get_instance_color(i)
+	return out
+
+
+## The level's country: every tree's needles tinted toward col by amount
+## (frosted, autumn red, burnt black...).
+func set_pull(col: Color, amount: float) -> void:
+	_pull = [col, amount]
+	for entry in _cones:
+		var mm: MultiMesh = entry[0]
+		var own: PackedColorArray = entry[1]
+		for i in own.size():
+			var c: Color = own[i]
+			mm.set_instance_color(i, c.lerp(col * (0.7 + c.v * 1.5), amount))
 
 
 ## Inside the open ground of a side lane (in front of the west or east wall)?

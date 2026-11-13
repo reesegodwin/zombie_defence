@@ -55,34 +55,35 @@ static func dress(level: Node3D) -> Array:
 ## a woodpile. (Their footprints are in defs.gd BLOCKERS.)
 static func _yard(level: Node3D) -> Array:
 	var lights: Array = []
-	var add := func(mesh: Mesh, pos: Vector3, yaw := 0.0) -> void:
+	var add := func(nm: String, mesh: Mesh, pos: Vector3, yaw := 0.0) -> MeshInstance3D:
 		var mi := MeshInstance3D.new()
+		mi.name = nm
 		mi.mesh = mesh
 		mi.material_override = Culvert._material()
 		mi.position = pos
 		mi.rotation.y = yaw
 		level.add_child(mi)
-	var lamp := func(pos: Vector3, rng: float, col: Color) -> void:
+		return mi
+	# Each lamp's light hangs off its prop, so it moves with it (bases.gd).
+	var lamp := func(on: Node3D, local: Vector3, rng: float, col: Color) -> void:
 		var l := OmniLight3D.new()
-		l.position = pos
+		l.position = local
 		l.light_color = col
 		l.omni_range = rng
 		l.omni_attenuation = 1.3
 		l.shadow_enabled = false
-		level.add_child(l)
+		on.add_child(l)
 		lights.append(l)
-	add.call(_generator(), Vector3(4.3, 0.0, 26.6))
-	add.call(_lamp_post(true), Vector3(5.4, 0.0, 25.6), PI * 0.75)
-	lamp.call(Vector3(5.0, 2.1, 25.2), 8.0, Color(1.0, 0.85, 0.6))
-	for x in [8.0, 14.5]:
-		add.call(_lamp_post(false), Vector3(x, 0.0, 24.5))
-		lamp.call(Vector3(x + 0.48, 1.95, 24.5), 8.5, Color(1.0, 0.75, 0.45))
-	add.call(_workbench(), Vector3(17.0, 0.0, 27.05))
-	level.get_child(level.get_child_count() - 1).name = "WorkshopBench"
-	add.call(_drafting_table(), Vector3(7.4, 0.0, 26.85))
-	level.get_child(level.get_child_count() - 1).name = "ResearchDesk"
-	lamp.call(Vector3(17.0, 1.75, 26.9), 6.0, Color(1.0, 0.8, 0.5))
-	add.call(_woodpile(), Vector3(14.2, 0.0, 27.2))
+	add.call("Generator", _generator(), Vector3(4.3, 0.0, 26.6))
+	var wl: MeshInstance3D = add.call("WorkLamp", _lamp_post(true), Vector3(5.4, 0.0, 25.6), PI * 0.75)
+	lamp.call(wl, Vector3(0.0, 2.1, 0.57), 8.0, Color(1.0, 0.85, 0.6))
+	for k in 2:
+		var lp: MeshInstance3D = add.call("LampPost%d" % (k + 1), _lamp_post(false), Vector3([8.0, 14.5][k], 0.0, 24.5))
+		lamp.call(lp, Vector3(0.48, 1.95, 0.0), 8.5, Color(1.0, 0.75, 0.45))
+	var wb: MeshInstance3D = add.call("WorkshopBench", _workbench(), Vector3(17.0, 0.0, 27.05))
+	lamp.call(wb, Vector3(0.0, 1.75, -0.15), 6.0, Color(1.0, 0.8, 0.5))
+	add.call("Woodpile", _woodpile(), Vector3(14.2, 0.0, 27.2))
+	add.call("ResearchDesk", _drafting_table(), Vector3(7.4, 0.0, 26.85))
 	return lights
 
 
