@@ -459,11 +459,11 @@ func _darkness() -> float:
 
 
 # Day, dusk and night each have their own light; the cycle blends between them.
-const DAY_MOOD := {"sun": 0.82, "sun_col": Color(1.0, 0.93, 0.82), "amb": 0.58, "fog": Color(0.62, 0.68, 0.74),
+const DAY_MOOD := {"sun": 0.8, "sun_col": Color(1.0, 0.93, 0.82), "amb": 0.5, "fog": Color(0.48, 0.53, 0.58), "exposure": 0.92, "sat": 1.12,
 	"top": Color(0.32, 0.52, 0.85), "horizon": Color(0.72, 0.8, 0.88)}
-const DUSK_MOOD := {"sun": 0.8, "sun_col": Color(1.0, 0.7, 0.48), "amb": 0.52, "fog": Color(0.45, 0.34, 0.36),
+const DUSK_MOOD := {"sun": 0.8, "sun_col": Color(1.0, 0.7, 0.48), "amb": 0.52, "fog": Color(0.45, 0.34, 0.36), "exposure": 1.0, "sat": 1.02,
 	"top": Color(0.25, 0.22, 0.34), "horizon": Color(0.78, 0.42, 0.3)}
-const NIGHT_MOOD := {"sun": 0.42, "sun_col": Color(0.62, 0.72, 1.0), "amb": 0.32, "fog": Color(0.17, 0.21, 0.3),
+const NIGHT_MOOD := {"sun": 0.42, "sun_col": Color(0.62, 0.72, 1.0), "amb": 0.32, "fog": Color(0.17, 0.21, 0.3), "exposure": 1.1, "sat": 0.9,
 	"top": Color(0.02, 0.03, 0.08), "horizon": Color(0.08, 0.1, 0.17)}
 
 
@@ -480,6 +480,9 @@ func _set_mood() -> void:
 	moon.light_color = _mood("sun_col", k)
 	env.ambient_light_energy = _mood("amb", k)
 	env.fog_light_color = _mood("fog", k)
+	env.tonemap_exposure = _mood("exposure", k)
+	env.adjustment_saturation = _mood("sat", k)
+	env.adjustment_contrast = lerpf(1.08, 1.0, k)   # a touch more punch by day
 	# Only the faintest haze over everything: the real fog lies on the ground
 	# (scenes/level/ground_fog.gd).
 	env.fog_density = lerpf(0.0012, 0.0035, k)

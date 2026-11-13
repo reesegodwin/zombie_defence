@@ -14,7 +14,7 @@ const PUFF_SHADER := preload("res://assets/shaders/fog_puff.gdshader")
 # The puffs.
 const PUFF_SPACING := 1.0                # metres between puffs (before jitter)
 const PUFF_WIDTH := Vector2(2.4, 3.6)
-const PUFF_HEIGHT := Vector2(0.9, 1.3)   # the thick part is the bottom 2/3 or so
+const PUFF_HEIGHT := Vector2(1.15, 1.6)  # the thick part is the bottom 2/3 or so
 const PUFF_DENSITY := 0.42
 const FOREST_SPACING := 1.9            # puffs in the woods are this much further apart
 const FOREST_SIZE := 1.5               # and this much bigger
@@ -179,7 +179,7 @@ func _build_puffs() -> void:
 						blocked = true
 				if blocked:
 					continue
-				spots.append([Vector3(p.x, h - 0.02, p.y), thick, 1.0])
+				spots.append([Vector3(p.x, _ground_under(p, 1.0) - 0.02, p.y), thick, 1.0])
 			u += _spacing
 	# And through the woods all round: fewer, bigger puffs (cheaper for the same
 	# cover), thinning out up the hills.
@@ -196,7 +196,7 @@ func _build_puffs() -> void:
 			var thick := (banks.get_noise_2dv(p) * 0.5 + 0.5) * (1.0 - smoothstep(HILL.x, HILL.y + 0.6, h))
 			if thick < 0.18 or rng.randf() > 0.5 + thick:
 				continue
-			spots.append([Vector3(p.x, h - 0.02, p.y), thick, FOREST_SIZE])
+			spots.append([Vector3(p.x, _ground_under(p, FOREST_SIZE) - 0.02, p.y), thick, FOREST_SIZE])
 		x += fs
 	var quad := QuadMesh.new()
 	quad.size = Vector2(1, 1)
@@ -224,6 +224,18 @@ func _build_puffs() -> void:
 	add_child(puffs)
 
 
+## The highest ground under a puff (its width, and the way it drifts), so a
+## rise in the ground doesn't slice through it.
+static func _ground_under(p: Vector2, size: float) -> float:
+	var r := PUFF_WIDTH.y * 0.5 * size + 0.7
+	var best := Terrain.sample(p.x, p.y)
+	for k in 8:
+		var o := Vector2.from_angle(TAU * k / 8.0)
+		best = maxf(best, Terrain.sample(p.x + o.x * r, p.y + o.y * r))
+		best = maxf(best, Terrain.sample(p.x + o.x * r * 0.5, p.y + o.y * r * 0.5))
+	return best
+
+
 ## True inside a lane's or the yard's fog area (see _areas()).
 func _in_areas(p: Vector2) -> bool:
 	for area in _areas():
@@ -242,7 +254,9 @@ func _in_areas(p: Vector2) -> bool:
 func set_night(k: float) -> void:
 	_night = k
 	if puffs != null:
-		puffs.material_override.set_shader_parameter("density", _puff_density * lerpf(1.0, 1.25, k))
+		puffs.material_override.set_shader_parameter("density", _puff_density * lerpf(0.85, 1.25, k))
+		# Greyer by day (in full sun white fog washes the lanes out), pale at night.
+		puffs.material_override.set_shader_parameter("tint", Color(0.72, 0.75, 0.78).lerp(Color(0.9, 0.92, 0.95), k))
 	for l in layers.size():
 		var f := float(l) / (LAYERS - 1)
 		var m: ShaderMaterial = layers[l].material_override
