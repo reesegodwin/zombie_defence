@@ -53,7 +53,7 @@ func setup(z: Dictionary, model := "") -> void:
 	rng.seed = int(z["id"]) * 92821 + 7
 	if model == "":
 		model = T["models"][rng.randi() % T["models"].size()]
-	j = Body.zombie(self, _look(z["type"], model, z["shirt"], rng.randi() % LOOKS))
+	j = Body.zombie(self, _ready_look(z["type"], model, z["shirt"], rng.randi() % LOOKS))
 	meshes = j["meshes"]
 	_lean = rng.randf_range(0.18, 0.42) if not _runner else 0.35
 	_tilt = rng.randf_range(-0.45, 0.45)
@@ -67,8 +67,19 @@ func setup(z: Dictionary, model := "") -> void:
 	sync(z, 0.0)
 
 
-func sync(z: Dictionary, dt: float) -> void:
+func sync(z: Dictionary, dt: float, shown := true) -> void:
 	position = Vector3(z["x"], Terrain.sample(z["x"], z["y"]), z["y"])
+	# Off screen: just keep up with where it is (and its stride, so the feet
+	# don't skip when it walks into view); posing it would be wasted work.
+	var skel: Node = meshes[0].get_parent() if not meshes.is_empty() else null
+	if skel != null and skel.is_processing() != shown:
+		skel.set_process(shown)
+	if not shown:
+		var at := Vector2(z["x"], z["y"])
+		if _last != Vector2.INF:
+			_phase += minf(at.distance_to(_last), 0.5) / Body.stride_cycle(stride * (1.25 if _runner else 0.8), scale.x) * TAU
+		_last = at
+		return
 	var t: float = z["t"]
 	var held: bool = z["held"] > 0
 	var attacking: bool = z["atk"] > 0
@@ -209,6 +220,32 @@ static func _look(type: String, model: String, shirt: int, which: int) -> Dictio
 	}
 
 
+## The look to give a zombie: the one asked for if its body is built, else
+## one of its type's that is (building a body takes a long moment, a stall
+## if it happened mid-fight; prewarm() builds the rest when nothing is going
+## on). Only if none of its type is built yet does it build one now.
+static func _ready_look(type: String, model: String, shirt: int, which: int) -> Dictionary:
+	var look := _look(type, model, shirt, which)
+	if Body.has_body(look["key"]):
+		return look
+	var built := Body.built_keys(type + "/")
+	if built.is_empty():
+		return look
+	var k: PackedStringArray = built[(shirt * LOOKS + which + model.hash()) % built.size()].split("/")
+	return _look(k[0], k[1], int(k[2]), int(k[3]))
+
+
+## Builds the first body of each type, if it isn't yet: a run needs at least
+## those before the dead arrive (the rest can be lent until they're made).
+static func ensure_basics() -> void:
+	for type in D.ZTYPES:
+		if Body.built_keys(type + "/").is_empty():
+			var model: String = D.ZTYPES[type]["models"][0]
+			var holder := Node3D.new()
+			Body.zombie(holder, _look(type, model, 0, 0))
+			holder.free()
+
+
 static var _to_make = null   # the bodies not made yet: [type, model, shirt, which]
 
 
@@ -260,6 +297,8 @@ static func _burn() -> StandardMaterial3D:
 ## into a sideways slump, or spinning round as it drops. The body lies a while
 ## (the oldest sink away first if too many pile up), then sinks into the ground.
 func die() -> void:
+	if not meshes.is_empty():
+		meshes[0].get_parent().set_process(true)   # (it may have been off screen)
 	dying = true
 	bar.visible = false
 	_stagger = 0.0

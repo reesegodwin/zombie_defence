@@ -369,6 +369,7 @@ func apply_fog() -> void:
 
 
 func start() -> void:
+	Zombie.ensure_basics()   # (bodies not built yet are lent from these)
 	_new_game()   # with whatever was just bought at the camp
 	tutorial.run_started()
 	started = true
@@ -486,8 +487,10 @@ func _process(dt: float) -> void:
 
 
 func _sync_scene(dt: float) -> void:
-	# Zombies.
+	# Zombies (those off screen are only moved, not posed).
 	var seen := {}
+	var cam := rig.get_viewport().get_camera_3d()
+	var view := Rect2(Vector2.ZERO, get_viewport().get_visible_rect().size).grow(160.0)
 	for z in game.zombies:
 		var id: int = z["id"]
 		seen[id] = true
@@ -498,7 +501,8 @@ func _sync_scene(dt: float) -> void:
 			node.setup(z)
 			zombie_nodes[id] = node
 		else:
-			node.sync(z, dt)
+			var p := Vector3(z["x"], 1.0, z["y"])
+			node.sync(z, dt, cam == null or (not cam.is_position_behind(p) and view.has_point(cam.unproject_position(p))))
 	for id in zombie_nodes.keys():
 		if not seen.has(id):
 			zombie_nodes[id].die()

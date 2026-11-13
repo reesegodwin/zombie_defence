@@ -1218,6 +1218,18 @@ static func spread_mul(w: Dictionary, d: float) -> float:
 	return 1.0 + w.get("falloff", 1.0) * maxf(0.0, d / w["range"] - 0.5)
 
 
+const NPC_AIM_SLOP := 0.3        # metres a crewmate's aim strays, like a hand on a mouse...
+const NPC_AIM_SLOP_PER_M := 0.035 # ...and more per metre out
+
+## A crewmate's aim is human, not perfect: where they put their sights is
+## off the zombie by a random amount (more for further, moving targets), on
+## top of the gun's own spread, so they hit about as often as a player does.
+static func npc_aim_error(s: Dictionary, z: Dictionary) -> Vector2:
+	var d := Vector2(z["x"] - s["x"], z["y"] - s["y"]).length()
+	var r := (NPC_AIM_SLOP + NPC_AIM_SLOP_PER_M * d) * (2.0 - D.skill_fx(s, "aim"))
+	return Vector2(randfn(0.0, r), randfn(0.0, r))
+
+
 ## How far auto-fire (crew, not turrets) will reach out with gun w.
 static func auto_reach(w: Dictionary) -> float:
 	return w["range"] * (AUTO_REACH_STEADY if w.get("falloff", 1.0) <= 0.0 else AUTO_REACH)
@@ -1393,7 +1405,7 @@ func update_crew(dt: float) -> void:
 			elif target != null:
 				_shoot(s, target["x"], target["y"], k)
 		else:
-			var z = auto_target(s, auto_reach(w))
+			var z = _lob_target(s, w, dt) if w.has("splash") else auto_target(s, auto_reach(w))
 			if z == null:
 				if s["idle"] > TOP_UP_AFTER:
 					start_reload(s)   # nothing to shoot: top the magazine up
@@ -1401,7 +1413,61 @@ func update_crew(dt: float) -> void:
 			s["idle"] = 0.0
 			var ready := swivel(s, atan2(z["y"] - s["y"], z["x"] - s["x"]), D.TURN_RATE, dt)
 			if s["cd"] <= 0 and ready:
-				_shoot(s, z["x"], z["y"], k)
+				var miss := npc_aim_error(s, z)
+				_shoot(s, z["x"] + miss.x, z["y"] + miss.y, k)
+				s["lob"] = -1   # (a launcher picks a fresh bunch for the next one)
+
+
+## A launcher's pick, looked for again a few times a second (it's a costly
+## search through a big horde), and dropped once its grenade is away.
+func _lob_target(s: Dictionary, w: Dictionary, dt: float) -> Variant:
+	s["lob_t"] = s.get("lob_t", 0.0) - dt
+	var z = null
+	var id: int = s.get("lob", -1)
+	if id >= 0 and s["lob_t"] > 0.0:
+		for o in zombies:
+			if o["id"] == id and o["hp"] > 0:
+				z = o
+				break
+	if z == null:
+		z = splash_target(s, auto_reach(w), w["splash"])
+		s["lob"] = z["id"] if z != null else -1
+		s["lob_t"] = 0.25
+	return z
+
+
+## Where a crewmate with a launcher lobs next: the thickest knot of the dead
+## in reach, but never one a grenade in the air is already coming down on
+## (theirs or anyone's), so two of them don't both shell the same bunch.
+func splash_target(s: Dictionary, rng: float, splash: float) -> Variant:
+	var taken: Array[Vector2] = []
+	for sh in shots:
+		if sh["kind"] == "grenade" and sh["t"] < sh["dur"]:
+			taken.append(Vector2(sh["x1"], sh["y1"]))
+	var best = null
+	var bs := -INF
+	for z in zombies:
+		if z["hp"] <= 0:
+			continue
+		var p := Vector2(z["x"], z["y"])
+		if p.distance_squared_to(Vector2(s["x"], s["y"])) > rng * rng:
+			continue
+		var skip := false
+		for t in taken:
+			if p.distance_to(t) < splash * 1.5:
+				skip = true
+				break
+		if skip:
+			continue
+		var n := 0.0
+		for o in zombies:
+			if o["hp"] > 0 and p.distance_squared_to(Vector2(o["x"], o["y"])) < splash * splash:
+				n += 1.0
+		var score: float = n * 2.0 + lane_uv(z["side"], p).y * 0.1 + (1.5 if z["type"] == "brute" else 0.0)
+		if score > bs:
+			bs = score
+			best = z
+	return best
 
 
 func crowd_centre() -> Variant:

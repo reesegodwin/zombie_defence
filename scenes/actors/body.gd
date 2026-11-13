@@ -596,6 +596,15 @@ static func _part(j: Dictionary, parent: Node3D, kind: String, col: Color, surfa
 	j["_parts"][parent].append([kind, Color(col, surface), xf, paint, tip, blend])
 
 
+## The keys of the bodies built so far that start with prefix.
+static func built_keys(prefix: String) -> Array:
+	var out := []
+	for k in _cache:
+		if (k as String).begins_with(prefix):
+			out.append(k)
+	return out
+
+
 ## Whether the body with this key has been built (and so costs nothing to make again).
 static func has_body(key: String) -> bool:
 	return _cache.has(key)

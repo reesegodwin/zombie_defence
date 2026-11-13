@@ -194,6 +194,25 @@ func _unit_checks() -> void:
 	check(st2.tutorial == false and st2.tutorial_done == ["walk", "rescue"], "tutorial settings are saved")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(tpath))
 
+	# A launcher picks the thickest bunch, and not one a grenade is already
+	# coming down on.
+	var glz = Game.new()
+	var glz_s: Dictionary = glz.crew[0]
+	for k in 4:
+		var lz: Dictionary = glz.spawn_zombie("walker", 100.0, 0.0)
+		lz["x"] = glz_s["x"] - 3.0 + k * 0.3; lz["y"] = glz_s["y"] - 8.0
+	var glz_lone: Dictionary = glz.spawn_zombie("walker", 100.0, 0.0)
+	glz_lone["x"] = glz_s["x"] + 4.0; glz_lone["y"] = glz_s["y"] - 8.0
+	var glz_t1 = glz.splash_target(glz_s, 30.0, 1.7)
+	check(glz_t1 != null and glz_t1 != glz_lone, "a launcher aims for the bunch, not the straggler")
+	glz.shots.append({"kind": "grenade", "x1": glz_t1["x"], "y1": glz_t1["y"], "t": 0.0, "dur": 1.0})
+	check(glz.splash_target(glz_s, 30.0, 1.7) == glz_lone, "and not at a bunch a grenade is already landing on")
+	# Crewmates' aim strays like a person's: not dead on every time.
+	var glz_ae := 0.0
+	for k in 200:
+		glz_ae += Game.npc_aim_error(glz_s, glz_lone).length()
+	check(glz_ae / 200.0 > 0.3, "crewmates' aim strays (%.2f m on average at 8 m)" % (glz_ae / 200.0))
+
 	# Bullets fly: out of the end of the barrel, taking time to get there.
 	var gb = Game.new()
 	var bt_sh: Dictionary = gb.crew[0]

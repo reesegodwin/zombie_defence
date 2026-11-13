@@ -477,12 +477,14 @@ func _highlight(r: Rect2) -> void:
 	else:
 		dir = Vector2.LEFT        # to its right, pointing left
 	var tip := c - dir * (absf(dir.x) * r.size.x * 0.5 + absf(dir.y) * r.size.y * 0.5 + grow + 8.0)
-	_arrow(tip, dir)
+	if not current in REMINDERS:   # reminders are subtler: the glow alone
+		_arrow(tip, dir)
 
 
 ## An arrow coming down onto a point in the world (a survivor, the truck).
 func _point_at(p: Vector2) -> void:
-	_arrow(p, Vector2.DOWN)
+	if not current in REMINDERS:
+		_arrow(p, Vector2.DOWN)
 
 
 ## A chunky arrow whose tip bobs toward tip, pointing along dir.

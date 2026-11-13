@@ -120,7 +120,6 @@ static func _lamp_post(work: bool) -> ArrayMesh:
 		k.cyl(Vector3(0, 1.2, 0), 0.06, 2.4, LOG, 8, up)
 		k.cyl(Vector3(0, 2.42, 0), 0.07, 0.04, LOG.darkened(0.2), 8, up)            # cap
 		k.box(Vector3(0.25, 2.33, 0), Vector3(0.56, 0.06, 0.06), LOG)                # the arm
-		k.box(Vector3(0.13, 2.18, 0), Vector3(0.04, 0.34, 0.04), LOG.darkened(0.1), Vector3(0, 0, 0.8))   # brace
 		k.box(Vector3(0.48, 2.25, 0), Vector3(0.02, 0.12, 0.02), STEEL)              # the hanger
 		var shade := Color(0.24, 0.32, 0.28)
 		k.cyl(Vector3(0.48, 2.12, 0), 0.05, 0.16, shade, 12, up, 0.2)                 # the cone, open below
