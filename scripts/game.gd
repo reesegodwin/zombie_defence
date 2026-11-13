@@ -1361,6 +1361,8 @@ static func npc_aim_error(s: Dictionary, z: Dictionary) -> Vector2:
 
 ## How far auto-fire (crew, not turrets) will reach out with gun w.
 static func auto_reach(w: Dictionary) -> float:
+	if w.get("flame", false):
+		return w["range"]   # nothing past the end of the flame
 	return w["range"] * (AUTO_REACH_STEADY if w.get("falloff", 1.0) <= 0.0 else AUTO_REACH)
 
 
@@ -1377,6 +1379,9 @@ func fire(s: Dictionary, tx: float, ty: float, dmg_mul: float, w = null) -> void
 	if dist > 0.3:
 		ang = atan2(ty - mz.z, tx - mz.x)   # from the barrel's end, so a true shot meets the mark
 	var wide := spread_mul(w, dist) * (2.0 - D.skill_fx(s, "aim"))   # (as aim_spread)
+	if w.get("flame", false):
+		_flame(w, ang, mz, dmg_mul)
+		return
 	if w.has("splash"):
 		# Lobbed: further out it lands wider of the mark, and long or short.
 		var ga: float = ang + (randf() * 2.0 - 1.0) * w["spread"] * wide
@@ -1420,6 +1425,42 @@ static func aim_spread(s: Dictionary, dist: float) -> float:
 func _ground_puff(x: float, y: float) -> void:
 	burst(x, y, 6, {"colors": [Color("6b5a44"), Color("8a7458"), Color("4f4232")], "spread": 0.9, "up": 70.0, "life": 0.5, "size": 2.2, "z": 1.0, "grav": 260.0})
 	burst(x, y, 3, {"colors": [Color(0.5, 0.45, 0.37), Color(0.44, 0.4, 0.33)], "spread": 0.4, "up": 26.0, "life": 0.8, "size": 4.2, "z": 1.0, "grav": 10.0})
+
+
+const FLAME_BURN := 1.4   # seconds a zombie caught in the flame burns on (as in a fire)
+
+## A flamethrower's tick: everything within its reach and inside its cone
+## (spread either side of the aim) is scorched and set burning; a fuel slick
+## in the stream goes up. Drawn as glowing flame along the cone.
+func _flame(w: Dictionary, ang: float, mz: Vector3, dmg_mul: float) -> void:
+	var fwd := Vector2(cos(ang), sin(ang))
+	var at := Vector2(mz.x, mz.z)
+	var reach: float = w["range"]
+	var half: float = w["spread"]
+	for z in zombies:
+		if z["hp"] <= 0:
+			continue
+		var to := Vector2(z["x"], z["y"]) - at
+		var d := to.length()
+		var r: float = ZT(z["type"])["r"]
+		if d - r > reach:
+			continue
+		# In the cone, allowing for its body's width at that distance.
+		if d > 0.05 and absf(fwd.angle_to(to)) > half + atan2(r, d):
+			continue
+		damage(z, w["dmg"] * dmg_mul)
+		z["burn"] = maxf(z["burn"], FLAME_BURN)
+	for k: float in [0.4, 0.7, 1.0]:
+		var p: Vector2 = at + fwd * reach * k
+		ignite_slicks(p.x, p.y, reach * k * tan(half))
+	# The stream: tongues of flame further out and wider as they go.
+	var h := mz.y / 0.06   # (particle heights are in 0.06 m steps: effects.gd)
+	for i in 5:
+		var t := randf_range(0.1, 1.0)
+		var a := ang + randf_range(-half, half) * t
+		var p := at + Vector2(cos(a), sin(a)) * reach * t
+		burst(p.x, p.y, 1, {"colors": [Color("fff1a8"), Color("ffcf5a"), Color("ff8a2a"), Color("e8461e")], "spread": 0.4, "up": 30.0,
+			"life": 0.3 + 0.25 * t, "size": 2.0 + 4.5 * t, "z": h * (1.0 - 0.3 * t), "grav": -20.0, "glow": true})
 
 
 ## Where a shot leaves the gun (x, height, y in metres): the end of the
@@ -2127,7 +2168,7 @@ func add_to_storage(key: String) -> bool:
 
 
 # Hands out storage sensibly. Used by the automated balance test.
-const RANK := {"pistol": 0, "smg": 2, "shotgun": 1, "rifle": 3, "launcher": 4}
+const RANK := {"pistol": 0, "smg": 2, "shotgun": 1, "rifle": 3, "flamer": 3, "launcher": 4}
 
 
 func auto_equip() -> void:
@@ -2396,7 +2437,7 @@ func _roll_loot(site_key: String, who = null) -> Dictionary:
 		for k in randi_range(1, 2):
 			r["throwables"].append(["molotov", "pipebomb"].pick_random())
 	if randf() < site["weapon_chance"] * luck:
-		r["weapon"] = ["smg", "shotgun", "rifle", "launcher", "smg", "shotgun", "rifle"].pick_random()
+		r["weapon"] = ["smg", "shotgun", "rifle", "launcher", "flamer", "smg", "shotgun", "rifle"].pick_random()
 	var forage: float = D.skill_fx(who, "forager") if who != null else 1.0
 	if randf() < site["food_chance"] * forage * research_mul("food_find") * (1.0 + D.SCAV_EYE_FIND * scav_eye):
 		r["food"] = int(round(randi_range(2, 5) * sqrt(forage) * research_mul("food_yield")))

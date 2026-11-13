@@ -11,6 +11,7 @@ extends Resource
 @export var pellets := 1                 ## Bullets per shot (shotguns fire several).
 @export var pierce := 1                  ## How many zombies one bullet can pass through.
 @export var splash_radius := 0.0         ## Above 0 the weapon lobs grenades that explode.
+@export var flame := false               ## Sprays a cone of fire instead of bullets: spread is the cone's half-width, reach a hard limit, and all in it burn.
 @export_group("Handling")
 @export var seconds_between_shots := 0.34
 @export var spread := 0.03               ## Random aim error, in radians.
@@ -25,7 +26,7 @@ extends Resource
 @export var muzzle_reach := 0.9          ## How far in front of the shooter the barrel ends (where shots come out), metres. Measured off the model.
 @export var muzzle_height := 1.41        ## How high above the shooter's feet the barrel ends: pistols held out at eye level, long guns shouldered lower.
 @export var muzzle_side := -0.05         ## How far the barrel end is off the line of aim, in metres (+: to the shooter's right, as a shouldered long gun).
-@export var sound := "gun"               ## gun, smg, shotgun, rifle or launch.
+@export var sound := "gun"               ## gun, smg, shotgun, rifle, launch or flame.
 @export var slot_label := "PST"          ## Short text shown in inventory slots.
 
 
@@ -40,4 +41,6 @@ func to_dict() -> Dictionary:
 	}
 	if splash_radius > 0.0:
 		d["splash"] = splash_radius
+	if flame:
+		d["flame"] = true
 	return d

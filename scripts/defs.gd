@@ -251,6 +251,7 @@ const RESEARCH := {
 	"firearms": {"branch": 0, "name": "SMG", "cost": 20, "time": 15.0, "needs": [], "desc": "Fix up automatic weapons. Unlocks the SMG."},
 	"shotguns": {"branch": 0, "name": "Scatter guns", "cost": 40, "time": 30.0, "needs": ["firearms"], "desc": "Unlocks the shotgun."},
 	"rifles": {"branch": 0, "name": "Long guns", "cost": 60, "time": 40.0, "needs": ["shotguns"], "desc": "Unlocks the hunting rifle."},
+	"flamers": {"branch": 0, "name": "Flamethrowers", "cost": 70, "time": 45.0, "needs": ["shotguns", "fuel"], "desc": "Unlocks the flamethrower: a short cone of fire that sets everything in it burning."},
 	"launchers": {"branch": 0, "name": "Grenade launchers", "cost": 90, "time": 50.0, "needs": ["rifles", "explosives"], "desc": "Unlocks the grenade launcher."},
 	# Gear
 	"reloading": {"branch": 1, "name": "Hand loading", "cost": 30, "time": 25.0, "needs": ["firearms"], "desc": "Unlocks hollow points."},
@@ -288,6 +289,7 @@ const SHOP := {
 	"smg": {"cost": 35, "name": "SMG", "needs": "firearms"},
 	"shotgun": {"cost": 45, "name": "Shotgun", "needs": "shotguns"},
 	"rifle": {"cost": 70, "name": "Hunting rifle", "needs": "rifles"},
+	"flamer": {"cost": 95, "name": "Flamethrower", "needs": "flamers"},
 	"launcher": {"cost": 110, "name": "Grenade launcher", "needs": "launchers"},
 	"hollow": {"cost": 30, "name": "Hollow points", "needs": "reloading"},
 	"trigger": {"cost": 30, "name": "Hair trigger", "needs": "gunsmith"},
@@ -307,7 +309,7 @@ const SHOP := {
 }
 const SHOP_SECTIONS := [
 	["Base", ["wall_wood", "wall_stone", "turret", "radio", "shelves", "drill"]],
-	["Guns", ["smg", "shotgun", "rifle", "launcher"]],
+	["Guns", ["smg", "shotgun", "rifle", "flamer", "launcher"]],
 	["Gear", ["hollow", "trigger"]],
 	["Throwables", ["molotov", "pipebomb"]],
 	["Traps", ["spikes", "beartrap", "mine", "slick"]],
@@ -318,7 +320,7 @@ const SHOP_SECTIONS := [
 # so they can be tuned in the Inspector. They are read into plain dictionaries
 # here, keyed by file name.
 const ZOMBIE_KEYS := ["walker", "runner", "brute"]
-const WEAPON_KEYS := ["pistol", "smg", "shotgun", "rifle", "launcher"]
+const WEAPON_KEYS := ["pistol", "smg", "shotgun", "rifle", "flamer", "launcher"]
 static var ZTYPES: Dictionary = _load_dir("res://data/zombies/", ZOMBIE_KEYS)
 
 static var WEAPONS: Dictionary = _load_dir("res://data/weapons/", WEAPON_KEYS)
@@ -346,6 +348,7 @@ const ITEMS := {
 	"smg": {"kind": "weapon", "short": "SMG"},
 	"shotgun": {"kind": "weapon", "short": "SHT"},
 	"rifle": {"kind": "weapon", "short": "RFL"},
+	"flamer": {"kind": "weapon", "short": "FL"},
 	"launcher": {"kind": "weapon", "short": "GL"},
 	"hollow": {"kind": "mod", "short": "HP", "name": "Hollow points", "desc": "Whoever carries these does 25% more damage."},
 	"trigger": {"kind": "mod", "short": "HT", "name": "Hair trigger", "desc": "Whoever carries this fires 15% faster."},

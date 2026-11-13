@@ -383,6 +383,7 @@ const GRIPS := {
 	"shotgun": [Vector2(0.24, 0.045), Vector2(0.47, 0.03)],     # left on the pump
 	"rifle": [Vector2(0.2, 0.045), Vector2(0.42, 0.03)],
 	"launcher": [Vector2(0.28, 0.06), Vector2(0.5, 0.045)],
+	"flamer": [Vector2(0.26, 0.06), Vector2(0.73, 0.055)],      # rear grip, fore-grip
 }
 var _rear := 0.0       # the gun's rear end (z, in the gun pivot)
 var _length := 0.3

@@ -50,6 +50,7 @@ func make_basic() -> void:
 	streams["die"] = _squelch()
 	streams["crash"] = _boom(1.6)
 	streams["fire"] = _crackle()
+	streams["flame"] = _roar()
 	streams["build"] = _tones([220.0, 330.0], 0.07, 0.25)
 	streams["coin"] = _tones([660.0, 990.0], 0.06, 0.2)
 	streams["levelup"] = _tones([392.0, 523.0, 659.0, 784.0], 0.09, 0.25)
@@ -69,10 +70,10 @@ func _exit_tree() -> void:
 
 ## How long (ms) before the same sound can play again, so a horde doesn't
 ## turn into one wall of noise.
-const GAPS := {"smg": 45, "hit": 45, "die": 45, "zdie": 160, "snarl": 220,
+const GAPS := {"flame": 150, "smg": 45, "hit": 45, "die": 45, "zdie": 160, "snarl": 220,
 	"groan_walker": 350, "groan_runner": 450, "groan_brute": 900, "groan": 1500}
 ## Volume (dB) per sound; zombie voices vary around theirs, as if near or far.
-const VOLUMES := {"smg": -6.0, "hit": -6.0, "zdie": -7.0, "snarl": -9.0,
+const VOLUMES := {"flame": -7.0, "smg": -6.0, "hit": -6.0, "zdie": -7.0, "snarl": -9.0,
 	"groan_walker": -9.0, "groan_runner": -10.0, "groan_brute": -6.0, "groan": -4.0}
 
 
@@ -183,6 +184,25 @@ func _crackle() -> AudioStreamWAV:
 		lp += (randf_range(-1, 1) - lp) * 0.2
 		var pop := randf_range(-1, 1) if randf() < 0.004 else 0.0
 		out[i] = (lp * 0.8 + pop) * _env(t, dur, 0.05) * 0.5
+	return _make(out)
+
+
+## A flamethrower's roar: dark rushing noise with a low rumble under it and
+## the odd crackle; short and overlapping, so a held trigger roars steadily.
+func _roar() -> AudioStreamWAV:
+	var dur := 0.26
+	var n := int(dur * RATE)
+	var out := PackedFloat32Array()
+	out.resize(n)
+	var lp := 0.0
+	var lp2 := 0.0
+	for i in n:
+		var t := float(i) / RATE
+		lp += (randf_range(-1, 1) - lp) * 0.12
+		lp2 += (lp - lp2) * 0.3
+		var rumble := sin(TAU * 55.0 * t + sin(TAU * 7.0 * t) * 2.0) * 0.25
+		var pop := randf_range(-1, 1) * 0.6 if randf() < 0.003 else 0.0
+		out[i] = (lp2 * 1.6 + rumble + pop) * _env(t, dur, 0.03) * 0.55
 	return _make(out)
 
 

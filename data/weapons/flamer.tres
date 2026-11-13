@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://data/weapon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Flamethrower"
+description = "Sprays a cone of fire at close range: everything in it burns."
+damage = 4.0
+pellets = 1
+pierce = 1
+flame = true
+seconds_between_shots = 0.08
+spread = 0.3
+reach = 4.5
+accuracy_falloff = 0.0
+knockback = 0.0
+magazine = 50
+reload_seconds = 2.5
+muzzle_reach = 0.9
+muzzle_height = 1.32
+muzzle_side = 0.109
+barrel_length = 0.8
+sound = "flame"
+slot_label = "FL"

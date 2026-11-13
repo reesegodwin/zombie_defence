@@ -201,6 +201,33 @@ func _unit_checks() -> void:
 		if not c["is_player"]:
 			one_t[c.get("tgt", -1)] = true
 	check(one_t.size() == 1 and not one_t.has(-1), "but with only one, they all shoot it")
+	# The flamethrower: a short cone of fire; all in it burn, nothing past it.
+	var gfl = Game.new()
+	var fl: Dictionary = gfl.crew[0]
+	fl["weapon"] = "flamer"
+	fl["x"] = 11.0; fl["y"] = D.WALK_Y
+	var in_cone: Array = []
+	for off in [-0.6, 0.0, 0.6]:
+		var zf: Dictionary = gfl.spawn_zombie("walker", 1000.0, 0.0, 0, 0.0)
+		zf["x"] = 11.0 + off; zf["y"] = D.WALK_Y - 3.0
+		in_cone.append(zf)
+	var aside: Dictionary = gfl.spawn_zombie("walker", 1000.0, 0.0, 0, 0.0)
+	aside["x"] = 14.5; aside["y"] = D.WALK_Y - 1.0   # well off to the side of the aim
+	var past: Dictionary = gfl.spawn_zombie("walker", 1000.0, 0.0, 0, 0.0)
+	past["x"] = 11.0; past["y"] = D.WALK_Y - 7.0     # straight ahead, beyond its reach
+	var fhp: float = in_cone[0]["max_hp"]
+	for i in 12:
+		gfl.fire(fl, 11.0, D.WALK_Y - 3.0, 1.0)
+	check(in_cone.all(func(zf): return zf["hp"] < fhp and zf["burn"] > 0.0), "a flamethrower scorches and sets alight everything in its cone")
+	check(aside["hp"] == aside["max_hp"] and aside["burn"] <= 0.0, "but not what's off to the side")
+	check(past["hp"] == past["max_hp"] and past["burn"] <= 0.0, "or past the end of the flame")
+	check(gfl.bullets.is_empty(), "and it fires no bullets")
+	check(Game.auto_reach(D.WEAPONS["flamer"]) == D.WEAPONS["flamer"]["range"], "the crew don't aim it past its reach")
+	var gfb = Game.new()
+	gfb.scrap = 1000
+	check(not gfb.buy("flamer").has("ok"), "it needs its research first")
+	gfb.researched["flamers"] = true
+	check(gfb.buy("flamer").has("ok") and gfb.storage["items"].any(func(it): return it["key"] == "flamer"), "then the workshop sells it")
 	var prl = load("res://scripts/progress.gd").open("user://test_progress_lv.cfg")
 	prl.reset()
 	check(prl.reached == 1, "only level 1 can be picked at first")

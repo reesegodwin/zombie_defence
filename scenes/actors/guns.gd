@@ -32,6 +32,7 @@ static func get_gun(key: String, length: float) -> Dictionary:
 			"shotgun": ends = _shotgun(k)
 			"rifle": ends = _rifle(k)
 			"launcher": ends = _launcher(k)
+			"flamer": ends = _flamer(k)
 			_: ends = _pistol(k)
 		_cache[key] = {"mesh": k.mesh(), "ends": ends}
 	var g: Dictionary = _cache[key]
@@ -146,6 +147,28 @@ static func _launcher(k: Kit) -> Vector2:
 	k.cyl(Vector3(0, 0.005, -0.16), 0.009, 0.2, STEEL, 6)                        # stock tube
 	k.box(Vector3(0, -0.02, -0.265), Vector3(0.04, 0.09, 0.026), POLY)           # butt
 	return Vector2(-0.278, 0.403)
+
+
+## A flamethrower: a long nozzle tube with a flared, scorched tip and a pilot
+## light under it, a red fuel tank slung beneath, a pistol grip and trigger at
+## the back and a fore-grip, and a short stock.
+static func _flamer(k: Kit) -> Vector2:
+	var red := Color(0.55, 0.12, 0.08)
+	k.cyl(Vector3(0, 0.012, 0.22), 0.016, 0.44, STEEL, 8)                        # nozzle tube
+	k.cyl(Vector3(0, 0.012, 0.43), 0.02, 0.03, GREY, 8)                          # heat shield ring
+	k.cyl(Vector3(0, 0.012, 0.455), 0.022, 0.03, BLACK, 8, Vector3.ZERO, 0.03)   # flared, scorched tip
+	k.box(Vector3(0, -0.016, 0.44), Vector3(0.012, 0.012, 0.03), Color(1.0, 0.75, 0.3) * 1.6)   # pilot light
+	k.box(Vector3(0, 0.005, 0.0), Vector3(0.05, 0.06, 0.14), POLY)               # body
+	k.cyl(Vector3(0, -0.055, 0.12), 0.042, 0.26, red, 12)                        # fuel tank
+	k.cyl(Vector3(0, -0.055, 0.255), 0.025, 0.012, GREY, 10)                     # its cap
+	k.cyl(Vector3(0, -0.055, -0.012), 0.03, 0.01, GREY, 10)
+	k.box(Vector3(0, -0.03, 0.06), Vector3(0.012, 0.03, 0.012), STEEL)          # feed line
+	k.box(Vector3(0, -0.07, -0.045), Vector3(0.03, 0.085, 0.04), POLY, Vector3(0.3, 0, 0))      # grip
+	k.box(Vector3(0, -0.04, 0.0), Vector3(0.01, 0.006, 0.05), BLACK)             # trigger guard
+	k.box(Vector3(0, -0.035, 0.29), Vector3(0.026, 0.06, 0.03), POLY, Vector3(-0.1, 0, 0))       # fore-grip
+	k.cyl(Vector3(0, 0.0, -0.13), 0.009, 0.14, STEEL, 6)                         # stock tube
+	k.box(Vector3(0, -0.015, -0.205), Vector3(0.036, 0.08, 0.024), POLY)         # butt
+	return Vector2(-0.217, 0.47)
 
 
 ## Builds one mesh from boxes and tubes, each face flat, colours per vertex.
