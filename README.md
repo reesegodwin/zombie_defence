@@ -105,7 +105,11 @@ Pick the level on the title screen (or at the camp, next to Heat):
    Long Dark** (the hardest before the end). Each has its own base: the
    bunker, huts, tent, benches and turret spots stand somewhere different
    (`scripts/bases.gd`), in its own country (snow and ash fall on some).
-14. **Last Stand**: endless. No truck comes; all three lanes and waves that
+14. **Last Stand: Fort Harlow**: an army base, still held by the last of its
+   garrison: four soldiers (Sgt. Reyes, Cpl. Okafor, Pvt. Lund, Pvt. Hale) in
+   helmets and vests, with assault rifles, already on the walls when you
+   arrive, and the fort's stores with them. They hold the fort (they don't go
+   scavenging). Endless: no truck comes; all three lanes and waves that
    never stop growing. Hold out 5 nights there and the run counts as won
    (the win's Grit and the next Heat), then keep going for Grit for every
    night until they get in.

@@ -33,6 +33,7 @@ static func get_gun(key: String, length: float) -> Dictionary:
 			"rifle": ends = _rifle(k)
 			"launcher": ends = _launcher(k)
 			"flamer": ends = _flamer(k)
+			"ar": ends = _ar(k)
 			_: ends = _pistol(k)
 		_cache[key] = {"mesh": k.mesh(), "ends": ends}
 	var g: Dictionary = _cache[key]
@@ -169,6 +170,26 @@ static func _flamer(k: Kit) -> Vector2:
 	k.cyl(Vector3(0, 0.0, -0.13), 0.009, 0.14, STEEL, 6)                         # stock tube
 	k.box(Vector3(0, -0.015, -0.205), Vector3(0.036, 0.08, 0.024), POLY)         # butt
 	return Vector2(-0.217, 0.47)
+
+
+## An army assault rifle: a black receiver with a carry handle, a ribbed
+## handguard, the front sight post, a curved magazine and a collapsing stock.
+static func _ar(k: Kit) -> Vector2:
+	k.cyl(Vector3(0, 0.014, 0.39), 0.008, 0.2, BLACK, 8)                        # barrel
+	k.cyl(Vector3(0, 0.014, 0.5), 0.011, 0.03, POLY, 8)                         # flash hider
+	k.box(Vector3(0, 0.012, 0.2), Vector3(0.036, 0.04, 0.2), POLY)              # handguard
+	for i in 4:
+		k.box(Vector3(0, 0.033, 0.12 + i * 0.05), Vector3(0.03, 0.004, 0.02), BLACK)
+	k.box(Vector3(0, 0.05, 0.31), Vector3(0.008, 0.05, 0.01), BLACK)            # front sight post
+	k.box(Vector3(0, 0.012, 0.02), Vector3(0.032, 0.046, 0.16), BLACK)          # receiver
+	k.box(Vector3(0, 0.05, 0.0), Vector3(0.012, 0.026, 0.12), BLACK)            # carry handle
+	k.box(Vector3(0, -0.045, 0.06), Vector3(0.022, 0.08, 0.035), STEEL, Vector3(-0.25, 0, 0))   # magazine
+	k.box(Vector3(0, -0.085, 0.075), Vector3(0.022, 0.04, 0.033), STEEL, Vector3(-0.45, 0, 0))
+	k.box(Vector3(0, -0.05, -0.045), Vector3(0.026, 0.07, 0.034), POLY, Vector3(0.3, 0, 0))    # grip
+	k.box(Vector3(0, -0.026, -0.005), Vector3(0.008, 0.006, 0.05), BLACK)       # trigger guard
+	k.cyl(Vector3(0, 0.008, -0.12), 0.012, 0.12, BLACK, 8)                      # buffer tube
+	k.box(Vector3(0, -0.005, -0.2), Vector3(0.032, 0.06, 0.08), POLY)           # stock
+	return Vector2(-0.24, 0.515)
 
 
 ## Builds one mesh from boxes and tubes, each face flat, colours per vertex.

@@ -242,6 +242,8 @@ static func extra(kind: String) -> ArrayMesh:
 			"tyres": m = _x_tyres()
 			"logs": m = _x_logs()
 			"duckboards": m = _x_duckboards()
+			"jeep": m = _x_jeep()
+			"flag": m = _x_flag()
 			_: m = _x_antlers()
 		_extra_cache[kind] = m
 	return _extra_cache[kind]
@@ -367,6 +369,42 @@ static func _x_duckboards() -> ArrayMesh:
 		k.box(Vector3(sx, 0.03, 0), Vector3(0.06, 0.05, 3.0), OLD_PLANK.darkened(0.2))
 	for i in 15:
 		k.box(Vector3(0, 0.07, -1.4 + i * 0.2), Vector3(0.8, 0.03, 0.15), OLD_PLANK.lerp(PLANK, k.rng.randf() * 0.5), Vector3(0, k.rng.randf_range(-0.05, 0.05), 0))
+	return k.mesh()
+
+
+## An army jeep, olive drab, its canvas top up and a spare wheel on the back.
+static func _x_jeep() -> ArrayMesh:
+	var k := _kit(0.35, 211)
+	var olive := Color(0.3, 0.33, 0.21)
+	var up := Vector3(PI / 2, 0, 0)
+	k.box(Vector3(0, 0.55, 0), Vector3(2.3, 0.45, 1.25), olive)                    # body
+	k.box(Vector3(0.75, 0.82, 0), Vector3(0.75, 0.12, 1.2), olive.darkened(0.1))     # bonnet
+	k.box(Vector3(0.38, 1.0, 0), Vector3(0.05, 0.4, 1.15), DARK)                     # windscreen frame
+	k.box(Vector3(-0.45, 1.25, 0), Vector3(1.1, 0.06, 1.2), Color(0.38, 0.38, 0.28)) # canvas top
+	for sz in [-0.58, 0.58]:
+		k.box(Vector3(-0.45, 0.98, sz), Vector3(1.1, 0.5, 0.04), Color(0.36, 0.36, 0.26))
+	for sx in [-0.75, 0.75]:
+		for sz in [-0.62, 0.62]:
+			k.cyl(Vector3(sx, 0.32, sz), 0.32, 0.24, Color(0.08, 0.08, 0.09), 12)
+			k.cyl(Vector3(sx, 0.32, sz + signf(sz) * 0.02), 0.15, 0.24, olive.darkened(0.3), 8)
+	k.cyl(Vector3(-1.2, 0.75, 0), 0.3, 0.22, Color(0.08, 0.08, 0.09), 12, Vector3(0, PI / 2, 0))   # spare wheel
+	k.box(Vector3(1.16, 0.6, 0.4), Vector3(0.04, 0.1, 0.18), Color(1.0, 0.95, 0.75))  # headlamps
+	k.box(Vector3(1.16, 0.6, -0.4), Vector3(0.04, 0.1, 0.18), Color(1.0, 0.95, 0.75))
+	k.box(Vector3(0, 0.82, 0.63), Vector3(0.36, 0.2, 0.01), Color(0.85, 0.85, 0.8))    # white star panel
+	return k.mesh()
+
+
+## A flagpole with the flag hanging from it.
+static func _x_flag() -> ArrayMesh:
+	var k := _kit(0.2, 212)
+	var up := Vector3(PI / 2, 0, 0)
+	k.box(Vector3(0, 0.1, 0), Vector3(0.45, 0.2, 0.45), CONCRETE.darkened(0.2))
+	k.cyl(Vector3(0, 2.6, 0), 0.035, 5.0, Color(0.7, 0.7, 0.68), 8, up)
+	k.cyl(Vector3(0, 5.12, 0), 0.06, 0.06, Color(0.75, 0.62, 0.2), 8, up)
+	# The flag: olive drab with a pale band, hanging in folds.
+	for i in 6:
+		var x := 0.12 + i * 0.13
+		k.box(Vector3(x, 4.6 - i * 0.02, 0.02 * (1 if i % 2 == 0 else -1)), Vector3(0.13, 0.6, 0.015), Color(0.34, 0.38, 0.22) if i != 2 and i != 3 else Color(0.78, 0.76, 0.66))
 	return k.mesh()
 
 

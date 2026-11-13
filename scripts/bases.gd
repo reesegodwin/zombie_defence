@@ -35,9 +35,12 @@ const EXTRAS := {
 	"mill": [["logs", 11.0, 18.0, 0.0]],
 	"marsh": [["duckboards", 6.6, 23.6, 0.0], ["duckboards", 11.2, 17.6, 1.57]],
 	"lodge": [["antlers", 5.2, 26.32, 0.0]],
+	"military": [["watchtower", 3.8, 17.2, 0.0], ["watchtower", 18.2, 17.2, 0.0], ["jeep", 13.4, 19.0, 0.0],
+		["flag", 11.2, 18.4, 0.0], ["sandbags", 11.2, 17.0, 0.0]],
 }
 const EXTRA_FOOT := {"water_tower": Vector2(1.8, 1.8), "boxcar": Vector2(3.4, 1.4), "watchtower": Vector2(1.3, 1.3),
-	"sandbags": Vector2(2.8, 0.7), "mast": Vector2(0.9, 0.9), "wreck": Vector2(2.6, 1.3), "tyres": Vector2(1.0, 1.0), "logs": Vector2(2.4, 1.0)}
+	"sandbags": Vector2(2.8, 0.7), "mast": Vector2(0.9, 0.9), "wreck": Vector2(2.6, 1.3), "tyres": Vector2(1.0, 1.0), "logs": Vector2(2.4, 1.0),
+	"jeep": Vector2(2.6, 1.4), "flag": Vector2(0.5, 0.5)}
 
 const BASES := {
 	# The outpost of the first levels: bunker at the front left, huts at the
@@ -130,6 +133,16 @@ const BASES := {
 			"worklamp": [4.4, 22.0, 0.0], "lamp1": [8.4, 22.4, 0.0], "lamp2": [14.0, 25.6, 0.0],
 			"workshop": [8.0, 24.2, 0.0], "research": [17.6, 22.6, 0.0], "woodpile": [6.4, 19.6, 0.0]},
 		"turrets": [Vector2(15.6, 17.4), Vector2(6.4, 17.4)], "radio": Vector2(13.6, 26.6)},
+	# Fort Harlow, the army base: the HQ bunker at the back left, barracks
+	# huts down the right, the supply tent and an ammo dump of crates, the
+	# vehicle park out front.
+	"military": {
+		"props": {"bunker": [6.0, 25.6, 0.0], "hut1": [17.6, 19.4, 1.57], "hut2": [17.6, 22.0, 1.57],
+			"crates": [14.6, 25.8, 0.0], "barrel1": [8.2, 18.0, 0.0], "barrel2": [9.0, 18.2, 0.0],
+			"fire": [7.8, 22.6, 0.0], "tent": [5.0, 20.0, 0.0], "generator": [3.8, 23.4, 1.57],
+			"worklamp": [5.0, 22.2, 0.0], "lamp1": [8.6, 20.4, 0.0], "lamp2": [13.8, 22.0, 0.0],
+			"workshop": [16.8, 26.9, 0.0], "research": [8.6, 27.1, 0.0], "woodpile": [14.4, 23.4, 0.0]},
+		"turrets": [Vector2(6.4, 17.4), Vector2(15.6, 17.4)], "radio": Vector2(18.0, 24.6)},
 	# The fortress: the bunker dead centre in front of the gate path, huts
 	# flanking, benches tucked in the back corners.
 	"fortress": {
@@ -157,6 +170,8 @@ const PALETTES := {
 		"tufts": [Color(0.3, 0.28, 0.25), 0.8], "haze": Color(0.85, 0.82, 0.8), "weather": "ash"},
 	"autumn": {"grass": [Color(0.48, 0.4, 0.18), 0.5], "soil": [Color(0.45, 0.32, 0.2), 0.2], "trees": [Color(0.55, 0.2, 0.07), 0.6],
 		"tufts": [Color(0.75, 0.45, 0.15), 0.6], "haze": Color(1.05, 0.9, 0.8)},
+	"military": {"grass": [Color(0.34, 0.36, 0.2), 0.45], "soil": [Color(0.42, 0.37, 0.28), 0.3], "trees": [Color(0.12, 0.17, 0.1), 0.2],
+		"tufts": [Color(0.45, 0.45, 0.25), 0.4], "haze": Color(0.93, 0.95, 0.9)},
 	"rust": {"grass": [Color(0.38, 0.33, 0.22), 0.55], "soil": [Color(0.42, 0.26, 0.16), 0.5], "trees": [Color(0.15, 0.16, 0.1), 0.3],
 		"tufts": [Color(0.55, 0.45, 0.25), 0.5], "haze": Color(1.0, 0.88, 0.8)},
 }

@@ -77,9 +77,9 @@ const LEVELS := [
 	{"name": "The Long Dark", "short": "the hardest", "base": "fortress", "palette": "ash",
 		"desc": "The old fortress, its stone walls still standing. The hardest of them all before the end: everything, thicker and tougher.",
 		"open_at": [0.0, 15.0, 15.0], "grit": 2.0, "spawn": 1.55, "hp": 1.4, "mix": {"runner": 1.4, "brute": 1.6}, "walls": 2},
-	{"name": "Last Stand", "short": "endless",
-		"desc": "No truck is coming. All three lanes, and the waves never end: hold out as long as you can. Grit for every night held.",
-		"open_at": [0.0, 15.0, 15.0], "grit": 2.1, "spawn": 1.6, "hp": 1.4, "endless": true},
+	{"name": "Last Stand: Fort Harlow", "short": "endless, army base", "base": "military", "palette": "military", "garrison": true, "walls": 1,
+		"desc": "An army base, still held by the last of its garrison: four soldiers with assault rifles. No truck comes: hold out as long as you can. Hold out 5 nights there and the run counts as won.",
+		"open_at": [0.0, 15.0, 15.0], "grit": 2.1, "spawn": 1.75, "hp": 1.5, "endless": true},
 ]
 # The dead come in at the far end of each lane: v = LANE_START (the wall is at
 # v = WALL_Y, so they walk WALL_Y - LANE_START tiles to reach it).
@@ -356,7 +356,7 @@ const SHOP_SECTIONS := [
 # so they can be tuned in the Inspector. They are read into plain dictionaries
 # here, keyed by file name.
 const ZOMBIE_KEYS := ["walker", "runner", "brute", "bloater"]
-const WEAPON_KEYS := ["pistol", "smg", "shotgun", "rifle", "flamer", "launcher"]
+const WEAPON_KEYS := ["pistol", "smg", "shotgun", "rifle", "flamer", "launcher", "ar"]
 static var ZTYPES: Dictionary = _load_dir("res://data/zombies/", ZOMBIE_KEYS)
 
 static var WEAPONS: Dictionary = _load_dir("res://data/weapons/", WEAPON_KEYS)
@@ -378,6 +378,11 @@ const NAMES := ["Dana", "Marek", "Priya", "Hollis", "June", "Tomas", "Ada", "Kof
 # (0 to 1); cap: a colour, or null for none. Hollis is the ranger: only the
 # one waiting at the ranger cabin.
 const RANGER := "Hollis"
+# The army garrison still holding Fort Harlow (the last level, "garrison"):
+# they're there when you arrive, with assault rifles, and they stay on the
+# walls (no scavenging). Never met anywhere else.
+const GARRISON := ["Sgt. Reyes", "Cpl. Okafor", "Pvt. Lund", "Pvt. Hale"]
+const GARRISON_FOOD := 4.0   # food each soldier brings from the fort's stores
 const CHARACTERS := {
 	"Dana": {"build": "f", "model": "tank", "skin": Color("e0b896"), "jacket": Color("5a5a3a"), "hair": Color("4a3221"), "hair_style": "ponytail",
 		"skills": {"repair": 2, "thrift": 1}, "line": "Point me at whatever's broken.", "bio": "Ran a body shop. Can patch anything with a hammer and spite."},
@@ -401,6 +406,18 @@ const CHARACTERS := {
 		"skills": {"repair": 1, "thrift": 1, "cook": 1}, "line": "Give me a hammer and some planks.", "bio": "A carpenter, and a fair hand at a camp stove."},
 	"Imke": {"build": "f", "model": "jacket", "skin": Color("f1cfb0"), "jacket": Color("4f5440"), "hair": Color("b08a4a"), "hair_style": "ponytail",
 		"skills": {"careful": 2, "fleet": 1}, "line": "Anyone hurt? Let me look.", "bio": "A nurse. Always comes back from a trip, and brings the others back too."},
+	"Sgt. Reyes": {"build": "m", "model": "trooper", "skin": Color("a8775a"), "jacket": Color("4a5236"), "hair": Color("1a1715"), "hair_style": "buzz", "beard": 0.25,
+		"helmet_col": Color(0.42, 0.45, 0.3), "weapon": "ar", "soldier": true,
+		"skills": {"aim": 2, "repair": 1}, "line": "Fort Harlow's still standing. Glad you made it.", "bio": "The sergeant who kept the last of the garrison together."},
+	"Cpl. Okafor": {"build": "m", "model": "trooper", "skin": Color("8d5e3e"), "jacket": Color("50573a"), "hair": Color("1a1715"), "hair_style": "buzz",
+		"helmet_col": Color(0.45, 0.47, 0.31), "weapon": "ar", "soldier": true,
+		"skills": {"quick": 2}, "line": "Mags full. Point me at the wall.", "bio": "A corporal with the fastest reload in the company."},
+	"Pvt. Lund": {"build": "f", "model": "trooper", "skin": Color("f1cfb0"), "jacket": Color("4d5538"), "hair": Color("b08a4a"), "hair_style": "ponytail",
+		"helmet_col": Color(0.43, 0.46, 0.3), "weapon": "ar", "soldier": true,
+		"skills": {"aim": 1, "careful": 1}, "line": "About time someone came.", "bio": "A private who hasn't missed a watch since the outbreak."},
+	"Pvt. Hale": {"build": "m", "model": "trooper", "skin": Color("e0b896"), "jacket": Color("495034"), "hair": Color("5c4a3a"), "hair_style": "short", "beard": 0.15,
+		"helmet_col": Color(0.44, 0.46, 0.29), "weapon": "ar", "soldier": true,
+		"skills": {"thrift": 1, "repair": 1}, "line": "I'll keep the walls patched.", "bio": "A combat engineer: if it's broken, he'll fix it."},
 	"Sol": {"build": "m", "model": "soldier", "skin": Color("a8775a"), "jacket": Color("4a4137"), "hair": Color("2a1d14"), "hair_style": "short", "beard": 0.9,
 		"skills": {"aim": 3}, "line": "One shot each. That's all they get.", "bio": "A deer hunter. Rarely needs a second shot."},
 }
@@ -418,6 +435,7 @@ const ITEMS := {
 	"rifle": {"kind": "weapon", "short": "RFL"},
 	"flamer": {"kind": "weapon", "short": "FL"},
 	"launcher": {"kind": "weapon", "short": "GL"},
+	"ar": {"kind": "weapon", "short": "AR"},
 	"hollow": {"kind": "mod", "short": "HP", "name": "Hollow points", "desc": "Whoever carries these does 25% more damage."},
 	"trigger": {"kind": "mod", "short": "HT", "name": "Hair trigger", "desc": "Whoever carries this fires 15% faster."},
 	"molotov": {"kind": "throw", "short": "MOL", "name": "Molotov", "desc": "One use. Use it, then click where to throw it: the ground there burns for a few seconds."},

@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="WeaponData" format=3]
+
+[ext_resource type="Script" path="res://data/weapon_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Assault rifle"
+description = "Army issue: fast, accurate and hard-hitting. Only the garrison carries them."
+damage = 18.0
+pellets = 1
+pierce = 1
+seconds_between_shots = 0.11
+spread = 0.04
+reach = 14.0
+accuracy_falloff = 0.8
+knockback = 0.03
+magazine = 30
+reload_seconds = 1.6
+muzzle_reach = 0.82
+muzzle_height = 1.328
+muzzle_side = 0.109
+bullet_speed = 85.0
+barrel_length = 0.75
+sound = "ar"
+slot_label = "AR"

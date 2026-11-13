@@ -126,6 +126,9 @@ static func look_of(s: Dictionary, model := "") -> Dictionary:
 		look["build"] = who["build"]
 		if who.has("cap"):
 			look["cap"] = who["cap"]
+		if who.has("helmet_col"):
+			look["helmet_col"] = who["helmet_col"]
+			look["cap"] = null
 	return look
 
 
@@ -422,6 +425,7 @@ const GRIPS := {
 	"rifle": [Vector2(0.2, 0.045), Vector2(0.42, 0.03)],
 	"launcher": [Vector2(0.28, 0.06), Vector2(0.5, 0.045)],
 	"flamer": [Vector2(0.26, 0.06), Vector2(0.73, 0.055)],      # rear grip, fore-grip
+	"ar": [Vector2(0.26, 0.06), Vector2(0.58, 0.035)],          # pistol grip, handguard
 }
 var _rear := 0.0       # the gun's rear end (z, in the gun pivot)
 var _length := 0.3

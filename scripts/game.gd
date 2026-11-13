@@ -347,6 +347,8 @@ func add_survivor(sname: String, weapon: String, is_player: bool, skills = null)
 		crew[-1]["jacket"] = who["jacket"]
 		crew[-1]["skin"] = who["skin"]
 		crew[-1]["model"] = who["model"]
+		if who.get("soldier", false):
+			crew[-1]["soldier"] = true
 	sid += 1
 	layout_crew()
 	return crew[-1]
@@ -2268,7 +2270,7 @@ func add_to_storage(key: String) -> bool:
 
 
 # Hands out storage sensibly. Used by the automated balance test.
-const RANK := {"pistol": 0, "smg": 2, "shotgun": 1, "rifle": 3, "flamer": 3, "launcher": 4}
+const RANK := {"pistol": 0, "smg": 2, "shotgun": 1, "rifle": 3, "flamer": 3, "launcher": 4, "ar": 5}
 
 
 func auto_equip() -> void:
@@ -2322,8 +2324,8 @@ func available_scavengers() -> Array:
 ## On the wall, or walking somewhere inside the base: a newcomer can be sent
 ## out as soon as they're through the gate, without walking to the wall first.
 func _in_for_scavenging(s: Dictionary) -> bool:
-	if s["hp"] <= 0.0:
-		return false
+	if s["hp"] <= 0.0 or s.get("soldier", false):
+		return false   # (the garrison holds the fort: they don't leave it)
 	if s["state"] == "wall":
 		return true
 	var p := Vector2(s["x"], s["y"])
@@ -3289,6 +3291,28 @@ func base_stage() -> int:
 	return maxi(start_stage, int(level_def().get("walls", 0)))
 
 
+## The army garrison of the last level (D.GARRISON), there when you arrive:
+## two on the front wall, one on each side wall, assault rifles in hand.
+func _add_garrison() -> void:
+	if not level_def().get("garrison", false):
+		return
+	var spots := [[0, -3.0], [0, 3.0], [1, 0.0], [2, 0.0]]
+	for i in D.GARRISON.size():
+		var nm: String = D.GARRISON[i]
+		if crew.any(func(c): return c["name"] == nm):
+			continue
+		var s := add_survivor(nm, D.CHARACTERS[nm].get("weapon", "ar"), false)
+		var L: Dictionary = D.LANES[spots[i][0]]
+		s["side"] = spots[i][0]
+		s["u"] = (L["u0"] + L["u1"]) / 2.0 + float(spots[i][1])
+		s["state"] = "wall"
+		s.erase("post")
+		var p := station_point(s)
+		s["x"] = p.x
+		s["y"] = p.y
+		food += D.GARRISON_FOOD   # (the fort's stores come with them)
+
+
 ## This level's settings (D.LEVELS).
 func level_def() -> Dictionary:
 	return D.LEVELS[clampi(level, 1, D.LEVELS.size()) - 1]
@@ -3547,6 +3571,7 @@ func apply_meta(m: Dictionary) -> void:
 		add_to_storage("spikes")
 	for i in lv.get("kit_survivor", 0):
 		add_survivor(free_name(), "pistol", false)
+	_add_garrison()
 	_changed()
 
 
@@ -3852,6 +3877,7 @@ func advance_level() -> void:
 			c["x"] = -200.0   # you fell, but the crew carried on: you stay behind
 			c["y"] = -200.0
 	layout_crew()
+	_add_garrison()   # (the last level: its soldiers are already there)
 	spawn_opening()
 	toast.emit("Level %d: %s. %s" % [level, D.LEVELS[level - 1]["name"], D.LEVELS[level - 1]["desc"]], "info")
 	level_started.emit(level)

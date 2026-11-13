@@ -302,6 +302,8 @@ const SURVIVOR_MODELS := {
 		"shoes": [Color("24211e"), Color("2b2622")]},
 	"tank": {"top": "tank", "legs": "cargo", "gloves": "fingerless", "pouches": true, "holster": true, "hair": ["ponytail", "long", "short"]},
 	"jacket": {"top": "jacket", "scarf": true, "legs": "worn", "pouches": true, "hair": ["short", "long", "buzz"], "beard": 0.6},
+	"trooper": {"top": "shirt", "vest": true, "legs": "cargo", "kneepads": true, "gloves": "full", "pouches": true, "helmet": true,
+		"hair": ["buzz", "short"], "beard": 0.1, "shoes": [Color("24211e"), Color("2b2622")]},
 	"ranger": {"top": "shirt", "rolled": true, "pack": "roll", "hat": true, "legs": "cargo", "pouches": true, "gloves": "fingerless", "hair": ["short", "ponytail"], "beard": 0.5},
 	"hooded": {"top": "jacket", "hood": true, "legs": "jeans", "hair": ["short", "long"], "beard": 0.4},
 }
@@ -505,6 +507,13 @@ static func survivor(root: Node3D, look: Dictionary) -> Dictionary:
 		_part(j, head, "s_hat_crown", felt, CLOTH, HEAD_AT + Vector3(0, 0.085, -0.004), Vector3.ONE, Vector3.ZERO, "worn")
 		_part(j, head, "s_hat_band", Color("2b2018"), CLOTH, HEAD_AT + Vector3(0, 0.062, -0.004), Vector3.ONE)
 		_part(j, head, "s_hat_brim", felt.darkened(0.08), CLOTH, HEAD_AT + Vector3(0, 0.047, 0.0), Vector3.ONE, Vector3(0.06, 0, 0), "worn")
+	elif look.get("helmet", false):
+		# An army helmet: a rounded steel shell, its rim flaring a little, and
+		# a chin strap.
+		var hc: Color = look.get("helmet_col", Color(0.33, 0.36, 0.24))
+		_part(j, head, "s_helmet", hc, PLAIN, HEAD_AT + Vector3(0, 0.03, -0.006), Vector3.ONE, Vector3.ZERO, "worn")
+		for side in [-1.0, 1.0]:
+			_part(j, head, "s_strap", Color("2b2a22"), PLAIN, HEAD_AT + Vector3(side * 0.082, -0.03, 0.01), Vector3.ONE, Vector3(0, 0, side * 0.12))
 	elif cap != null:
 		_part(j, head, "s_cap", cap, CLOTH, HEAD_AT, Vector3.ONE, Vector3.ZERO, "worn")
 		_part(j, head, "s_cap_brim", cap.darkened(0.12), CLOTH, HEAD_AT + Vector3(0, 0.052, 0.118), Vector3.ONE, Vector3(0.2, 0, 0))
@@ -1268,6 +1277,17 @@ static func _geometry(kind: String) -> Array:
 				if d > 0.0:
 					q.z += 0.006 * smoothstep(0.02, 0.07, p.z) * smoothstep(0.1, 0.05, p.y)   # a stiff front panel
 				return q)
+		"s_helmet":
+			g = _ellipsoid(Vector3(0.104, 0.09, 0.118), 32, 16, func(p: Vector3) -> Vector3:
+				var q := p
+				q.y = maxf(q.y, -0.012)                                       # open below the rim
+				var rim := 1.0 - smoothstep(-0.012, 0.012, p.y)
+				q.x *= 1.0 + 0.1 * rim                                        # the rim flares out
+				q.z *= 1.0 + 0.1 * rim
+				return q)
+		"s_strap":
+			g = _ellipsoid(Vector3(0.006, 0.05, 0.012), 6, 6, func(p: Vector3) -> Vector3:
+				return p)
 		"s_hat_crown":
 			g = _ellipsoid(Vector3(0.093, 0.072, 0.11), 32, 16, func(p: Vector3) -> Vector3:
 				var q := p

@@ -316,6 +316,22 @@ func _unit_checks() -> void:
 	var pal_hp: float = pal["hp"]
 	gbl2.damage(bl2, 9999.0)
 	check(gbl2.walls[0]["hp"] == wall_hp_b and pal["hp"] < pal_hp, "one popped out in the lane leaves the wall alone and hurts the dead round it")
+	# The last level: Fort Harlow, an army base still held by its garrison.
+	var gfh = Game.new()
+	gfh.apply_meta({"levels": {}, "level": D.LEVELS.size()})
+	var troops: Array = gfh.crew.filter(func(c): return c.get("soldier", false))
+	check(troops.size() == D.GARRISON.size() and troops.all(func(c): return c["weapon"] == "ar" and c["state"] == "wall" and c["hp"] > 0.0), "Fort Harlow's garrison is on the walls with assault rifles (%d)" % troops.size())
+	check(troops.any(func(c): return c["side"] == 1) and troops.any(func(c): return c["side"] == 2), "on the side walls too")
+	check(not gfh.can_scavenge(gfh.crew.find(troops[0])).has("ok") and not gfh.available_scavengers().has(gfh.crew.find(troops[0])), "soldiers hold the fort: they don't go scavenging")
+	var gfh2 = Game.new()
+	gfh2.apply_meta({"levels": {}, "level": D.LEVELS.size() - 1})
+	check(not gfh2.crew.any(func(c): return c.get("soldier", false)), "no soldiers on the levels before")
+	gfh2.advance_level()
+	check(gfh2.crew.filter(func(c): return c.get("soldier", false)).size() == D.GARRISON.size(), "and they're there when the truck brings you in")
+	var seen_names := {}
+	for i in 40:
+		seen_names[gfh2.free_name()] = true
+	check(not D.GARRISON.any(func(nm): return seen_names.has(nm)), "the garrison never turns up as strangers")
 	var prl = load("res://scripts/progress.gd").open("user://test_progress_lv.cfg")
 	prl.reset()
 	check(prl.reached == 1, "only level 1 can be picked at first")

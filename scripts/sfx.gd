@@ -44,6 +44,7 @@ func make_basic() -> void:
 	streams["smg"] = _shot(0.07, 0.35, 1400.0)
 	streams["shotgun"] = _shot(0.28, 0.8, 500.0)
 	streams["rifle"] = _shot(0.3, 0.75, 700.0)
+	streams["ar"] = _shot(0.1, 0.5, 1050.0)
 	streams["launch"] = _thump(0.18, 140.0, 0.5)
 	streams["boom"] = _boom(0.9)
 	streams["hit"] = _thump(0.09, 90.0, 0.45)
@@ -71,10 +72,10 @@ func _exit_tree() -> void:
 
 ## How long (ms) before the same sound can play again, so a horde doesn't
 ## turn into one wall of noise.
-const GAPS := {"flame": 150, "smg": 45, "hit": 45, "die": 45, "zdie": 160, "snarl": 220,
+const GAPS := {"flame": 150, "smg": 45, "ar": 55, "hit": 45, "die": 45, "zdie": 160, "snarl": 220,
 	"groan_walker": 350, "groan_runner": 450, "groan_brute": 900, "groan": 1500}
 ## Volume (dB) per sound; zombie voices vary around theirs, as if near or far.
-const VOLUMES := {"flame": -7.0, "smg": -6.0, "hit": -6.0, "zdie": -7.0, "snarl": -9.0,
+const VOLUMES := {"flame": -7.0, "smg": -6.0, "ar": -5.0, "hit": -6.0, "zdie": -7.0, "snarl": -9.0,
 	"groan_walker": -9.0, "groan_runner": -10.0, "groan_brute": -6.0, "groan": -4.0}
 
 
