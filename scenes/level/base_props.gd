@@ -76,7 +76,7 @@ static func _yard(level: Node3D) -> Array:
 	lamp.call(Vector3(5.0, 2.1, 25.2), 8.0, Color(1.0, 0.85, 0.6))
 	for x in [8.0, 14.5]:
 		add.call(_lamp_post(false), Vector3(x, 0.0, 24.5))
-		lamp.call(Vector3(x, 2.25, 24.5), 8.5, Color(1.0, 0.75, 0.45))
+		lamp.call(Vector3(x + 0.48, 1.95, 24.5), 8.5, Color(1.0, 0.75, 0.45))
 	add.call(_workbench(), Vector3(17.0, 0.0, 27.05))
 	lamp.call(Vector3(17.0, 1.75, 26.9), 6.0, Color(1.0, 0.8, 0.5))
 	add.call(_woodpile(), Vector3(14.2, 0.0, 27.2))
@@ -115,10 +115,17 @@ static func _lamp_post(work: bool) -> ArrayMesh:
 		k.box(Vector3(0, 2.2, 0.22), Vector3(0.4, 0.3, 0.12), Color(0.85, 0.65, 0.12))
 		k.box(Vector3(0, 2.2, 0.29), Vector3(0.34, 0.24, 0.02), Color(1.0, 0.95, 0.75) * 2.0)
 	else:
-		k.cyl(Vector3(0, 1.15, 0), 0.06, 2.3, LOG, 8, up)
-		k.box(Vector3(0.15, 2.32, 0), Vector3(0.36, 0.05, 0.05), LOG)
-		k.cyl(Vector3(0.0, 2.32, 0), 0.16, 0.08, STEEL.darkened(0.3), 10, up, 0.05)
-		_bulb(k, Vector3(0.0, 2.24, 0))
+		# A pole with an arm out from the top (braced), and a deep enamel
+		# shade hanging off its end over the bulb.
+		k.cyl(Vector3(0, 1.2, 0), 0.06, 2.4, LOG, 8, up)
+		k.cyl(Vector3(0, 2.42, 0), 0.07, 0.04, LOG.darkened(0.2), 8, up)            # cap
+		k.box(Vector3(0.25, 2.33, 0), Vector3(0.56, 0.06, 0.06), LOG)                # the arm
+		k.box(Vector3(0.13, 2.18, 0), Vector3(0.04, 0.34, 0.04), LOG.darkened(0.1), Vector3(0, 0, 0.8))   # brace
+		k.box(Vector3(0.48, 2.25, 0), Vector3(0.02, 0.12, 0.02), STEEL)              # the hanger
+		var shade := Color(0.24, 0.32, 0.28)
+		k.cyl(Vector3(0.48, 2.12, 0), 0.05, 0.16, shade, 12, up, 0.2)                 # the cone, open below
+		k.cyl(Vector3(0.48, 2.035, 0), 0.205, 0.015, shade.darkened(0.25), 12, up)    # its rolled rim
+		_bulb(k, Vector3(0.48, 2.02, 0))
 	return k.mesh()
 
 
