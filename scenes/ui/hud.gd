@@ -58,6 +58,7 @@ var research_label: Label  # in the stats panel: what's being researched
 var ammo_label: Label      # in the stats panel: your gun and rounds left
 var btn_research: Button
 var options_overlay: Control
+var _btn_reset: Button
 var camp_overlay: Control
 var _camp_grit: Label
 var _camp_records: Label
@@ -315,27 +316,6 @@ func _build_saves() -> void:
 		else:
 			host_b.disabled = true
 			join_b.disabled = true)
-	# Start over from scratch: click twice.
-	var wipe := Button.new()
-	wipe.text = "Reset game"
-	wipe.custom_minimum_size = Vector2(320, 36)
-	wipe.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	wipe.focus_mode = Control.FOCUS_NONE
-	wipe.modulate = Color(1, 1, 1, 0.7)
-	wipe.pressed.connect(func():
-		if wipe.has_meta("armed"):
-			reset_game()
-			wipe.remove_meta("armed")
-			wipe.text = "Game reset"
-		else:
-			wipe.set_meta("armed", true)
-			wipe.text = "Click again: wipe ALL progress and saves")
-	wipe.mouse_exited.connect(func():
-		if wipe.has_meta("armed"):
-			wipe.remove_meta("armed")
-			wipe.text = "Reset game")
-	tv.add_child(wipe)
-	tv.move_child(wipe, _btn_load_title.get_index() + 1)
 	# The level to play.
 	var lrow := HBoxContainer.new()
 	lrow.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -1003,6 +983,7 @@ func toggle_options() -> void:
 	options_overlay.visible = not options_overlay.visible
 	if options_overlay.visible:
 		_fill_options()
+		_btn_reset.visible = not main.started   # (wiping everything is for the title, not mid-run)
 		if main.started and not main.game.over:
 			main.paused = true
 
@@ -1088,6 +1069,27 @@ func _build_options() -> void:
 	note.text = "The game starts maximised to fit your screen. Everything is\ndrawn for 1600 x 900 and scaled up to the window, so a bigger\nwindow means bigger text; Interface size adjusts it from there.\nGraphics: Low if the game runs slowly (it's picked for your PC on the\nfirst run). Fog follows it, or set it on its own."
 	note.theme_type_variation = &"DimLabel"
 	box.add_child(note)
+	# Start over from scratch (from the title only): click twice.
+	var wipe := Button.new()
+	wipe.text = "Reset game"
+	wipe.custom_minimum_size = Vector2(320, 36)
+	wipe.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	wipe.focus_mode = Control.FOCUS_NONE
+	wipe.modulate = Color(1, 1, 1, 0.7)
+	wipe.pressed.connect(func():
+		if wipe.has_meta("armed"):
+			reset_game()
+			wipe.remove_meta("armed")
+			wipe.text = "Game reset"
+		else:
+			wipe.set_meta("armed", true)
+			wipe.text = "Click again: wipe ALL progress and saves")
+	wipe.mouse_exited.connect(func():
+		if wipe.has_meta("armed"):
+			wipe.remove_meta("armed")
+			wipe.text = "Reset game")
+	box.add_child(wipe)
+	_btn_reset = wipe
 	var close := Button.new()
 	close.text = "Close (O)"
 	close.focus_mode = Control.FOCUS_NONE
@@ -1178,14 +1180,7 @@ func close_camp() -> void:
 
 
 func _build_camp() -> void:
-	# Buttons on the title and game-over screens.
-	var tb := Button.new()
-	tb.text = "CAMP: spend Grit  (C)"
-	tb.custom_minimum_size = Vector2(320, 44)
-	tb.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	tb.focus_mode = Control.FOCUS_NONE
-	tb.pressed.connect(toggle_camp)
-	%StartButton.get_parent().add_child(tb)
+	# A button on the game-over screen (the title has none: C opens it).
 	_btn_camp_over = Button.new()
 	_btn_camp_over.text = "To the camp  (C)"
 	_btn_camp_over.focus_mode = Control.FOCUS_NONE

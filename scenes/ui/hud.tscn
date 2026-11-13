@@ -415,30 +415,6 @@ theme_override_font_sizes/font_size = 84
 text = "NIGHTFALL OUTPOST"
 horizontal_alignment = 1
 
-[node name="Tagline" type="Label" parent="Root/TitleOverlay/Center/VBox"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 20
-theme_override_colors/font_color = Color(1, 1, 1, 0.8)
-text = "Five nights. The dead never stop coming."
-horizontal_alignment = 1
-
-[node name="Panel" type="PanelContainer" parent="Root/TitleOverlay/Center/VBox"]
-layout_mode = 2
-size_flags_horizontal = 4
-
-[node name="HowTo" type="Label" parent="Root/TitleOverlay/Center/VBox/Panel"]
-layout_mode = 2
-text = "Hold out 5 nights and an army truck takes you on to the next level.
-By day the dead drift in; at night the horde comes, bigger every night.
-
-Hold the left mouse button to shoot. Your crew shoots on its own.
-Click a survivor, then a walkway, to move them; click them again to repair.
-T: research   B: workshop   I: storage   M: send someone scavenging
-Keep food in store, or the crew goes hungry and shoots slower.
-
-Win or lose, every run earns Grit to spend at the camp (C) on upgrades
-that last: your skills, a better start, blueprints and a stronger base."
-
 [node name="StartButton" type="Button" parent="Root/TitleOverlay/Center/VBox"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(320, 56)
