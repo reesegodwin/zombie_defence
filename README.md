@@ -141,15 +141,22 @@ floodlight, muzzle flashes, burning fuel, explosions and blood on the ground.
 
 ## Co-op (up to 4 players)
 
-On the title screen, one player clicks **Host co-op**; friends type the host's
-address and click **Join** (port 24565 must be reachable: on the same network,
-or forwarded). The host's game is the real one: friends see it and send their
+**With Steam** (the Windows build, Steam running): one player clicks
+**Invite friends (Steam)** on the title screen. That opens a friends-only
+Steam lobby and Steam's invite box (or invite later with Shift+Tab). Friends
+accept from Steam chat or their friends list ("Join game"); if the game isn't
+running, Steam starts it and it joins. No addresses or ports.
+
+**Without Steam** (or in a pinch): one player clicks **Host co-op**; friends
+type the host's address and click **Join** (port 24565 must be reachable: on
+the same network, or forwarded). The browser version can't do co-op. The host's game is the real one: friends see it and send their
 aiming, shooting, walking and clicks to it. Everyone has their own character;
 the AI crew is shared, and so is the Grit: anyone can spend it at the camp, and
 the upgrades apply to the whole team. The run is lost only when every player
-is down. The connection code (`scripts/net.gd`) is written so Steam's
-networking can be plugged in for invites once the game has its Steam app ID
-(the GodotSteam add-on provides `SteamMultiplayerPeer`).
+is down. Steam runs as Valve's test app (Spacewar, 480) until the game has its own
+App ID: change `STEAM_APP_ID` in `scripts/net.gd` and the `480` written to
+`steam_appid.txt` in `.github/workflows/windows-build.yml`. The build adds
+the GodotSteam add-on itself (it isn't kept in the repo).
 
 ## Controls
 

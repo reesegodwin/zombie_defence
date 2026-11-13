@@ -7,14 +7,20 @@
 # does it in the real game.
 #
 # The connection itself is swappable: ENet (an IP address and a port) works
-# everywhere now; on Steam the same thing runs over Steam's networking with
-# invites (SteamMultiplayerPeer, from the GodotSteam add-on) once the game has
-# its Steam app ID: see host() and join().
+# everywhere; with Steam running (the Windows build, which carries the
+# GodotSteam add-on) the same thing runs over Steam's networking, with a
+# friends-only lobby and Steam's invites: see host_steam() and join_steam().
+# Every Steam call goes through _steam_call(), so this script runs (without
+# Steam) where the add-on isn't there: the browser, the editor, the tests.
 #
 # Grit is the team's: the host's camp is the one everyone spends from, and
 # its upgrades apply to every player.
 extends Node
 
+## Valve's free test app (Spacewar) until the game has its own Steam app ID:
+## change this one number then (and steam_appid.txt in the Windows build).
+const STEAM_APP_ID := 480
+const LOBBY_FRIENDS_ONLY := 1     # Steam's lobby type: friends can see and join it
 const PORT := 24565
 const MAX_FRIENDS := 3
 const SNAPSHOT_HZ := 15.0
@@ -36,6 +42,135 @@ var _prev := {}                      # (friends) the last two snapshots' positio
 var _cur := {}
 var _cur_t := 0.0
 var _gap := 1.0 / SNAPSHOT_HZ
+var _steam_on := false               # Steam started up (the add-on is there and Steam is running)
+var lobby_id := 0                    # the Steam lobby we're in, or 0
+var _hosting_steam := false
+
+
+# --- Steam (optional) --------------------------------------------------------
+func _ready() -> void:
+	if not Engine.has_singleton("Steam"):
+		return
+	var s := Engine.get_singleton("Steam")
+	var r = _steam_init(s)
+	_steam_on = r
+	if not _steam_on:
+		return
+	for sig in [["lobby_created", _on_lobby_created], ["lobby_joined", _on_lobby_joined], ["join_requested", _on_join_requested]]:
+		if s.has_signal(sig[0]):
+			s.connect(sig[0], sig[1])
+	# Launched by accepting an invite while the game wasn't running.
+	var args := OS.get_cmdline_args()
+	var i := args.find("+connect_lobby")
+	if i >= 0 and i + 1 < args.size():
+		join_steam.call_deferred(int(args[i + 1]))
+
+
+## Starts Steam up, whichever version of GodotSteam this is (the way it's
+## called has changed over the years). True if Steam is running for us.
+func _steam_init(s: Object) -> bool:
+	OS.set_environment("SteamAppId", str(STEAM_APP_ID))
+	OS.set_environment("SteamGameId", str(STEAM_APP_ID))
+	var r = null
+	if s.has_method("steamInitEx"):
+		var n := 0
+		for m in s.get_method_list():
+			if m["name"] == "steamInitEx":
+				n = m["args"].size()
+		if n >= 3:
+			r = s.call("steamInitEx", false, STEAM_APP_ID, false)
+		elif n == 2:
+			r = s.call("steamInitEx", STEAM_APP_ID, false)
+		else:
+			r = s.call("steamInitEx")
+	elif s.has_method("steamInit"):
+		r = s.call("steamInit")
+	if r is Dictionary:
+		return int(r.get("status", 1)) == 0
+	return bool(r)
+
+
+func steam_ok() -> bool:
+	return _steam_on and ClassDB.class_exists("SteamMultiplayerPeer")
+
+
+func _steam_call(method: String, args := []) -> Variant:
+	if not _steam_on:
+		return null
+	var s := Engine.get_singleton("Steam")
+	if not s.has_method(method):
+		return null
+	return s.callv(method, args)
+
+
+func _process(_dt: float) -> void:
+	if _steam_on:
+		_steam_call("run_callbacks")
+
+
+## Your name on Steam (or the fallback).
+func steam_name(fallback: String) -> String:
+	var n = _steam_call("getPersonaName")
+	return n if n is String and n != "" else fallback
+
+
+## Host over Steam: a friends-only lobby, and Steam's invite box to ask friends in.
+func host_steam() -> void:
+	if not steam_ok():
+		status.emit("Steam isn't running.")
+		return
+	_hosting_steam = true
+	status.emit("Opening a Steam lobby...")
+	_steam_call("createLobby", [LOBBY_FRIENDS_ONLY, MAX_FRIENDS + 1])
+
+
+func _on_lobby_created(result: int, id: int) -> void:
+	if result != 1 or not _hosting_steam:
+		status.emit("Couldn't open a Steam lobby.")
+		return
+	lobby_id = id
+	_steam_call("setLobbyJoinable", [id, true])
+	_steam_call("setLobbyData", [id, "game", "nightfall_outpost"])
+	var p: MultiplayerPeer = ClassDB.instantiate("SteamMultiplayerPeer")
+	var err = p.call("create_host", 0)
+	if err != OK:
+		status.emit("Couldn't host over Steam.")
+		return
+	_use(p)
+	names[1] = steam_name("Host")
+	main.hosted_steam()
+	status.emit("Steam lobby open: invite friends (the box, or Shift+Tab).")
+	_steam_call("activateGameOverlayInviteDialog", [id])
+
+
+## Join a friend's Steam lobby (from an invite).
+func join_steam(id: int) -> void:
+	if not steam_ok() or active():
+		return
+	status.emit("Joining a friend's game on Steam...")
+	_steam_call("joinLobby", [id])
+
+
+func _on_join_requested(id: int, _friend: int) -> void:
+	join_steam(id)
+
+
+func _on_lobby_joined(id: int, _permissions: int, _locked: bool, response: int) -> void:
+	if _hosting_steam:
+		return   # our own lobby
+	if response != 1:
+		status.emit("Couldn't join that Steam lobby.")
+		return
+	lobby_id = id
+	var owner = _steam_call("getLobbyOwner", [id])
+	var p: MultiplayerPeer = ClassDB.instantiate("SteamMultiplayerPeer")
+	var err = p.call("create_client", int(owner), 0)
+	if err != OK:
+		status.emit("Couldn't reach the host over Steam.")
+		return
+	main.joining_steam()
+	_use(p)
+	names[0] = steam_name("Friend")
 
 
 func active() -> bool:
@@ -78,6 +213,10 @@ func join(address: String, pname := "Friend") -> String:
 
 
 func leave() -> void:
+	if lobby_id != 0:
+		_steam_call("leaveLobby", [lobby_id])
+		lobby_id = 0
+	_hosting_steam = false
 	if peer != null:
 		peer.close()
 	peer = null

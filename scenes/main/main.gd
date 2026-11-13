@@ -230,6 +230,18 @@ func host_coop(pname: String) -> String:
 	return err
 
 
+## Co-op over Steam: our lobby's open (net.gd hosted it): bind the game.
+func hosted_steam() -> void:
+	net.bind_host(game)
+	hud.coop_busy()
+
+
+## Co-op over Steam: about to join a friend's lobby.
+func joining_steam() -> void:
+	progress = Progress.open("user://progress_coop_guest.cfg")
+	hud.coop_busy()
+
+
 ## Co-op: join a friend's game. Our own camp's Grit isn't touched: the
 ## team's is the host's.
 func join_coop(address: String, pname: String) -> String:

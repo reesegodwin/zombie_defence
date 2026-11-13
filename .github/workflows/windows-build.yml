@@ -67,6 +67,45 @@ jobs:
           test -s assets/baked/sounds.res && test -s assets/baked/terrain.res
           ~/godot/godot --headless --path . --import || true
 
+      - name: Add GodotSteam (Steam invites for co-op)
+        # The add-on's own builds: the newest GDExtension plugin, from its
+        # GitHub releases or (where it's moved) Codeberg. If it can't be had,
+        # the game is built without Steam (co-op still works by address).
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          pick() {
+            python3 -c "
+          import json, sys
+          rels = json.load(sys.stdin)
+          for r in rels if isinstance(rels, list) else []:
+              for a in r.get('assets', []):
+                  n = a.get('name', '').lower()
+                  if n.endswith('.zip') and 'gdextension' in n and 'plugin' in n:
+                      print(a.get('browser_download_url')); sys.exit(0)
+          "
+          }
+          url=$(curl -sSL -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/GodotSteam/GodotSteam/releases?per_page=20" | pick)
+          if [ -z "$url" ]; then
+            url=$(curl -sSL "https://codeberg.org/api/v1/repos/godotsteam/godotsteam/releases?limit=20" | pick)
+          fi
+          echo "GodotSteam download: ${url:-none found}"
+          if [ -n "$url" ] && curl -sSL -o /tmp/godotsteam.zip "$url" && unzip -q -o /tmp/godotsteam.zip -d /tmp/godotsteam; then
+            src=$(find /tmp/godotsteam -type d -path "*addons/godotsteam" | head -1)
+            if [ -n "$src" ]; then
+              mkdir -p addons && cp -r "$src" addons/
+              ls -R addons/godotsteam | head -40
+              ~/godot/godot --headless --path . --import > /dev/null 2>&1
+              ~/godot/godot --headless --path . --script res://tools/steam_check.gd
+            else
+              echo "::warning::GodotSteam zip had no addons/godotsteam: building without Steam"
+            fi
+          else
+            echo "::warning::Couldn't get GodotSteam: building without Steam"
+          fi
+          exit 0
+
       - name: Export the Windows exe
         run: |
           mkdir -p export
@@ -76,8 +115,11 @@ jobs:
       - name: Zip it
         run: |
           cp "dist/HOW TO PLAY.txt" export/
+          # Steam: the test app's ID next to the exe, so it runs outside Steam too.
+          if [ -d addons/godotsteam ]; then echo 480 > export/steam_appid.txt; fi
           cd export
-          zip -9 -q NightfallOutpost-windows.zip NightfallOutpost.exe "HOW TO PLAY.txt"
+          zip -9 -q NightfallOutpost-windows.zip NightfallOutpost.exe "HOW TO PLAY.txt" $(ls *.dll steam_appid.txt 2>/dev/null)
+          unzip -l NightfallOutpost-windows.zip
           ls -la
 
       - name: Attach the zip to this run
@@ -106,6 +148,8 @@ jobs:
 
       - name: Export the browser version
         run: |
+          # (No Steam in a browser: the add-on stays out of this build.)
+          rm -rf addons/godotsteam && ~/godot/godot --headless --path . --import > /dev/null 2>&1 || true
           mkdir -p export/web
           ~/godot/godot --headless --path . --export-release "Web" export/web/index.html
           test -s export/web/index.html

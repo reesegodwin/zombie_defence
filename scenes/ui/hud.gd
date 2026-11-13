@@ -195,6 +195,13 @@ func _fill_levels(ob: OptionButton) -> void:
 		ob.set_item_tooltip(i, L["desc"])
 
 
+## Co-op: now hosting or joining: the buttons go quiet.
+func coop_busy() -> void:
+	for b in _co_buttons + [_steam_btn]:
+		if b != null:
+			b.disabled = true
+
+
 ## Co-op status, on the title screen.
 func on_net_status(t: String) -> void:
 	if _co_status != null:
@@ -217,6 +224,8 @@ func reset_game() -> void:
 
 
 func _refresh_title() -> void:
+	if _steam_btn != null and main != null and main.net != null:
+		_steam_btn.visible = main.net.steam_ok()
 	if _title_level != null and main != null:
 		_fill_levels(_title_level)
 		var lv: int = clampi(main.progress.map_level, 1, _title_level.item_count)
@@ -266,9 +275,21 @@ func _build_saves() -> void:
 	var join_b := Button.new()
 	join_b.text = "Join"
 	join_b.focus_mode = Control.FOCUS_NONE
+	# With Steam running: invite friends straight from Steam.
+	var steam_b := Button.new()
+	steam_b.text = "Invite friends (Steam)"
+	steam_b.focus_mode = Control.FOCUS_NONE
+	steam_b.custom_minimum_size = Vector2(320, 40)
+	steam_b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	steam_b.visible = false
+	steam_b.pressed.connect(func(): main.net.host_steam())
+	_steam_btn = steam_b
+	tv.add_child(steam_b)
+	tv.move_child(steam_b, _btn_load_title.get_index() + 1)
 	co.add_child(host_b)
 	co.add_child(addr)
 	co.add_child(join_b)
+	_co_buttons = [host_b, join_b]
 	tv.add_child(co)
 	tv.move_child(co, _btn_load_title.get_index() + 1)
 	var co_status := Label.new()
@@ -279,7 +300,7 @@ func _build_saves() -> void:
 	co_status.visible = false
 	_co_status = co_status
 	host_b.pressed.connect(func():
-		var err: String = main.host_coop("Host")
+		var err: String = main.host_coop(main.net.steam_name("Host"))
 		if err != "":
 			co_status.text = err
 			co_status.visible = true
@@ -287,7 +308,7 @@ func _build_saves() -> void:
 			host_b.disabled = true
 			join_b.disabled = true)
 	join_b.pressed.connect(func():
-		var err: String = main.join_coop(addr.text, "Friend")
+		var err: String = main.join_coop(addr.text, main.net.steam_name("Friend"))
 		if err != "":
 			co_status.text = err
 			co_status.visible = true
@@ -1003,6 +1024,8 @@ var _opt_fog: OptionButton
 var _opt_gfx: OptionButton
 var _opt_tut: OptionButton
 var _co_status: Label        # co-op: hosting, joining, joined...
+var _steam_btn: Button
+var _co_buttons: Array = []
 var btn_camp: Button          # "Camp (C)" on the top bar
 var grit_label: Label         # Grit under Scrap: banked, and what this run adds so far
 var _grit_t := 0.0
