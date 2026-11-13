@@ -228,6 +228,29 @@ func _unit_checks() -> void:
 	check(not gfb.buy("flamer").has("ok"), "it needs its research first")
 	gfb.researched["flamers"] = true
 	check(gfb.buy("flamer").has("ok") and gfb.storage["items"].any(func(it): return it["key"] == "flamer"), "then the workshop sells it")
+	# The named survivors: the same skills and looks every time they turn up.
+	var gch = Game.new()
+	var sol: Dictionary = gch.add_survivor("Sol", "pistol", false)
+	var gch2 = Game.new()
+	gch2.add_survivor("Ada", "pistol", false)
+	var sol2: Dictionary = gch2.add_survivor("Sol", "pistol", false)
+	check(sol["skills"] == D.CHARACTERS["Sol"]["skills"] and sol2["skills"] == sol["skills"] and sol2["jacket"] == sol["jacket"] and sol2["model"] == D.CHARACTERS["Sol"]["model"], "Sol always has his own skills and look")
+	var SurvivorScript = load("res://scenes/actors/survivor.gd")
+	var lk1: Dictionary = SurvivorScript.look_of(sol)
+	var lk2: Dictionary = SurvivorScript.look_of(sol2)
+	check(lk1["hair"] == lk2["hair"] and lk1["hair_style"] == lk2["hair_style"] and lk1["build"] == "m" and lk1["beard"] == D.CHARACTERS["Sol"]["beard"], "and the same hair, beard and build")
+	check(Game.skills_detail(sol).begins_with(D.CHARACTERS["Sol"]["bio"]), "his card tells you who he is")
+	var seen := {}
+	var dup := false
+	for i in 10:
+		var nm := gch.free_name()
+		dup = dup or seen.has(nm) or nm == D.RANGER
+		seen[nm] = true
+		gch.add_survivor(nm, "pistol", false)
+	check(not dup, "no one turns up twice, and the ranger only at his cabin")
+	var grng = Game.new()
+	var cab: Dictionary = grng._roll_loot("ranger_cabin")
+	check(cab["survivor"] == D.RANGER, "the ranger cabin's survivor is Hollis")
 	var prl = load("res://scripts/progress.gd").open("user://test_progress_lv.cfg")
 	prl.reset()
 	check(prl.reached == 1, "only level 1 can be picked at first")

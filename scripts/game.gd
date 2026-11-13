@@ -97,6 +97,7 @@ var input_aim = null           # Vector2 or null: the host's own player (peer 1)
 var input_firing := false
 ## The other players' (co-op): peer id -> {"aim": Vector2 or null, "firing": bool}.
 var inputs := {}
+var lost_names: Array = []      # the named survivors lost this run (they don't turn up again)
 var first_run := false         # the player's first run ever (or since a full reset): it pays D.GRIT["base"] on top
 var moved_crew := false         # has the player sent one of the crew somewhere yet (the tutorial)
 var input_auto := false          # a stand-in player for the tests and balance bots: you shoot whatever is nearest the wall (not in the game)
@@ -329,6 +330,10 @@ func new_item(key: String, uses = null) -> Dictionary:
 # --- Crew -------------------------------------------------------------------
 func add_survivor(sname: String, weapon: String, is_player: bool, skills = null) -> Dictionary:
 	var i := crew.size()
+	# One of the named survivors: their own skills and colours, every time.
+	var who: Dictionary = {} if is_player else D.CHARACTERS.get(sname, {})
+	if skills == null and not who.is_empty():
+		skills = who["skills"].duplicate()
 	crew.append({
 		"id": sid, "skills": ({} if is_player else roll_skills(false)) if skills == null else skills,
 		"name": sname, "weapon": weapon, "is_player": is_player, "gear": [null, null],
@@ -337,6 +342,10 @@ func add_survivor(sname: String, weapon: String, is_player: bool, skills = null)
 		"jacket": Color("3e5a6e") if is_player else D.JACKETS[i % D.JACKETS.size()],
 		"skin": Color("d9a77f") if is_player else D.SKINS[(i * 3) % D.SKINS.size()],
 	})
+	if not who.is_empty():
+		crew[-1]["jacket"] = who["jacket"]
+		crew[-1]["skin"] = who["skin"]
+		crew[-1]["model"] = who["model"]
 	sid += 1
 	layout_crew()
 	return crew[-1]
@@ -376,6 +385,8 @@ static func skills_text(s: Dictionary) -> String:
 ## One line per skill, with what it does.
 static func skills_detail(s: Dictionary) -> String:
 	var lines: PackedStringArray = []
+	if not s.get("is_player", false) and D.CHARACTERS.has(s["name"]):
+		lines.append(D.CHARACTERS[s["name"]]["bio"])
 	for k in s.get("skills", {}):
 		lines.append("%s: %s." % [D.skill_label(k, s["skills"][k]), D.skill_desc(k, s["skills"][k])])
 	return "\n".join(lines) if lines.size() > 0 else "No special skills."
@@ -664,9 +675,11 @@ func free_name() -> String:
 	var used := {}
 	for s in crew:
 		used[s["name"]] = true
+	for nm in lost_names:
+		used[nm] = true   # (nobody comes back from the dead this run)
 	var pool: Array = []
 	for n in D.NAMES:
-		if not used.has(n):
+		if not used.has(n) and n != D.RANGER:   # (the ranger only waits at his cabin)
 			pool.append(n)
 	if pool.size() > 0:
 		return pool.pick_random()
@@ -2419,6 +2432,7 @@ func _fight_on_the_way(s: Dictionary, dt: float) -> bool:
 func _lose_scavenger() -> void:
 	var s: Dictionary = trip["who"]
 	var site: Dictionary = D.SITES[trip["site"]]
+	lost_names.append(s["name"])
 	crew.erase(s)
 	trip = null
 	toast.emit("%s never came back from the %s." % [s["name"], site["name"]], "danger")
@@ -2445,7 +2459,9 @@ func _roll_loot(site_key: String, who = null) -> Dictionary:
 	elif researched.has("foraging"):
 		r["food"] = int(round(1 * research_mul("food_yield")))   # foraging: never empty-handed
 	if site["survivor_chance"] >= 1.0 or randf() < site["survivor_chance"] * luck:
-		r["survivor"] = free_name()   # (a site at 1 has someone waiting: they radioed for help)
+		# (A site at 1 has someone waiting: they radioed for help. At the
+		# ranger cabin that's the ranger himself.)
+		r["survivor"] = D.RANGER if site_key == "ranger_cabin" and not crew.any(func(c): return c["name"] == D.RANGER) else free_name()
 	return r
 
 

@@ -86,7 +86,9 @@ static func look_of(s: Dictionary, model := "") -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = int(s["id"]) * 7919 + 13
 	var fem: bool = rng.randf() < 0.5
-	if s["name"] in WOMEN:
+	if not s["is_player"] and D.CHARACTERS.has(s["name"]):
+		fem = D.CHARACTERS[s["name"]]["build"] == "f"
+	elif s["name"] in WOMEN:
 		fem = true
 	elif s["name"] in MEN or s["is_player"]:
 		fem = false
@@ -96,6 +98,7 @@ static func look_of(s: Dictionary, model := "") -> Dictionary:
 		model = "scout" if s["is_player"] else s.get("model", pick[rng.randi() % pick.size()])
 	var M: Dictionary = Body.SURVIVOR_MODELS[model]
 	var look: Dictionary = M.duplicate()
+	var who: Dictionary = {} if s["is_player"] else D.CHARACTERS.get(s["name"], {})
 	var styles: Array = M["hair"]
 	if fem:   # short hair is the exception
 		styles = styles.filter(func(k): return k != "buzz")
@@ -115,6 +118,14 @@ static func look_of(s: Dictionary, model := "") -> Dictionary:
 		"width": rng.randf_range(0.96, 1.06) * (0.94 if fem else 1.0), "rng": rng,
 		"key": "s/%d/%s/%s/%s/%s" % [s["id"], model, s["skin"].to_html(), s["jacket"].to_html(), s["name"]],
 	}, true)
+	if not who.is_empty():
+		# One of the named survivors: their own hair, beard and build, always.
+		look["hair"] = who["hair"]
+		look["hair_style"] = who["hair_style"]
+		look["beard"] = who.get("beard", 0.0)
+		look["build"] = who["build"]
+		if who.has("cap"):
+			look["cap"] = who["cap"]
 	return look
 
 

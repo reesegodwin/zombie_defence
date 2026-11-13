@@ -336,6 +336,38 @@ static func _load_dir(dir: String, keys: Array) -> Dictionary:
 	return out
 
 const NAMES := ["Dana", "Marek", "Priya", "Hollis", "June", "Tomas", "Ada", "Kofi", "Rosa", "Lev", "Imke", "Sol"]
+# The survivors you can meet: each always looks the same and has the same
+# skills, wherever and whenever they turn up. build: "m" or "f"; model: one of
+# body.gd's SURVIVOR_MODELS; skin, jacket, hair: colours; hair_style; beard
+# (0 to 1); cap: a colour, or null for none. Hollis is the ranger: only the
+# one waiting at the ranger cabin.
+const RANGER := "Hollis"
+const CHARACTERS := {
+	"Dana": {"build": "f", "model": "tank", "skin": Color("e0b896"), "jacket": Color("5a5a3a"), "hair": Color("4a3221"), "hair_style": "ponytail",
+		"skills": {"repair": 2, "thrift": 1}, "bio": "Ran a body shop. Can patch anything with a hammer and spite."},
+	"Marek": {"build": "m", "model": "soldier", "skin": Color("f1cfb0"), "jacket": Color("3f4a3a"), "hair": Color("1a1715"), "hair_style": "buzz", "beard": 0.3,
+		"skills": {"aim": 2, "quick": 1}, "bio": "Ex-army marksman. Doesn't talk about the war."},
+	"Priya": {"build": "f", "model": "hooded", "skin": Color("8d5e3e"), "jacket": Color("2f3a52"), "hair": Color("1a1715"), "hair_style": "long",
+		"skills": {"scrounge": 2, "fleet": 1}, "bio": "A courier before it all fell apart: knows every back road."},
+	"Hollis": {"build": "m", "model": "ranger", "skin": Color("c49270"), "jacket": Color("6a5a3a"), "hair": Color("9a8f86"), "hair_style": "short", "beard": 0.85,
+		"skills": {"careful": 2, "forager": 2}, "bio": "The park ranger who radioed for help from the cabin."},
+	"June": {"build": "f", "model": "jacket", "skin": Color("f1cfb0"), "jacket": Color("7a3b30"), "hair": Color("8a3a22"), "hair_style": "short",
+		"skills": {"cook": 2, "forager": 1}, "bio": "Ran the diner on Route 9. Nobody goes hungry on her watch."},
+	"Tomas": {"build": "m", "model": "jacket", "skin": Color("a8775a"), "jacket": Color("4a4a52"), "hair": Color("4a3221"), "hair_style": "long", "beard": 0.6,
+		"skills": {"quick": 2}, "bio": "A line cook with fast hands and faster reloads."},
+	"Ada": {"build": "f", "model": "soldier", "skin": Color("e0b896"), "jacket": Color("2f3540"), "hair": Color("b08a4a"), "hair_style": "short",
+		"skills": {"aim": 1, "careful": 1, "repair": 1}, "bio": "A police reservist. Steady when it counts."},
+	"Kofi": {"build": "m", "model": "tank", "skin": Color("8d5e3e"), "jacket": Color("5a3a2a"), "hair": Color("1a1715"), "hair_style": "buzz",
+		"skills": {"thrift": 2, "repair": 1}, "bio": "An electrician. Wastes nothing, least of all scrap."},
+	"Rosa": {"build": "f", "model": "tank", "skin": Color("c49270"), "jacket": Color("3e5a6e"), "hair": Color("2a1d14"), "hair_style": "ponytail",
+		"skills": {"fleet": 2, "scrounge": 1}, "bio": "A distance runner. In and out of anywhere before the dead notice."},
+	"Lev": {"build": "m", "model": "hooded", "skin": Color("f1cfb0"), "jacket": Color("40362f"), "hair": Color("5c4a3a"), "hair_style": "short", "beard": 0.4,
+		"skills": {"repair": 1, "thrift": 1, "cook": 1}, "bio": "A carpenter, and a fair hand at a camp stove."},
+	"Imke": {"build": "f", "model": "jacket", "skin": Color("f1cfb0"), "jacket": Color("4f5440"), "hair": Color("b08a4a"), "hair_style": "ponytail",
+		"skills": {"careful": 2, "fleet": 1}, "bio": "A nurse. Always comes back from a trip, and brings the others back too."},
+	"Sol": {"build": "m", "model": "soldier", "skin": Color("a8775a"), "jacket": Color("4a4137"), "hair": Color("2a1d14"), "hair_style": "short", "beard": 0.9,
+		"skills": {"aim": 3}, "bio": "A deer hunter. Rarely needs a second shot."},
+}
 const PLAYER_COLOURS := [Color("3e5a6e"), Color("7a3b30"), Color("3f6a3a"), Color("6a5a2a"), Color("5a3f6e")]   # co-op players' jackets
 const JACKETS := [Color("7a5c3a"), Color("4d5a3c"), Color("5c3f4f"), Color("3d4f5c"), Color("6b6b4a")]
 const DECK_H := 0.45     # walkway height, in metres
