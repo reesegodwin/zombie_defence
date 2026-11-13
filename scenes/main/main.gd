@@ -14,6 +14,7 @@ const Truck = preload("res://scenes/actors/truck.gd")
 const Reticle = preload("res://scenes/ui/reticle.gd")
 const Tutorial = preload("res://scenes/ui/tutorial.gd")
 const Zombie = preload("res://scenes/actors/zombie.gd")
+const Body = preload("res://scenes/actors/body.gd")
 
 @export var zombie_scene: PackedScene
 @export var survivor_scene: PackedScene
@@ -325,6 +326,7 @@ func _process(dt: float) -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE   # menus need the mouse
 	if not live:
 		Zombie.prewarm()   # menus are a good time to get the horde's bodies ready
+	_zombie_detail()
 	if started:
 		_update_aim()
 		# The world waits while you study the scavenging map.
@@ -552,6 +554,21 @@ func _hide_cursor() -> void:
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_HIDDEN:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+
+## The zombies' light bodies whenever they're small on screen (zoomed out
+## past LIGHT_ZOOM), and always on Low graphics; the full ones up close.
+const LIGHT_ZOOM := 14.0
+
+func _zombie_detail() -> void:
+	var want: bool = settings.graphics == "Low" or rig.zoom > LIGHT_ZOOM
+	if want == Body.light:
+		return
+	Body.light = want
+	for node in zombie_nodes.values():
+		for mi in node.meshes:
+			if mi is MeshInstance3D and mi.has_meta("lo"):
+				mi.mesh = mi.get_meta("lo" if want else "hi")
 
 
 ## The camera stays on you (or on the truck once you're in it).

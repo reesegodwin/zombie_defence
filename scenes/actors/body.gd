@@ -58,6 +58,14 @@ const PUPIL := Color(0.05, 0.04, 0.04)
 const NAIL := Color(0.52, 0.56, 0.62)
 
 static var _geo := {}
+## How finely shapes are made (1: full detail). The horde also gets a light
+## version of each body at LIGHT, drawn whenever they're small on screen: far
+## fewer points to bend round the bones every frame, which is most of what a
+## zombie costs to draw.
+static var detail := 1.0
+const LIGHT := 0.4
+## Draw the zombies' light bodies (set by main from the zoom and graphics).
+static var light := false
 static var _material: ShaderMaterial
 static var _noise: FastNoiseLite
 static var _skin: Color   # the skin of the body being built
@@ -608,81 +616,96 @@ static func _skin_over(j: Dictionary, root: Node3D, bones: Array, rng: RandomNum
 	var mi := MeshInstance3D.new()
 	mi.material_override = material()
 	if key != "" and _cache.has(key):
-		mi.mesh = _cache[key][0]
+		mi.mesh = _cache[key][2] if light else _cache[key][0]
 		mi.skin = _cache[key][1]
+		mi.set_meta("hi", _cache[key][0])
+		mi.set_meta("lo", _cache[key][2])
 	else:
 		if _noise == null:
 			_noise = FastNoiseLite.new()
 			_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
 			_noise.frequency = 7.0
 		var seed_off := Vector3(rng.randf() * 100.0, rng.randf() * 100.0, rng.randf() * 100.0)
-		var verts := PackedVector3Array()
-		var norms := PackedVector3Array()
-		var cols := PackedColorArray()
-		var idx := PackedInt32Array()
-		var bone_of := PackedInt32Array()
-		var weight_of := PackedFloat32Array()
-		for joint in j["_parts"]:
-			var here: Vector3 = at[joint]
-			var bone := bones.find(joint)
-			# Stains are laid out over the whole body at rest, so they carry
-			# on across a knee or an elbow.
-			var off: Vector3 = seed_off + here
-			for part in j["_parts"][joint]:
-				var g: Array = _geometry(part[0])
-				var xf: Transform3D = part[2]
-				var nb := xf.basis.inverse().transposed()
-				var flip := xf.basis.determinant() < 0.0   # mirrored: turn its faces back out
-				var base := verts.size()
-				var col: Color = part[1]
-				var paint: String = part[3]
-				var tips: PackedFloat32Array = g[3]
-				var blend: Array = part[5]
-				for k in g[0].size():
-					var v: Vector3 = xf * g[0][k]
-					verts.append(v + here)
-					norms.append((nb * g[1][k]).normalized())
-					var c := col
-					if part[4] != null and tips[k] > 0.0:
-						c = Color(col.lerp(part[4], tips[k]), part[4].a if tips[k] > 0.5 else col.a)
-					if paint != "" and (part[4] == null or tips[k] <= 0.5):
-						c = _stain(c, v, paint, off, dirt)
-					cols.append(c)
-					# Which bones it follows: its own, going over to others where it bends.
-					var b := [bone, 0, 0, 0]
-					var wt := [1.0, 0.0, 0.0, 0.0]
-					for n in blend.size():
-						var t := smoothstep(blend[n][1], blend[n][2], v.y)
-						for m in n + 1:
-							wt[m] *= 1.0 - t
-						b[n + 1] = bones.find(blend[n][0])
-						wt[n + 1] = t
-					bone_of.append_array(b)
-					weight_of.append_array(wt)
-				var tri: PackedInt32Array = g[2]
-				for i in range(0, tri.size(), 3):
-					idx.append(base + tri[i])
-					idx.append(base + tri[i + (2 if flip else 1)])
-					idx.append(base + tri[i + (1 if flip else 2)])
-		var arr := []
-		arr.resize(Mesh.ARRAY_MAX)
-		arr[Mesh.ARRAY_VERTEX] = verts
-		arr[Mesh.ARRAY_NORMAL] = norms
-		arr[Mesh.ARRAY_COLOR] = cols
-		arr[Mesh.ARRAY_INDEX] = idx
-		arr[Mesh.ARRAY_BONES] = bone_of
-		arr[Mesh.ARRAY_WEIGHTS] = weight_of
-		var im := ImporterMesh.new()
-		im.add_surface(Mesh.PRIMITIVE_TRIANGLES, arr)
-		im.generate_lods(25.0, 60.0, [])
-		mi.mesh = im.get_mesh()
+		var hi := _skin_mesh(j, bones, at, seed_off, dirt)
+		var lo := hi
+		if dirt >= 1.0:   # the dead come in numbers: a light body too, for when they're small on screen
+			detail = LIGHT
+			lo = _skin_mesh(j, bones, at, seed_off, dirt)
+			detail = 1.0
+		mi.mesh = lo if light else hi
+		mi.set_meta("hi", hi)
+		mi.set_meta("lo", lo)
 		mi.skin = rig.create_skin_from_rest_transforms()
 		if key != "":
-			_cache[key] = [mi.mesh, mi.skin]
+			_cache[key] = [hi, mi.skin, lo]
 	rig.add_child(mi)
 	mi.skeleton = NodePath("..")
 	j["meshes"].append(mi)
 	j.erase("_parts")
+
+
+## One skin mesh over the whole body, at the current detail.
+static func _skin_mesh(j: Dictionary, bones: Array, at: Dictionary, seed_off: Vector3, dirt: float) -> ArrayMesh:
+	var verts := PackedVector3Array()
+	var norms := PackedVector3Array()
+	var cols := PackedColorArray()
+	var idx := PackedInt32Array()
+	var bone_of := PackedInt32Array()
+	var weight_of := PackedFloat32Array()
+	for joint in j["_parts"]:
+		var here: Vector3 = at[joint]
+		var bone := bones.find(joint)
+		# Stains are laid out over the whole body at rest, so they carry
+		# on across a knee or an elbow.
+		var off: Vector3 = seed_off + here
+		for part in j["_parts"][joint]:
+			var g: Array = _geometry(part[0])
+			var xf: Transform3D = part[2]
+			var nb := xf.basis.inverse().transposed()
+			var flip := xf.basis.determinant() < 0.0   # mirrored: turn its faces back out
+			var base := verts.size()
+			var col: Color = part[1]
+			var paint: String = part[3]
+			var tips: PackedFloat32Array = g[3]
+			var blend: Array = part[5]
+			for k in g[0].size():
+				var v: Vector3 = xf * g[0][k]
+				verts.append(v + here)
+				norms.append((nb * g[1][k]).normalized())
+				var c := col
+				if part[4] != null and tips[k] > 0.0:
+					c = Color(col.lerp(part[4], tips[k]), part[4].a if tips[k] > 0.5 else col.a)
+				if paint != "" and (part[4] == null or tips[k] <= 0.5):
+					c = _stain(c, v, paint, off, dirt)
+				cols.append(c)
+				# Which bones it follows: its own, going over to others where it bends.
+				var b := [bone, 0, 0, 0]
+				var wt := [1.0, 0.0, 0.0, 0.0]
+				for n in blend.size():
+					var t := smoothstep(blend[n][1], blend[n][2], v.y)
+					for m in n + 1:
+						wt[m] *= 1.0 - t
+					b[n + 1] = bones.find(blend[n][0])
+					wt[n + 1] = t
+				bone_of.append_array(b)
+				weight_of.append_array(wt)
+			var tri: PackedInt32Array = g[2]
+			for i in range(0, tri.size(), 3):
+				idx.append(base + tri[i])
+				idx.append(base + tri[i + (2 if flip else 1)])
+				idx.append(base + tri[i + (1 if flip else 2)])
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = verts
+	arr[Mesh.ARRAY_NORMAL] = norms
+	arr[Mesh.ARRAY_COLOR] = cols
+	arr[Mesh.ARRAY_INDEX] = idx
+	arr[Mesh.ARRAY_BONES] = bone_of
+	arr[Mesh.ARRAY_WEIGHTS] = weight_of
+	var im := ImporterMesh.new()
+	im.add_surface(Mesh.PRIMITIVE_TRIANGLES, arr)
+	im.generate_lods(25.0, 60.0, [])
+	return im.get_mesh()
 
 
 ## How far a rib stands out at a point on a bare chest (0..1).
@@ -805,8 +828,9 @@ static func material() -> ShaderMaterial:
 
 ## A shape's [vertices, normals, indices, tip weights], made on first use.
 static func _geometry(kind: String) -> Array:
-	if _geo.has(kind):
-		return _geo[kind]
+	var gkey := kind if detail >= 1.0 else "%s@%.2f" % [kind, detail]
+	if _geo.has(gkey):
+		return _geo[gkey]
 	var g: Array
 	var base := kind.rstrip("0123456789")
 	var variant := int(kind.substr(base.length())) if base.length() < kind.length() else 0
@@ -1285,14 +1309,20 @@ static func _geometry(kind: String) -> Array:
 		"s_glove_cuff":
 			g = _loft([[0.03, 0.026, 0.032, 0.0], [0.0, 0.025, 0.031, 0.0], [-0.012, 0.022, 0.03, 0.0]], 12, false, false)
 	_fix_winding(g)
-	_geo[kind] = g
+	_geo[gkey] = g
 	return g
+
+
+## n at the current detail (never below least).
+static func _less(n: int, least: int) -> int:
+	return n if detail >= 1.0 else maxi(least, int(round(n * detail)))
 
 
 ## A tube through rings of [y, x radius, z radius, z offset], top to bottom,
 ## with its ends capped. ragged: how jagged the bottom edge is (torn cloth).
 ## tip: how much of the far end (as a fraction of the length) gets the tip colour.
 static func _loft(rings: Array, seg: int, cap_top := true, cap_bottom := true, ragged := 0.0, variant := 0, tip := 0.0) -> Array:
+	seg = _less(seg, 6)
 	var v := PackedVector3Array()
 	var t := PackedFloat32Array()
 	var idx := PackedInt32Array()
@@ -1458,6 +1488,7 @@ static func _boxy(p: Vector3, r: Vector3, how: float) -> Vector3:
 ## A finer set of rings through the same shape (sub steps between each two),
 ## rounded off so the tube bends smoothly instead of in facets.
 static func _fine(rings: Array, sub: int) -> Array:
+	sub = _less(sub, 1)
 	var out := []
 	var n := rings.size()
 	for i in n - 1:
@@ -1489,6 +1520,8 @@ static func _bend(g: Array, deform: Callable) -> void:
 
 ## A squashed sphere; deform(p) can bend each point.
 static func _ellipsoid(r: Vector3, seg: int, rings: int, deform := Callable()) -> Array:
+	seg = _less(seg, 6)
+	rings = _less(rings, 3)
 	var v := PackedVector3Array()
 	var idx := PackedInt32Array()
 	v.append(Vector3(0, r.y, 0))
