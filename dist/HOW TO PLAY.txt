@@ -11,6 +11,13 @@ isn't signed by a known publisher. Click "More info", then "Run anyway".
 Your Grit, camp upgrades and settings are saved in
 %APPDATA%\Godot\app_userdata\Nightfall Outpost
 
-Keys: left mouse to shoot, F auto-fire, I storage, B workshop, T research,
-M scavenge, C camp, P pause, O options, N sound, R reload.
-F5 quick save, F9 quick load (it also autosaves every dawn).
+How to play: WASD walks (the camera follows you), the left mouse button
+shoots where you aim. Click the workbench in the yard for the Workshop and
+the drafting table for Research. Click a survivor, then a spot, to move them;
+click them again to repair the wall there.
+
+Keys: R reload, I storage, B workshop, T research, M scavenge, C camp,
+P pause, O options, N sound. F5 quick save, F9 quick load (it also autosaves
+every dawn).
+
+Co-op: from the title screen, host a game or join a friend's by address.
