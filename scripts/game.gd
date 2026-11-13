@@ -95,6 +95,7 @@ var research_count := 0        # projects finished this run (blueprints don't co
 # Player input, written by main.gd each frame (grid coordinates).
 var input_aim = null           # Vector2 or null
 var input_firing := false
+var moved_crew := false         # has the player sent one of the crew somewhere yet (the tutorial)
 var input_auto := false          # a stand-in player for the tests and balance bots: you shoot whatever is nearest the wall (not in the game)
 
 
@@ -395,6 +396,8 @@ func move_survivor(i: int, side: int, u: float) -> Dictionary:
 	s["path_t"] = 0.0
 	s["state"] = "moving"
 	var who: String = "You head" if s["is_player"] else s["name"] + " heads"
+	if not s["is_player"]:
+		moved_crew = true
 	return {"ok": true, "msg": "%s to the %s wall." % [who, L["name"].to_lower()]}
 
 
@@ -436,6 +439,8 @@ func move_survivor_to(i: int, p: Vector2) -> Dictionary:
 	s["route"] = route
 	s["path_t"] = 0.0
 	s["state"] = "moving"
+	if not s["is_player"]:
+		moved_crew = true
 	return {"ok": true, "msg": ("You head" if s["is_player"] else s["name"] + " heads") + " over there."}
 
 

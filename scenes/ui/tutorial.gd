@@ -15,7 +15,7 @@ const GOLD := Color(1.0, 0.8, 0.25)
 const INK := Color(0.05, 0.05, 0.05, 0.9)
 
 ## In order: the first one that's ready and not done is shown.
-const STEPS := ["walk", "shoot", "rescue", "research", "buy_smg", "equip", "research_build", "turret", "radio", "repair", "truck", "grit"]
+const STEPS := ["walk", "shoot", "rescue", "move", "research", "buy_smg", "equip", "research_build", "turret", "radio", "repair", "truck", "grit"]
 ## Steps that can show over the game-over screen and the camp.
 const CAMP_STEPS := ["grit"]
 const CABIN := "ranger_cabin"
@@ -78,8 +78,18 @@ static func grit_done(pr) -> bool:
 	return not pr.levels.is_empty()
 
 
+## One of the crew standing on a wall, to pick and send somewhere (or null).
+static func movable(g) -> Variant:
+	for s in g.crew:
+		if not s["is_player"] and s["state"] == "wall" and s["hp"] > 0.0:
+			return s
+	return null
+
+
 static func step_ready(id: String, g) -> bool:
 	match id:
+		"move":
+			return movable(g) != null
 		"research_build":
 			return g.research_cur == "" and build_project(g) != ""
 		"turret":
@@ -103,6 +113,8 @@ static func step_ready(id: String, g) -> bool:
 
 static func step_done(id: String, g) -> bool:
 	match id:
+		"move":
+			return g.moved_crew
 		"research_build":
 			return g.researched.has("turrets") or g.researched.has("radio") or g.research_cur in ["turrets", "radio"]
 		"turret":
@@ -251,6 +263,21 @@ func _target():
 		"truck":
 			if h._btn_board != null and h._btn_board.visible:
 				return h._btn_board.get_global_rect()
+		"move":
+			# Click one of the crew; then click a spot down the wall to send them.
+			var picked: Variant = null
+			for s in g.crew:
+				if s["id"] == main.selected_id:
+					picked = s
+			if picked == null:
+				var m: Variant = movable(g)
+				if m == null:
+					return null
+				return main.rig.world_to_screen(Vector3(m["x"], D.DECK_H + 2.0, m["y"]))
+			var L: Dictionary = D.LANES[0]
+			var u: float = clampf(picked["u"] + (4.0 if picked["u"] < (L["u0"] + L["u1"]) / 2.0 else -4.0), L["u0"] + 1.0, L["u1"] - 1.0)
+			var spot: Vector2 = g.lane_point(0, u, D.WALK_Y)
+			return main.rig.world_to_screen(Vector3(spot.x, D.DECK_H + 0.2, spot.y))
 		"research_build":
 			var pid := build_project(g)
 			if pid == "":

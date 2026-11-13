@@ -143,6 +143,11 @@ func _unit_checks() -> void:
 	var prl2 = load("res://scripts/progress.gd").open("user://test_progress_lv.cfg")
 	check(prl2.reached == 2, "once the truck takes you to level 2 it can be picked, and that's kept")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path("user://test_progress_lv.cfg"))
+	var gmov = Game.new()
+	gmov.add_survivor("Ada", "pistol", false)
+	check(Tut.step_ready("move", gmov) and not Tut.step_done("move", gmov), "tutorial: with someone on the wall, show how to move them")
+	gmov.move_survivor(1, 0, 6.0)
+	check(Tut.step_done("move", gmov), "tutorial: done once one of the crew is sent somewhere")
 	# Its settings: on/off and what's been done carry over, in their own file.
 	var tpath := "user://test_settings.cfg"
 	var st = load("res://scripts/settings.gd").load_or_detect(tpath)
