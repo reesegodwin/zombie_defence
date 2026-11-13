@@ -1295,7 +1295,23 @@ func damage(z: Dictionary, amt: float, quiet := false) -> void:
 
 # --- Weapons ----------------------------------------------------------------
 # Closest-to-the-wall target in range: the most urgent threat.
+const SHARED_TARGET := 1.5   # metres less "far down the lane" a zombie counts for, per crewmate already shooting it
+const KEEP_TARGET := 0.6     # ...and more for the one you're already on, so you don't flick about
+
+
 func auto_target(s: Dictionary, rng: float) -> Variant:
+	# Who the rest of the crew are shooting at, so they spread their fire
+	# over a crowd instead of all emptying their guns into the same one.
+	var taken := {}
+	var me_id: int = s.get("id", -999)
+	for c in crew:
+		if c["id"] == me_id or c.get("tgt", -1) < 0 or c["hp"] <= 0.0:
+			continue
+		if c.get("repairing", false) or c.get("fixing", false):
+			continue   # busy with a hammer: not shooting anything
+		if c["state"] == "wall" or c.get("fighting", false):
+			taken[c["tgt"]] = taken.get(c["tgt"], 0) + 1
+	var mine: int = s.get("tgt", -1)
 	var best = null
 	var by := -INF
 	for z in zombies:
@@ -1305,6 +1321,9 @@ func auto_target(s: Dictionary, rng: float) -> Variant:
 		if d2 > rng * rng:
 			continue
 		var score: float = lane_uv(z["side"], Vector2(z["x"], z["y"])).y + (1.5 if z["type"] == "brute" else 0.0)
+		score -= SHARED_TARGET * taken.get(z["id"], 0)
+		if z["id"] == mine:
+			score += KEEP_TARGET
 		if score > by:
 			by = score
 			best = z
@@ -1516,6 +1535,7 @@ func update_crew(dt: float) -> void:
 				_shoot(s, target["x"], target["y"], k)
 		else:
 			var z = _lob_target(s, w, dt) if w.has("splash") else auto_target(s, auto_reach(w))
+			s["tgt"] = z["id"] if z != null else -1
 			if z == null:
 				if s["idle"] > TOP_UP_AFTER:
 					start_reload(s)   # nothing to shoot: top the magazine up
@@ -2339,6 +2359,7 @@ func _fight_on_the_way(s: Dictionary, dt: float) -> bool:
 		return false
 	var w: Dictionary = D.WEAPONS[s["weapon"]]
 	var z = auto_target(s, w["range"])
+	s["tgt"] = z["id"] if z != null else -1
 	if z == null:
 		return false
 	s["cd"] -= dt

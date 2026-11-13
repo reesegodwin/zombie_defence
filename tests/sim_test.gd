@@ -177,6 +177,28 @@ func _unit_checks() -> void:
 		if gsc.trip == null:
 			break
 	check(gsc.trip == null and nw["state"] == "wall" and Vector2(nw["x"], nw["y"]).distance_to(spot_n) < 0.1, "and they come back to their spot on the wall")
+	# The crew spread their fire over a crowd; a lone zombie gets everyone.
+	var gsp = Game.new()
+	for nm in ["Al", "Bo", "Cy", "Di"]:
+		gsp.add_survivor(nm, "pistol", false)
+	for i in 8:
+		var zsp: Dictionary = gsp.spawn_zombie("walker", 1000.0, 0.0, 0, 7.5)
+		zsp["x"] = 6.0 + i * 1.3
+	for i in 60:
+		gsp.update_crew(1.0 / 30.0)
+	var spread_t := {}
+	for c in gsp.crew:
+		if not c["is_player"]:
+			spread_t[c.get("tgt", -1)] = true
+	check(spread_t.size() >= 3 and not spread_t.has(-1), "with a crowd, the crew pick different zombies (%d targets for 4)" % spread_t.size())
+	gsp.zombies = [gsp.zombies[3]]
+	for i in 30:
+		gsp.update_crew(1.0 / 30.0)
+	var one_t := {}
+	for c in gsp.crew:
+		if not c["is_player"]:
+			one_t[c.get("tgt", -1)] = true
+	check(one_t.size() == 1 and not one_t.has(-1), "but with only one, they all shoot it")
 	var prl = load("res://scripts/progress.gd").open("user://test_progress_lv.cfg")
 	prl.reset()
 	check(prl.reached == 1, "only level 1 can be picked at first")

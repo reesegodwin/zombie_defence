@@ -6,7 +6,7 @@
 script = ExtResource("1")
 display_name = "Runner"
 health = 24.0
-speed = 1.35
+speed = 1.55
 wall_damage = 5.0
 seconds_between_hits = 0.6
 radius = 0.17
