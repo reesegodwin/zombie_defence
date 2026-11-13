@@ -2010,7 +2010,10 @@ func update_trip(dt: float) -> void:
 			s["state"] = "returning"
 			s["path_t"] = 1.0
 			if trip["report"]["survivor"] != "":
-				var n := add_survivor(trip["report"]["survivor"], "pistol", false)
+				var ranger: bool = trip["report"]["site"] == "ranger_cabin"
+				var n := add_survivor(trip["report"]["survivor"], "shotgun" if ranger else "pistol", false)
+				if ranger:
+					n["model"] = "ranger"   # the one who radioed for help: hat, pack and a shotgun
 				n["state"] = "arriving"
 				n["route"] = pass_route(n)
 				n["path_t"] = 1.12   # a few steps behind

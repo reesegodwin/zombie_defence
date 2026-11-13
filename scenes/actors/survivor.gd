@@ -91,8 +91,9 @@ static func look_of(s: Dictionary, model := "") -> Dictionary:
 	elif s["name"] in MEN or s["is_player"]:
 		fem = false
 	if model == "":
-		var pick: Array = ["tank", "jacket", "ranger", "hooded", "tank"] if fem else ["soldier", "jacket", "ranger", "hooded", "tank"]
-		model = "scout" if s["is_player"] else pick[rng.randi() % pick.size()]
+		# (The ranger, hat and pack, is only ever the one rescued from the cabin.)
+		var pick: Array = ["tank", "jacket", "hooded", "tank"] if fem else ["soldier", "jacket", "hooded", "tank"]
+		model = "scout" if s["is_player"] else s.get("model", pick[rng.randi() % pick.size()])
 	var M: Dictionary = Body.SURVIVOR_MODELS[model]
 	var look: Dictionary = M.duplicate()
 	var styles: Array = M["hair"]

@@ -302,8 +302,8 @@ const SURVIVOR_MODELS := {
 		"shoes": [Color("24211e"), Color("2b2622")]},
 	"tank": {"top": "tank", "legs": "cargo", "gloves": "fingerless", "pouches": true, "holster": true, "hair": ["ponytail", "long", "short"]},
 	"jacket": {"top": "jacket", "scarf": true, "legs": "worn", "pouches": true, "hair": ["short", "long", "buzz"], "beard": 0.6},
-	"ranger": {"top": "shirt", "rolled": true, "pack": "roll", "legs": "cargo", "pouches": true, "gloves": "fingerless", "hair": ["short", "ponytail"], "beard": 0.5},
-	"hooded": {"top": "jacket", "hood": true, "pack": "plain", "legs": "jeans", "hair": ["short", "long"], "beard": 0.4},
+	"ranger": {"top": "shirt", "rolled": true, "pack": "roll", "hat": true, "legs": "cargo", "pouches": true, "gloves": "fingerless", "hair": ["short", "ponytail"], "beard": 0.5},
+	"hooded": {"top": "jacket", "hood": true, "legs": "jeans", "hair": ["short", "long"], "beard": 0.4},
 }
 
 const WEBBING := Color("4a4d3a")
@@ -499,7 +499,13 @@ static func survivor(root: Node3D, look: Dictionary) -> Dictionary:
 		_part(j, head, "z_ear", skin, LIVE, Vector3(side * 0.078, 0.118, -0.012), Vector3.ONE, Vector3(-0.12, side * -0.3, side * -0.1))
 	if hood:
 		_part(j, head, "s_hood", shirt.darkened(0.04), CLOTH, HEAD_AT + Vector3(0, -0.012, -0.012), Vector3.ONE, Vector3.ZERO, "worn")
-	if cap != null:
+	if look.get("hat", false):
+		# A cowboy hat: a creased crown with a band, and a wide brim curled up at the sides.
+		var felt := Color("6b4a2e")
+		_part(j, head, "s_hat_crown", felt, CLOTH, HEAD_AT + Vector3(0, 0.085, -0.004), Vector3.ONE, Vector3.ZERO, "worn")
+		_part(j, head, "s_hat_band", Color("2b2018"), CLOTH, HEAD_AT + Vector3(0, 0.062, -0.004), Vector3.ONE)
+		_part(j, head, "s_hat_brim", felt.darkened(0.08), CLOTH, HEAD_AT + Vector3(0, 0.047, 0.0), Vector3.ONE, Vector3(0.06, 0, 0), "worn")
+	elif cap != null:
 		_part(j, head, "s_cap", cap, CLOTH, HEAD_AT, Vector3.ONE, Vector3.ZERO, "worn")
 		_part(j, head, "s_cap_brim", cap.darkened(0.12), CLOTH, HEAD_AT + Vector3(0, 0.052, 0.118), Vector3.ONE, Vector3(0.2, 0, 0))
 	if not hood or cap == null:
@@ -1253,6 +1259,20 @@ static func _geometry(kind: String) -> Array:
 				var q: Vector3 = _face(p, 1) * lerpf(0.93, 1.085, smoothstep(-0.004, 0.0, d))
 				if d > 0.0:
 					q.z += 0.006 * smoothstep(0.02, 0.07, p.z) * smoothstep(0.1, 0.05, p.y)   # a stiff front panel
+				return q)
+		"s_hat_crown":
+			g = _ellipsoid(Vector3(0.093, 0.072, 0.11), 32, 16, func(p: Vector3) -> Vector3:
+				var q := p
+				q.y = maxf(q.y, -0.036)                                       # open, flat-sided bottom
+				q.y -= 0.022 * smoothstep(0.03, 0.072, p.y) * (1.0 - smoothstep(0.0, 0.06, absf(p.x)))   # the crease down the top
+				q.x *= 1.0 - 0.18 * smoothstep(0.0, 0.07, p.y) * smoothstep(0.02, 0.11, p.z)            # pinched at the front
+				return q)
+		"s_hat_band":
+			g = _loft([[0.012, 0.096, 0.113, 0.0], [-0.012, 0.097, 0.114, 0.0]], 32, false, false)
+		"s_hat_brim":
+			g = _ellipsoid(Vector3(0.2, 0.006, 0.185), 36, 6, func(p: Vector3) -> Vector3:
+				var q := p
+				q.y += 1.9 * p.x * p.x - 0.5 * p.z * p.z   # curled up at the sides, dipping front and back
 				return q)
 		"s_cap_brim":
 			g = _ellipsoid(Vector3(0.074, 0.005, 0.062), 20, 6, func(p: Vector3) -> Vector3:

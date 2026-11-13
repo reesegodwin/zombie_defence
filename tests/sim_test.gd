@@ -168,6 +168,24 @@ func _unit_checks() -> void:
 		if gcab._roll_loot("ranger_cabin", gcab.crew[0])["survivor"] == "":
 			always = false
 	check(D.SITES.has("ranger_cabin") and always, "the ranger cabin always has the survivor who radioed for help")
+	var grs = Game.new()
+	var scout: Dictionary = grs.add_survivor("Bea", "pistol", false)
+	grs.send_scavenger(1, "ranger_cabin")
+	var guard := 0
+	while not grs.crew.any(func(c): return c.get("model", "") == "ranger") and guard < 4000:
+		grs.step(0.1)
+		grs.zombies.clear()
+		scout["hp"] = scout["max_hp"]
+		guard += 1
+	var rangers: Array = grs.crew.filter(func(c): return c.get("model", "") == "ranger")
+	check(rangers.size() == 1 and rangers[0]["weapon"] == "shotgun", "the one rescued from the cabin is the ranger, with a shotgun")
+	var Surv = load("res://scenes/actors/survivor.gd")
+	var others_plain := true
+	for i in 40:
+		var lk: Dictionary = Surv.look_of({"id": i, "name": "Kofi", "is_player": false, "skin": Color.WHITE, "jacket": Color.GRAY})
+		if lk.get("hat", false) or lk.get("pack", "") != "":
+			others_plain = false
+	check(others_plain, "nobody else gets the ranger's hat or a pack")
 
 	# A rifle round passes through several, and never hits the same one twice.
 	gb.crew[0]["weapon"] = "rifle"
