@@ -105,6 +105,13 @@ const UNDERVEST := Color(0.60, 0.56, 0.48)
 const DEAD_HAIR := [Color("6a5d50"), Color("7c6e60"), Color("8c857a"), Color("a8a297"), Color("5e554c")]
 
 const Rig = preload("res://scenes/actors/skin_rig.gd")
+const Models = preload("res://scripts/models.gd")
+
+# What each point of a body modelled in Blender is: the red of its vertex
+# colour, as code / 32 (tools/blender/zombies.py REGIONS). Its green is the
+# ambient occlusion baked in.
+enum { ZONE_SKIN, ZONE_SHIRT, ZONE_TRIM, ZONE_PANTS, ZONE_BOOT, ZONE_SOLE, ZONE_SCALP, ZONE_STRAND,
+	ZONE_TEETH, ZONE_EYE, ZONE_MOUTH, ZONE_NAIL, ZONE_BUTTON, ZONE_POCKET }
 
 static var _cache := {}     # zombie bodies already built: key -> [their mesh, its skin]
 static var _rim: Color      # the dark round a dead eye
@@ -144,6 +151,11 @@ static func zombie(root: Node3D, look: Dictionary) -> Dictionary:
 	_under = UNDERVEST
 	var hc: Color = DEAD_HAIR[rng.randi() % DEAD_HAIR.size()]
 	_thin_hair = hc if hair == "thin" else null
+	# A body modelled in Blender (tools/blender/zombies.py), if there is one.
+	var made: Dictionary = Models.skinned("zombie_" + look.get("model", ""))
+	if not made.is_empty():
+		var made_lo: Dictionary = Models.skinned("zombie_%s_lo" % look["model"])
+		return _zombie_made(root, look, j, made, made_lo if not made_lo.is_empty() else made, hc, rng)
 
 	# --- Lower body: pelvis, legs, and boots or bare feet --------------------
 	var leg_paint := "jeans" if legs == "jeans" else "pants"
@@ -282,6 +294,214 @@ static func zombie(root: Node3D, look: Dictionary) -> Dictionary:
 
 	_skin_over(j, root, bones, rng, look.get("key", ""), 1.0)
 	return j
+
+
+## A zombie from a body modelled in Blender (Models.skinned: its points, what
+## each one is, and its bone weights by bone name), coloured for this look:
+## the same joints as the code-built bodies, so it's posed the same way.
+static func _zombie_made(root: Node3D, look: Dictionary, j: Dictionary, made: Dictionary, made_lo: Dictionary, hc: Color, rng: RandomNumberGenerator) -> Dictionary:
+	var w: float = look.get("width", 1.0)
+	var hips := _joint(root, "Hips", Vector3(0, HIP_H, 0))
+	var spine := _joint(root, "Spine", Vector3(0, HIP_H + 0.04, 0))
+	var bones := [hips, spine]
+	j["hips"] = hips
+	j["spine"] = spine
+	for side in [-1, 1]:
+		var s := "l" if side < 0 else "r"
+		var hip := _joint(hips, "Hip" + s, Vector3(side * 0.076 * w, -0.04, 0))
+		var knee := _joint(hip, "Knee" + s, Vector3(0, -0.43, 0))
+		bones.append_array([hip, knee])
+		j["hip_" + s] = hip
+		j["knee_" + s] = knee
+	var neck := _joint(spine, "Neck", Vector3(0, 0.48, 0.0))
+	var head := _joint(neck, "Head", Vector3(0, 0.06, 0.01))
+	bones.append_array([neck, head])
+	j["neck"] = neck
+	j["head"] = head
+	for side in [-1, 1]:
+		var s := "l" if side < 0 else "r"
+		var sh := _joint(spine, "Shoulder" + s, Vector3(side * 0.172 * w, 0.415, 0))
+		var el := _joint(sh, "Elbow" + s, Vector3(0, -0.29, 0))
+		var hand := _joint(el, "Hand" + s, Vector3(0, -0.27, 0))
+		bones.append_array([sh, el, hand])
+		j["shoulder_" + s] = sh
+		j["elbow_" + s] = el
+		j["hand_" + s] = hand
+	var rig: Skeleton3D = Rig.new()
+	rig.name = "Skin"
+	var at := {}
+	for i in bones.size():
+		var joint: Node3D = bones[i]
+		rig.add_bone(joint.name)
+		var parent := bones.find(joint.get_parent())
+		rig.set_bone_parent(i, parent)
+		rig.set_bone_rest(i, Transform3D(Basis(), joint.position))
+		at[joint] = joint.position + (at[bones[parent]] if parent >= 0 else Vector3.ZERO)
+	rig.reset_bone_poses()
+	rig.joints = bones
+	root.add_child(rig)
+	var mi := MeshInstance3D.new()
+	mi.material_override = material()
+	var key: String = look.get("key", "")
+	if key != "" and _cache.has(key):
+		mi.mesh = _cache[key][2] if light else _cache[key][0]
+		mi.skin = _cache[key][1]
+		mi.set_meta("hi", _cache[key][0])
+		mi.set_meta("lo", _cache[key][2])
+	else:
+		if _noise == null:
+			_noise = FastNoiseLite.new()
+			_noise.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+			_noise.frequency = 7.0
+		var seed_off := Vector3(rng.randf() * 100.0, rng.randf() * 100.0, rng.randf() * 100.0)
+		var hi := _made_mesh(made, look, bones, at, seed_off, hc, false)
+		var lo := _made_mesh(made_lo, look, bones, at, seed_off, hc, true)
+		mi.mesh = lo if light else hi
+		mi.set_meta("hi", hi)
+		mi.set_meta("lo", lo)
+		mi.skin = rig.create_skin_from_rest_transforms()
+		if key != "":
+			_cache[key] = [hi, mi.skin, lo]
+	rig.add_child(mi)
+	mi.skeleton = NodePath("..")
+	j["meshes"].append(mi)
+	j.erase("_parts")
+	return j
+
+
+## The joint whose space a point's paint is laid out in, by the bone it most
+## follows (as the code-built parts are: arms from the shoulder, legs from the hip).
+const _PAINT_JOINT := {"Hips": "Hips", "Spine": "Spine", "Neck": "Spine", "Head": "Head",
+	"Hipl": "Hipl", "Kneel": "Hipl", "Hipr": "Hipr", "Kneer": "Hipr",
+	"Shoulderl": "Shoulderl", "Elbowl": "Shoulderl", "Handl": "Handl",
+	"Shoulderr": "Shoulderr", "Elbowr": "Shoulderr", "Handr": "Handr"}
+
+
+static func _made_mesh(made: Dictionary, look: Dictionary, bones: Array, at: Dictionary, seed_off: Vector3, hc: Color, lo: bool) -> ArrayMesh:
+	var w: float = look.get("width", 1.0)
+	var skin: Color = look["skin"]
+	var shirt: Color = look["shirt"]
+	var top: String = look.get("top", "tee")
+	var lank: bool = look.get("hair", "bald") == "lank"
+	var glow: bool = look.get("glow", false)
+	var boots: Color = look.get("boots", Color("5a3524"))
+	var shirt_paint: String = {"tee": "shirt", "work": "shirt", "open": "open", "sweater": "sweater", "vest": "sweater"}.get(top, "shirt")
+	var leg_paint := "jeans" if look.get("legs", "") == "jeans" else "pants"
+	var names: PackedStringArray = made["names"]
+	var by_name := {}
+	for b in bones:
+		by_name[String((b as Node3D).name)] = bones.find(b)
+	var remap := PackedInt32Array()
+	for nm in names:
+		remap.append(by_name.get(nm, 0))
+	var src_v: PackedVector3Array = made["vertex"]
+	var src_n: PackedVector3Array = made["normal"]
+	var src_c: PackedColorArray = made["color"]
+	var src_b: PackedInt32Array = made["bones"]
+	var src_w: PackedFloat32Array = made["weights"]
+	var verts := PackedVector3Array()
+	var norms := PackedVector3Array()
+	var cols := PackedColorArray()
+	var bone_of := PackedInt32Array()
+	var weight_of := PackedFloat32Array()
+	var keep := PackedInt32Array()   # new index of each point (-1: dropped)
+	keep.resize(src_v.size())
+	var scale := Vector3(w, 1.0, 1.0 + (w - 1.0) * 0.6)
+	var nscale := Vector3(1.0 / scale.x, 1.0, 1.0 / scale.z)
+	for i in src_v.size():
+		var zone := int(src_c[i].r * 32.0)
+		if zone == ZONE_STRAND and not lank:
+			keep[i] = -1
+			continue
+		keep[i] = verts.size()
+		var v: Vector3 = src_v[i] * scale
+		verts.append(v)
+		norms.append((src_n[i] * nscale).normalized())
+		# Its bones, and the strongest one, whose joint its paint is laid out from.
+		var top_b := 0
+		var top_w := -1.0
+		for k in 4:
+			var b := remap[src_b[i * 4 + k]]
+			var wt: float = src_w[i * 4 + k]
+			bone_of.append(b)
+			weight_of.append(wt)
+			if wt > top_w:
+				top_w = wt
+				top_b = b
+		var bone_name := String((bones[top_b] as Node3D).name)
+		var pj: Node3D = bones[by_name[_PAINT_JOINT.get(bone_name, "Spine")]]
+		var here: Vector3 = at[pj]
+		var local := v - here
+		var c: Color
+		var paint := ""
+		match zone:
+			ZONE_SKIN, ZONE_SCALP:
+				c = Color(skin, SKIN)
+				match _PAINT_JOINT.get(bone_name, "Spine"):
+					"Head": paint = "face"
+					"Spine": paint = "throat" if bone_name == "Neck" else ("flayed" if top == "flayed" else "bare")
+					"Hips": paint = "bare"
+					"Shoulderl", "Shoulderr": paint = "arm"
+					"Handl", "Handr": paint = "hand"
+					_: paint = "skin"
+				if zone == ZONE_SCALP and lank:
+					c = Color(hc, CLOTH)
+					paint = ""
+			ZONE_STRAND:
+				c = Color(hc.lightened(absf(_noise.get_noise_3dv(v * 9.0)) * 0.3), CLOTH)
+			ZONE_SHIRT:
+				c = Color(shirt, STRIPE if top == "sweater" else CLOTH)
+				paint = shirt_paint
+			ZONE_TRIM:
+				c = Color(shirt.darkened(0.2), CLOTH)
+			ZONE_POCKET:
+				c = Color(shirt.darkened(0.08), CLOTH)
+				paint = "sweater"
+			ZONE_BUTTON:
+				c = Color(0.62, 0.6, 0.52, PLAIN)
+			ZONE_PANTS:
+				c = Color(look["pants"], CLOTH)
+				paint = leg_paint
+			ZONE_BOOT:
+				c = Color(boots, PLAIN)
+				paint = "boot"
+			ZONE_SOLE:
+				c = Color(boots.darkened(0.55), PLAIN)
+			ZONE_TEETH:
+				c = Color(DEAD_TEETH.lerp(BLOOD, clampf(_noise.get_noise_3dv(v * 3.0) + 0.3, 0.0, 1.0) * 0.4), PLAIN)
+			ZONE_EYE:
+				c = Color(look.get("eyes", Color(1.0, 0.8, 0.4)), GLOW) if glow else Color(MILKY, PLAIN)
+			ZONE_MOUTH:
+				c = Color(0.07, 0.015, 0.012, PLAIN)
+			ZONE_NAIL:
+				c = Color(skin.darkened(0.3).lerp(NAIL, 0.25), SKIN)
+			_:
+				c = Color(skin, SKIN)
+		if paint != "":
+			c = _stain(c, local, paint, seed_off + here, 1.0)
+		var ao: float = src_c[i].g
+		cols.append(Color(c.r * ao, c.g * ao, c.b * ao, c.a))
+	var idx := PackedInt32Array()
+	var src_i: PackedInt32Array = made["index"]
+	for t in range(0, src_i.size(), 3):
+		var a := keep[src_i[t]]
+		var b := keep[src_i[t + 1]]
+		var d := keep[src_i[t + 2]]
+		if a >= 0 and b >= 0 and d >= 0:
+			idx.append_array([a, b, d])
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = verts
+	arr[Mesh.ARRAY_NORMAL] = norms
+	arr[Mesh.ARRAY_COLOR] = cols
+	arr[Mesh.ARRAY_INDEX] = idx
+	arr[Mesh.ARRAY_BONES] = bone_of
+	arr[Mesh.ARRAY_WEIGHTS] = weight_of
+	var im := ImporterMesh.new()
+	im.add_surface(Mesh.PRIMITIVE_TRIANGLES, arr)
+	if not lo:
+		im.generate_lods(25.0, 60.0, [])
+	return im.get_mesh()
 
 
 const IRIS := [Color("4a3424"), Color("2f4f6a"), Color("3d5a36"), Color("5a4630"), Color("2a2a2a")]

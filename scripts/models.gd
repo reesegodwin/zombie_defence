@@ -61,3 +61,48 @@ static func _flatten(root: Node) -> ArrayMesh:
 	var m := ArrayMesh.new()
 	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, out)
 	return m
+
+
+static var _skinned := {}
+
+
+## A skinned model's raw arrays: "vertex", "normal", "color", "index", and per
+## vertex four "bones" (by name, from "names") with their "weights"; or {} if
+## there's no assets/models/<model_name>.glb.
+static func skinned(model_name: String) -> Dictionary:
+	if _skinned.has(model_name):
+		return _skinned[model_name]
+	var out := {}
+	var path := "res://assets/models/%s.glb" % model_name
+	if ResourceLoader.exists(path):
+		var scene: PackedScene = load(path)
+		var root := scene.instantiate() if scene != null else null
+		var mi: MeshInstance3D = _find_mesh(root) if root != null else null
+		if mi != null and mi.mesh != null and mi.skin != null:
+			var arr := mi.mesh.surface_get_arrays(0)
+			var skel: Skeleton3D = mi.get_node_or_null(mi.skeleton) as Skeleton3D
+			var names := PackedStringArray()
+			for i in mi.skin.get_bind_count():
+				var nm := String(mi.skin.get_bind_name(i))
+				if nm == "" and skel != null:
+					nm = skel.get_bone_name(mi.skin.get_bind_bone(i))
+				names.append(nm)
+			out = {
+				"vertex": arr[Mesh.ARRAY_VERTEX], "normal": arr[Mesh.ARRAY_NORMAL],
+				"color": arr[Mesh.ARRAY_COLOR], "index": arr[Mesh.ARRAY_INDEX],
+				"bones": arr[Mesh.ARRAY_BONES], "weights": arr[Mesh.ARRAY_WEIGHTS], "names": names,
+			}
+		if root != null:
+			root.free()
+	_skinned[model_name] = out
+	return out
+
+
+static func _find_mesh(n: Node) -> MeshInstance3D:
+	if n is MeshInstance3D:
+		return n
+	for c in n.get_children():
+		var m := _find_mesh(c)
+		if m != null:
+			return m
+	return null
