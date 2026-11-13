@@ -292,7 +292,9 @@ func layout_crew() -> void:
 
 func _free_front_spot(me: Dictionary) -> float:
 	var mid := (D.X0 + D.X1) / 2.0
-	var offs: Array = D.CREW_SLOTS.duplicate()
+	# You start in the middle; the crew's spots go out from the middle of the
+	# wall (not from wherever you've walked to), and you don't take one up.
+	var offs: Array = [0.0] if me["is_player"] else D.CREW_SLOTS.slice(1)
 	for k in range(1, 12):
 		offs.append(-1.5 * k + 0.75)   # past the usual spots: fill in every metre and a half
 		offs.append(1.5 * k - 0.75)
@@ -300,7 +302,7 @@ func _free_front_spot(me: Dictionary) -> float:
 		var u := clampf(mid + off, D.X0 + 0.6, D.X1 - 0.6)
 		var taken := false
 		for o in crew:
-			if o != me and o["side"] == 0 and not o.has("post") and absf(o["u"] - u) < 1.2:
+			if o != me and not o["is_player"] and o["side"] == 0 and not o.has("post") and absf(o["u"] - u) < 1.2:
 				taken = true
 		if not taken:
 			return u

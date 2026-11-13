@@ -329,7 +329,7 @@ const NAMES := ["Dana", "Marek", "Priya", "Hollis", "June", "Tomas", "Ada", "Kof
 const JACKETS := [Color("7a5c3a"), Color("4d5a3c"), Color("5c3f4f"), Color("3d4f5c"), Color("6b6b4a")]
 const DECK_H := 0.45     # walkway height, in metres
 const SKINS := [Color("e0b896"), Color("c49270"), Color("8d5e3e"), Color("f1cfb0"), Color("a8775a")]
-const CREW_SLOTS := [0.0, 1.3, -1.3, 2.8, -2.8, 4.6, -4.6]   # spots on the front wall from its middle: you, then the first of the crew right beside you
+const CREW_SLOTS := [0.0, 2.0, -2.0, 4.0, -4.0, 5.8, -5.8]   # spots on the front wall, measured from its middle: you start at 0, the crew take the rest, nearest the middle first
 
 # kind: weapon | mod (gear) | supply | trap. "short" is the label drawn in a slot.
 const ITEMS := {

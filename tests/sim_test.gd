@@ -105,7 +105,12 @@ func _unit_checks() -> void:
 	grp.scrap = 20
 	grp.add_survivor("Bea", "pistol", false)
 	check(Tut.step_ready("repair", grp), "tutorial: the repair tip comes once a wall is 5% down")
-	check(absf(grp.crew[1]["u"] - grp.crew[0]["u"]) <= 1.5 and grp.crew[1]["side"] == 0, "the first of the crew stands right beside you on the front wall (%.1f m away)" % absf(grp.crew[1]["u"] - grp.crew[0]["u"]))
+	var mid := (D.X0 + D.X1) / 2.0
+	check(absf(grp.crew[1]["u"] - mid) <= 2.1 and grp.crew[1]["side"] == 0, "the first of the crew stands near the middle of the front wall (%.1f m off)" % absf(grp.crew[1]["u"] - mid))
+	var gmv = Game.new()
+	gmv.crew[0]["u"] = mid + 2.0   # you've walked off along the wall
+	gmv.add_survivor("Dot", "pistol", false)
+	check(absf(gmv.crew[1]["u"] - mid) <= 2.1, "they still go to the middle, wherever you've walked to")
 	# Its settings: on/off and what's been done carry over, in their own file.
 	var tpath := "user://test_settings.cfg"
 	var st = load("res://scripts/settings.gd").load_or_detect(tpath)
