@@ -1403,12 +1403,8 @@ func update_shots(dt: float) -> void:
 			if pow(z["x"] - f["x"], 2) + pow(z["y"] - f["y"], 2) < f["r"] * f["r"]:
 				damage(z, 20.0 * dt, true)
 				z["burn"] = 1.4
-		if randf() < dt * 30.0:
-			var a := randf() * TAU
-			var rr: float = sqrt(randf()) * f["r"]
-			parts.append({"x": f["x"] + cos(a) * rr, "y": f["y"] + sin(a) * rr, "z": 2.0, "vx": 0.0, "vy": 0.0, "vz": 30.0 + randf() * 30.0,
-				"life": 0.6, "max": 0.6, "color": [Color("ffe08a"), Color("ffb347"), Color("ff7a2a")].pick_random(),
-				"size": 3.0 + randf() * 3.0, "grav": -40.0, "glow": true})
+		# (The flames themselves are the fire scene's own: scenes/fx/fire.tscn,
+		# the same as the fire barrel in the yard.)
 	fires = fires.filter(func(f): return f["life"] > 0)
 
 
