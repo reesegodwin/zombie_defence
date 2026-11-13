@@ -15,6 +15,7 @@ const Reticle = preload("res://scenes/ui/reticle.gd")
 const Tutorial = preload("res://scenes/ui/tutorial.gd")
 const Zombie = preload("res://scenes/actors/zombie.gd")
 const Body = preload("res://scenes/actors/body.gd")
+const Net = preload("res://scripts/net.gd")
 
 @export var zombie_scene: PackedScene
 @export var survivor_scene: PackedScene
@@ -53,7 +54,8 @@ var placing := ""              # "turret" or "radio" while choosing where to bui
 var throwing := -1             # uid of the molotov or pipe bomb being aimed, or -1
 var settings                   # display settings (scripts/settings.gd)
 var tutorial                   # the highlight-and-arrow tutorial (scenes/ui/tutorial.gd)
-var net                        # co-op: hosting or joined (scripts/net.gd), or null playing alone
+var net                        # co-op: hosting or joined (scripts/net.gd)
+var _walk_vec := Vector2.ZERO   # the way you're walking this frame (sent to the host in co-op)
 var progress                   # Grit and camp upgrades (scripts/progress.gd)
 
 var _mouse_screen = null   # last cursor position over the battlefield
@@ -71,6 +73,11 @@ func _ready() -> void:
 	add_child(buildings_root)
 	rig.bounds = Rect2(-26, -16, 76, 52)   # room to look down every lane
 	hud.main = self
+	net = Net.new()
+	net.main = self
+	net.name = "Net"
+	add_child(net)
+	net.status.connect(hud.on_net_status)
 	_bullseye_cursor()
 	settings = Settings.load_or_detect()
 	_apply_settings.call_deferred()
@@ -106,6 +113,11 @@ func _new_game(saved := {}) -> void:
 			turret_nodes.remove_at(i))
 	game.exploded.connect(func(_x, _y, _r): rig.shake = maxf(rig.shake, 0.6))
 	effects.bind(game)
+	if net != null and net.is_host():
+		net.bind_host(game)
+		for id in net.names:
+			if id != 1 and game.me(id) == null:
+				game.add_player(id, net.names[id])
 	game.level_started.connect(_on_level_started)
 	game.new_day.connect(func(n): hud.banner("DAY %d" % n, level_title()))
 	_clear_scene()
@@ -177,6 +189,72 @@ func _fade_to(a: float) -> void:
 
 
 ## The crew have arrived at the next level's base: clear away the old one.
+## Does something to the game: here, or (a co-op friend) at the host's, whose
+## game is the real one. A friend gets an "ok" straight away; anything the
+## host has to say comes back as a toast.
+func act(method: String, args: Array) -> Dictionary:
+	if net.is_friend():
+		net.send_action(method, args)
+		return {"ok": true, "msg": ""}
+	return do_action(method, args, 1)
+
+
+## The game doing something someone (peer) asked for.
+func do_action(method: String, args: Array, peer: int) -> Variant:
+	match method:
+		"start_reload_peer":
+			var s = game.me(peer)
+			return {"ok": game.start_reload(s)} if s != null else {}
+		"camp_buy":
+			return camp_buy(args[0])
+	return game.callv(method, args)
+
+
+## Spends the team's Grit at the camp (the host's camp, in co-op), and puts
+## what can take hold mid-run into the game straight away.
+func camp_buy(id: String) -> Dictionary:
+	if net.is_friend():
+		net.send_action("camp_buy", [id])
+		return {"ok": true, "msg": ""}
+	var r: Dictionary = progress.buy(id)
+	if r.has("ok") and started:
+		game.apply_live(id, progress.level(id))
+	return r
+
+
+## Co-op: host a game for friends to join.
+func host_coop(pname: String) -> String:
+	var err: String = net.host(pname)
+	if err == "":
+		net.bind_host(game)
+	return err
+
+
+## Co-op: join a friend's game. Our own camp's Grit isn't touched: the
+## team's is the host's.
+func join_coop(address: String, pname: String) -> String:
+	progress = Progress.open("user://progress_coop_guest.cfg")
+	return net.join(address, pname)
+
+
+## Co-op (a friend): the host's run is under way: show it.
+func friend_started() -> void:
+	if started:
+		return
+	started = true
+	hud.close_camp()
+	hud.hide_title()
+	hud.banner("DAY %d" % game.day_number(), level_title())
+
+
+## Co-op (a friend): the host left. Back to the title.
+func host_left() -> void:
+	started = false
+	progress = Progress.open("user://progress.cfg")
+	_new_game()
+	hud.show_title()
+
+
 ## Your own character (in co-op, the one with your network id).
 func local_player():
 	if game == null:
@@ -322,7 +400,7 @@ func toggle_pause() -> void:
 func board_all() -> void:
 	if not started or game.over:
 		return
-	var r: Dictionary = game.board_all()
+	var r: Dictionary = act("board_all", [])
 	if r.get("msg", "") != "":
 		hud.toast(r["msg"], "info" if r.has("ok") else "danger")
 	cancel_actions()
@@ -341,6 +419,10 @@ func toggle_sound() -> void:
 func _process(dt: float) -> void:
 	_clock += dt
 	var live: bool = started and not paused and not hud.map_open() and not hud.research_open() and not hud.options_open() and not hud.camp_open() and not hud.saves_open()
+	if net.is_host():
+		live = started and not paused and not game.over   # friends are playing: menus don't stop the world
+	elif net.is_friend():
+		live = started and not hud.options_open() and not hud.camp_open()
 	_keyboard_walk(minf(dt, 0.05), live)
 	if not live and Input.mouse_mode == Input.MOUSE_MODE_HIDDEN:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE   # menus need the mouse
@@ -350,11 +432,17 @@ func _process(dt: float) -> void:
 	if started:
 		_update_aim()
 		# The world waits while you study the scavenging map.
-		if live:
+		if net.is_friend():
+			net.smooth()   # the host's game runs the world: we show it
+			net.friend_tick(game.input_aim, game.input_firing, _walk_vec, minf(dt, 0.05))
+			game.update_parts(minf(dt, 0.05))
+		elif live:
 			game.step(minf(dt, 0.05))
+		if net.is_host():
+			net.host_tick(dt)
 	_follow(dt)
 	# Autosave every dawn.
-	if started and not game.over:
+	if started and not game.over and not net.is_friend():
 		var night_now: bool = game.is_night()
 		if _was_night and not night_now and save_run("auto"):
 			hud.toast("Dawn. Autosaved.", "info")
@@ -552,6 +640,7 @@ func _keyboard_walk(dt: float, live: bool) -> void:
 	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT): v.x += 1
 	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP): v.y += 1
 	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN): v.y -= 1
+	_walk_vec = Vector2.ZERO
 	if v == Vector2.ZERO or not started or game.over:
 		return
 	var me = local_player()
@@ -566,7 +655,8 @@ func _keyboard_walk(dt: float, live: bool) -> void:
 	var fwd := Vector3(-rig.global_basis.z.x, 0, -rig.global_basis.z.z).normalized()
 	var right := Vector3(rig.global_basis.x.x, 0, rig.global_basis.x.z).normalized()
 	var w := right * v.x + fwd * v.y
-	game.walk_player(Vector2(w.x, w.z).normalized(), dt)
+	_walk_vec = Vector2(w.x, w.z).normalized()
+	game.walk_player(_walk_vec, dt, net.my_peer())   # (a friend: straight away here too, and the host's agrees)
 	_hide_cursor()
 
 
@@ -679,7 +769,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				if not hud.camp_open():
 					hud.toggle_camp()
 			elif started:
-				game.start_reload(local_player())
+				act("start_reload_peer", [])
 		KEY_HOME:
 			rig.reset()
 		KEY_EQUAL, KEY_KP_ADD:
@@ -705,7 +795,7 @@ func field_input(event: InputEvent) -> void:
 						return
 					if throwing >= 0:
 						var tp := _grid(event.position)
-						var tr: Dictionary = game.throw_item(throwing, tp.x, tp.y)
+						var tr: Dictionary = act("throw_item", [throwing, tp.x, tp.y])
 						if tr.has("ok"):
 							throwing = -1
 							preview.visible = false
@@ -722,7 +812,7 @@ func field_input(event: InputEvent) -> void:
 							# (You walk with WASD: clicking yourself just starts or stops repairing.)
 							# Clicking the selected survivor again: repair here.
 							selected_id = -1
-							var r: Dictionary = game.toggle_repair(who)
+							var r: Dictionary = act("toggle_repair", [who])
 							if r.get("msg", "") != "":
 								hud.toast(r["msg"], "info" if r.has("ok") else "danger")
 						else:
@@ -734,7 +824,7 @@ func field_input(event: InputEvent) -> void:
 							var sent := 0
 							for id in [selected_id] + group_ids:
 								for c in game.crew.size():
-									if game.crew[c]["id"] == id and game.board_truck(c).has("ok"):
+									if game.crew[c]["id"] == id and act("board_truck", [c]).has("ok"):
 										sent += 1
 							hud.toast("%d of the crew head for the truck." % sent if sent > 1 else ("To the truck!" if sent == 1 else "They can't get there right now."), "info" if sent > 0 else "danger")
 							selected_id = -1
@@ -747,7 +837,7 @@ func field_input(event: InputEvent) -> void:
 						# A damaged turret: go and repair it.
 						var ti := turret_at_screen(event.position)
 						if ti >= 0:
-							var tr: Dictionary = game.repair_turret(selected_index(), ti)
+							var tr: Dictionary = act("repair_turret", [selected_index(), ti])
 							if tr.get("msg", "") != "":
 								hud.toast(tr["msg"], "info" if tr.has("ok") else "danger")
 							selected_id = -1
@@ -904,12 +994,12 @@ func _move_group(spot: Dictionary, ground: Vector2) -> Dictionary:
 		var off := (k - (n - 1) / 2.0) * 0.8
 		var r: Dictionary
 		if not spot.is_empty():
-			r = game.move_survivor(i, spot["side"], spot["u"] + off)
+			r = act("move_survivor", [i, spot["side"], spot["u"] + off])
 		else:
 			var p := ground + Vector2(off, 0.0)
 			if not Game.in_base(p):
 				p = ground
-			r = game.move_survivor_to(i, p)
+			r = act("move_survivor_to", [i, p])
 		if r.has("ok"):
 			sent += 1
 		if first.is_empty() or (r.has("ok") and not first.has("ok")):
@@ -960,7 +1050,7 @@ func start_placing(id: String) -> void:
 
 func _place_building(screen: Vector2) -> void:
 	var gp := _grid(screen)
-	var r: Dictionary = game.build(placing, gp.x, gp.y)
+	var r: Dictionary = act("build", [placing, gp.x, gp.y])
 	if r.has("ok"):
 		hud.toast("%s built." % D.SHOP[placing]["name"])
 		placing = ""
@@ -1047,9 +1137,9 @@ func field_drop(pos: Vector2, data: Variant) -> void:
 	var gp := _grid(pos)
 	var r: Dictionary
 	if data.has("trap_uid"):
-		r = game.move_trap(data["trap_uid"], gp.x, gp.y)
+		r = act("move_trap", [data["trap_uid"], gp.x, gp.y])
 	else:
-		r = game.place_trap(data["loc"]["i"], gp.x, gp.y)
+		r = act("place_trap", [data["loc"]["i"], gp.x, gp.y])
 	preview.visible = false
 	if r.has("ok"):
 		hud.clear_selection()

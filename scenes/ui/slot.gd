@@ -120,11 +120,11 @@ func _can_drop_data(_pos: Vector2, data: Variant) -> bool:
 func _drop_data(_pos: Vector2, data: Variant) -> void:
 	var r: Dictionary
 	if data.has("loc"):
-		r = game().move_item(data["loc"], loc)
+		r = hud.main.act("move_item", [data["loc"], loc])
 		if r.has("ok"):
 			hud.main.sfx.play("build")
 			hud.select(loc)
 	else:
-		r = game().pick_up_trap(data["trap_uid"])
+		r = hud.main.act("pick_up_trap", [data["trap_uid"]])
 	if r.has("msg") and r["msg"] != "":
 		hud.set_inv_message(r["msg"])

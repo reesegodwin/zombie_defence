@@ -195,6 +195,13 @@ func _fill_levels(ob: OptionButton) -> void:
 		ob.set_item_tooltip(i, L["desc"])
 
 
+## Co-op status, on the title screen.
+func on_net_status(t: String) -> void:
+	if _co_status != null:
+		_co_status.text = t
+		_co_status.visible = true
+
+
 ## Everything back to a first play: Grit, upgrades, Heat, levels, records,
 ## saved runs, and the tutorial.
 func reset_game() -> void:
@@ -245,6 +252,48 @@ func _build_saves() -> void:
 	_btn_load_title.pressed.connect(func(): open_saves("load"))
 	tv.add_child(_btn_load_title)
 	tv.move_child(_btn_load_title, %StartButton.get_index() + 1)
+	# Co-op: host a game, or join a friend's.
+	var co := HBoxContainer.new()
+	co.alignment = BoxContainer.ALIGNMENT_CENTER
+	co.add_theme_constant_override("separation", 8)
+	var host_b := Button.new()
+	host_b.text = "Host co-op"
+	host_b.focus_mode = Control.FOCUS_NONE
+	var addr := LineEdit.new()
+	addr.placeholder_text = "friend's address"
+	addr.text = "127.0.0.1"
+	addr.custom_minimum_size = Vector2(170, 0)
+	var join_b := Button.new()
+	join_b.text = "Join"
+	join_b.focus_mode = Control.FOCUS_NONE
+	co.add_child(host_b)
+	co.add_child(addr)
+	co.add_child(join_b)
+	tv.add_child(co)
+	tv.move_child(co, _btn_load_title.get_index() + 1)
+	var co_status := Label.new()
+	co_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	co_status.add_theme_color_override("font_color", Color(1, 1, 1, 0.75))
+	tv.add_child(co_status)
+	tv.move_child(co_status, co.get_index() + 1)
+	co_status.visible = false
+	_co_status = co_status
+	host_b.pressed.connect(func():
+		var err: String = main.host_coop("Host")
+		if err != "":
+			co_status.text = err
+			co_status.visible = true
+		else:
+			host_b.disabled = true
+			join_b.disabled = true)
+	join_b.pressed.connect(func():
+		var err: String = main.join_coop(addr.text, "Friend")
+		if err != "":
+			co_status.text = err
+			co_status.visible = true
+		else:
+			host_b.disabled = true
+			join_b.disabled = true)
 	# Start over from scratch: click twice.
 	var wipe := Button.new()
 	wipe.text = "Reset game"
@@ -612,7 +661,7 @@ func use_selected() -> void:
 		main.start_throwing(it["uid"])
 		clear_selection()
 		return
-	var r: Dictionary = main.game.use_supply(selected["i"])
+	var r: Dictionary = main.act("use_supply", [selected["i"]])
 	if r.get("msg", "") != "":
 		if r.has("ok"):
 			toast(r["msg"])
@@ -625,7 +674,7 @@ func use_selected() -> void:
 func _drop_selected() -> void:
 	if selected == null:
 		return
-	var r: Dictionary = main.game.salvage(selected)
+	var r: Dictionary = main.act("salvage", [selected])
 	if r.has("ok"):
 		toast(r["msg"])
 		clear_selection()
@@ -808,7 +857,7 @@ func _buy(id: String) -> void:
 		toggle_workshop()
 		main.start_placing(id)
 		return
-	var r: Dictionary = main.game.buy(id)
+	var r: Dictionary = main.act("buy", [id])
 	if r.has("ok"):
 		if D.ITEMS.has(id):
 			toast(D.SHOP[id]["name"] + " built. It's in storage (I).")
@@ -953,6 +1002,7 @@ const FOG_QUALITIES := ["Off", "Low", "Medium", "High"]
 var _opt_fog: OptionButton
 var _opt_gfx: OptionButton
 var _opt_tut: OptionButton
+var _co_status: Label        # co-op: hosting, joining, joined...
 var btn_camp: Button          # "Camp (C)" on the top bar
 var grit_label: Label         # Grit under Scrap: banked, and what this run adds so far
 var _grit_t := 0.0
@@ -1263,12 +1313,13 @@ func _build_camp() -> void:
 
 
 func _camp_buy(id: String) -> void:
-	var r: Dictionary = main.progress.buy(id)
+	var was: int = main.progress.level(id)
+	var r: Dictionary = main.camp_buy(id)   # (the team's Grit: the host's, in co-op)
 	if r.has("ok"):
 		main.sfx.play("build")
-		var lv: int = main.progress.level(id)
+		var lv: int = maxi(main.progress.level(id), was + 1)
 		var nm := "%s%s" % [D.META[id]["name"], "" if main.progress.max_level(id) == 1 else " " + D.LEVEL_MARKS[lv - 1]]
-		if main.started and main.game.apply_live(id, lv):
+		if main.started and id in D.META_LIVE:
 			_camp_msg.text = "%s bought. It takes hold right now, and in every run after." % nm
 		elif main.started and not main.game.over:
 			_camp_msg.text = "%s bought. It applies from your next run." % nm

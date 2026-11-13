@@ -135,7 +135,7 @@ func _update_status() -> void:
 
 
 func _send() -> void:
-	var r: Dictionary = main.game.send_scavenger(who, site)
+	var r: Dictionary = main.act("send_scavenger", [who, site])
 	if r.has("ok"):
 		close()
 	else:

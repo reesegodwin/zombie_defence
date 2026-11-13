@@ -139,6 +139,18 @@ floodlight, muzzle flashes, burning fuel, explosions and blood on the ground.
 3. The first import takes a moment while Godot processes textures and the font.
 4. Press **F5** (or ▶ at the top right) to play.
 
+## Co-op (up to 4 players)
+
+On the title screen, one player clicks **Host co-op**; friends type the host's
+address and click **Join** (port 24565 must be reachable: on the same network,
+or forwarded). The host's game is the real one: friends see it and send their
+aiming, shooting, walking and clicks to it. Everyone has their own character;
+the AI crew is shared, and so is the Grit: anyone can spend it at the camp, and
+the upgrades apply to the whole team. The run is lost only when every player
+is down. The connection code (`scripts/net.gd`) is written so Steam's
+networking can be plugged in for invites once the game has its Steam app ID
+(the GodotSteam add-on provides `SteamMultiplayerPeer`).
+
 ## Controls
 
 | Action | Input |

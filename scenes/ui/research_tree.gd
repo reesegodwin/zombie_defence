@@ -59,7 +59,7 @@ func _ready() -> void:
 
 
 func _start(id: String) -> void:
-	var r: Dictionary = main.game.start_research(id)
+	var r: Dictionary = main.act("start_research", [id])
 	if r.has("ok"):
 		message.emit("Researching %s. It takes %d seconds once you close this." % [D.RESEARCH[id]["name"], int(D.RESEARCH[id]["time"])])
 	else:
