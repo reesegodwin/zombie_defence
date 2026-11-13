@@ -2153,9 +2153,20 @@ func auto_equip() -> void:
 func available_scavengers() -> Array:
 	var out: Array = []
 	for i in crew.size():
-		if not crew[i]["is_player"] and crew[i]["state"] == "wall":
+		if not crew[i]["is_player"] and _in_for_scavenging(crew[i]):
 			out.append(i)
 	return out
+
+
+## On the wall, or walking somewhere inside the base: a newcomer can be sent
+## out as soon as they're through the gate, without walking to the wall first.
+func _in_for_scavenging(s: Dictionary) -> bool:
+	if s["hp"] <= 0.0:
+		return false
+	if s["state"] == "wall":
+		return true
+	var p := Vector2(s["x"], s["y"])
+	return s["state"] in ["moving", "arriving"] and (in_base(p) or on_deck(p))
 
 
 func can_scavenge(si: int) -> Dictionary:
@@ -2166,8 +2177,8 @@ func can_scavenge(si: int) -> Dictionary:
 	var s: Dictionary = crew[si]
 	if s["is_player"]:
 		return {"msg": "You have to stay and hold the wall."}
-	if s["state"] != "wall":
-		return {"msg": s["name"] + " isn't on the wall right now."}
+	if not _in_for_scavenging(s):
+		return {"msg": s["name"] + " isn't in the base right now."}
 	return {"ok": true}
 
 
@@ -2191,7 +2202,18 @@ func send_scavenger(si: int, site_key: String) -> Dictionary:
 		return chk
 	var site: Dictionary = D.SITES[site_key]
 	var s: Dictionary = crew[si]
-	s["route"] = pass_route(s)
+	if s["state"] == "arriving":
+		# Just in through the gate: they've joined you, and straight back out.
+		survivor_arrived.emit(s["name"])
+		toast.emit("%s made it through the pass and joins you. Skills: %s." % [s["name"], skills_text(s)], "good")
+	if s["state"] == "wall":
+		s["route"] = pass_route(s)
+	else:
+		# Walking somewhere in the base: out from where they are now. (They
+		# come back to their spot on the wall: see update_trip.)
+		var out: Array = [Vector2(s["x"], s["y"])]
+		out.append_array(D.PASS_PATH)
+		s["route"] = out
 	var walk := route_length(s["route"]) / D.WALK_SPEED
 	s["repairing"] = false
 	s["state"] = "leaving"
@@ -2247,6 +2269,7 @@ func update_trip(dt: float) -> void:
 				return
 			trip["report"] = _roll_loot(trip["site"], s)
 			s["state"] = "returning"
+			s["route"] = pass_route(s)   # back to their own spot, wherever they set off from
 			s["path_t"] = 1.0
 			if trip["report"]["survivor"] != "":
 				var ranger: bool = trip["report"]["site"] == "ranger_cabin"

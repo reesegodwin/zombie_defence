@@ -158,6 +158,25 @@ func _unit_checks() -> void:
 	for i in 30:
 		gso.update_walkers(0.05)
 	check(so["path_t"] == tso and so.get("fighting", false), "someone you sent somewhere stops to shoot the dead in range on the way")
+	# A newcomer can be sent scavenging as soon as they're in through the gate.
+	var gsc = Game.new()
+	var nw: Dictionary = gsc.add_survivor("Ned", "pistol", false)
+	nw["state"] = "arriving"
+	nw["route"] = Game.pass_route(nw)
+	nw["path_t"] = 1.12
+	var nwp := Game.route_point(nw["route"], 1.0)
+	nw["x"] = nwp.x; nw["y"] = nwp.y
+	var ni: int = gsc.crew.find(nw)
+	check(not gsc.can_scavenge(ni).has("ok"), "still out in the pass: can't be sent yet")
+	while not Game.in_base(Vector2(nw["x"], nw["y"])):
+		gsc.update_walkers(0.05)
+	check(nw["state"] == "arriving" and gsc.available_scavengers().has(ni) and gsc.send_scavenger(ni, "gas_station").has("ok"), "but once inside the base, off they go")
+	var spot_n := Game.station_point(nw)
+	for i in 2000:
+		gsc.step(0.1)
+		if gsc.trip == null:
+			break
+	check(gsc.trip == null and nw["state"] == "wall" and Vector2(nw["x"], nw["y"]).distance_to(spot_n) < 0.1, "and they come back to their spot on the wall")
 	var prl = load("res://scripts/progress.gd").open("user://test_progress_lv.cfg")
 	prl.reset()
 	check(prl.reached == 1, "only level 1 can be picked at first")
