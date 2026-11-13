@@ -356,7 +356,7 @@ const WEAPON_KEYS := ["pistol", "smg", "shotgun", "rifle", "flamer", "launcher"]
 static var ZTYPES: Dictionary = _load_dir("res://data/zombies/", ZOMBIE_KEYS)
 
 static var WEAPONS: Dictionary = _load_dir("res://data/weapons/", WEAPON_KEYS)
-const SITE_KEYS := ["gas_station", "farmhouse", "hardware_store", "trailer_park", "radio_tower", "police_station", "rail_yard", "ranger_cabin"]
+const SITE_KEYS := ["gas_station", "farmhouse", "hardware_store", "trailer_park", "radio_tower", "police_station", "rail_yard", "ranger_cabin", "church", "hospital", "quarry", "checkpoint"]
 static var SITES: Dictionary = _load_dir("res://data/sites/", SITE_KEYS)
 
 

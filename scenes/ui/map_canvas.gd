@@ -233,6 +233,30 @@ func _draw_site(key: String) -> void:
 			for k in 2:
 				var q := p + Vector2(-26 + k * 26, -2)
 				wpath([q, q + Vector2(0, -14), q + Vector2(22, -14), q + Vector2(22, 0)], col, 1.8, sd + k)
+		"church":
+			# A chapel: a pitched roof, a little steeple and its cross.
+			wpath([p + Vector2(-16, 0), p + Vector2(-16, -14), p + Vector2(0, -24), p + Vector2(16, -14), p + Vector2(16, 0), p + Vector2(-16, 0)], col, 2.0, sd)
+			wline(p + Vector2(0, -24), p + Vector2(0, -40), col, 1.8, sd + 1)
+			wline(p + Vector2(-6, -34), p + Vector2(6, -34), col, 1.8, sd + 2)
+			wpath([p + Vector2(-4, 0), p + Vector2(-4, -9), p + Vector2(4, -9), p + Vector2(4, 0)], col, 1.4, sd + 3)
+		"hospital":
+			# A clinic: a flat-roofed block with a red cross on it.
+			wpath([p + Vector2(-22, 0), p + Vector2(-22, -24), p + Vector2(22, -24), p + Vector2(22, 0), p + Vector2(-22, 0)], col, 2.0, sd)
+			wline(p + Vector2(0, -19), p + Vector2(0, -7), RED, 2.6, sd + 1)
+			wline(p + Vector2(-6, -13), p + Vector2(6, -13), RED, 2.6, sd + 2)
+		"quarry":
+			# A quarry: stepped cuts in the rock, a shed at the top.
+			wpath([p + Vector2(-30, 0), p + Vector2(-20, -8), p + Vector2(-6, -8), p + Vector2(2, -18), p + Vector2(16, -18), p + Vector2(24, -28), p + Vector2(32, -28)], col, 2.0, sd)
+			wpath([p + Vector2(-24, 0), p + Vector2(30, 0)], col, 1.6, sd + 1)
+			wpath([p + Vector2(18, -28), p + Vector2(18, -38), p + Vector2(30, -38), p + Vector2(30, -28)], col, 1.5, sd + 2)
+		"army":
+			# A checkpoint: a barrier pole across the road, a hut and its flag.
+			wline(p + Vector2(-32, -4), p + Vector2(10, -4), col, 2.4, sd)
+			for k in 4:
+				wline(p + Vector2(-28 + k * 10, -7), p + Vector2(-24 + k * 10, -1), RED, 2.0, sd + 1 + k)
+			wpath([p + Vector2(14, 0), p + Vector2(14, -16), p + Vector2(30, -16), p + Vector2(30, 0)], col, 1.8, sd + 5)
+			wline(p + Vector2(22, -16), p + Vector2(22, -36), col, 1.5, sd + 6)
+			wpath([p + Vector2(22, -36), p + Vector2(34, -32), p + Vector2(22, -28)], RED, 1.5, sd + 7)
 		"sos":
 			# A log cabin with an aerial, and radio waves coming off it.
 			wpath([p + Vector2(-14, 0), p + Vector2(-14, -14), p + Vector2(0, -24), p + Vector2(14, -14), p + Vector2(14, 0), p + Vector2(-14, 0)], col, 2.0, sd)

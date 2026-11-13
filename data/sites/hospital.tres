@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ScavengeSite" format=3]
+
+[ext_resource type="Script" path="res://data/scavenge_site.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Clinic"
+note = "pharmacy on the 2nd floor"
+map_position = Vector2(0.84, 0.47)
+icon = "hospital"
+gone_seconds = 110.0
+scrap = 1
+weapon_chance = 0.02
+food_chance = 0.2
+survivor_chance = 0.15
+throwable_chance = 0.1
