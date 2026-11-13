@@ -33,15 +33,18 @@ they'll be gone and how much scrap it holds (each place can only be looted
 once; it's crossed out afterwards). They come back with scrap, and
 with luck a gun, food, molotovs, pipe bombs or another survivor.
 
-Scrap goes on **research** first (T): a tree of projects in six branches
+Scrap goes on **research** first (click the drafting table in the yard, or T): a tree of projects in six branches
 (guns, gear, traps, defences, turrets, provisions). Each one costs scrap up front,
 takes a while, and only one runs at a time. Research unlocks things in the
-**workshop**, where you spend more scrap to build them: guns, gear, traps,
+**workshop** (the workbench in the yard, or B), where you spend more scrap to build them: guns
+(SMG, shotgun, hunting rifle, flamethrower, grenade launcher), gear, traps,
 wire, molotovs and pipe bombs, more shelving, crew drills, and base
 buildings. The walls start as flimsy fences; carpentry lets you put up wooden
 walls, and masonry stone ones. Auto-turrets are bought in the workshop and
 then placed wherever you click in the base (up to four). They shoot on their
-own; heavy rounds, belt feed and optics upgrade them. But the dead can tear
+own; heavy rounds, belt feed and optics upgrade them. The flamethrower
+(research Flamethrowers, after Scatter guns and Fuel slicks) sprays a short
+cone of fire that sets everything in it burning, and lights fuel slicks. But the dead can tear
 them down: a turret standing close behind a wall gets clawed at by the
 zombies at that wall, and any that get into the base go for whatever's
 nearest, turret or person. A health bar shows once one's been hit; pick a
@@ -59,13 +62,18 @@ scrap in the storage panel. Every survivor eats all the time
 going and how long it will last. If it runs out the crew goes hungry and
 shoots slower.
 
-Every survivor who joins you turns up with one to three random skills, each
-at level I, II or III: **Handy** (repairs faster), **Thrifty** (less scrap per
+Twelve named survivors can join you, each always the same person with the
+same look and skills (`scripts/defs.gd`, `CHARACTERS`): Sol the deer hunter
+(Sharpshooter III), June from the diner (Cook, Forager), Kofi the electrician
+(Thrifty, Handy), Hollis the park ranger (the one waiting at the ranger cabin,
+with his hat and shotgun), and more. Hover one in storage for who they are.
+Skills come at level I, II or III: **Handy** (repairs faster), **Thrifty** (less scrap per
 repair), **Sharpshooter** (more damage, tighter spread), **Quick hands**
 (shoots faster), **Cook** (while they're at the base, everyone eats less),
 **Scrounger** (more scrap, guns and bombs), **Forager** (more food on trips), **Fleet-footed**
 (shorter trips) and **Careful** (less likely to die out there). You start
-with none: your own skills come from the camp. Scavenging is risky: there
+with none: your own skills come from the camp. The crew speak up now and
+then: when a wall gives way, when they're hurt, when they head out. Scavenging is risky: there
 is a slight chance, higher on longer trips, that whoever you send never comes
 back, and their gun and gear are lost with them. The map shows the odds for
 the survivor you've picked; the storage panel lists everyone's skills (hover
@@ -83,10 +91,18 @@ Pick the level on the title screen (or at the camp, next to Heat):
 3. **The Siege**: all three lanes from the first morning, and the dead come
    thicker and tougher. The mountain pass at your back stays safe. Pays 50%
    more Grit.
-4. **Last Stand**: endless. No truck comes; all three lanes and waves that
+4. **Frostbite Ridge** (snow, more brutes), 5. **Black Marsh** (fog and mud:
+   a slower but bigger horde), 6. **Dust Bowl** (runners), 7. **Ashwood**
+   (burnt forest, a heavy front lane), 8. **Hollow Creek** (two lanes that
+   never let up), 9. **Iron Yard** (fewer, tougher dead), 10. **Red Pines**,
+   11. **Whiteout**, 12. **Floodplain** (the biggest hordes) and 13. **The
+   Long Dark** (the hardest before the end). Each has its own base: the
+   bunker, huts, tent, benches and turret spots stand somewhere different
+   (`scripts/bases.gd`), in its own country (snow and ash fall on some).
+14. **Last Stand**: endless. No truck comes; all three lanes and waves that
    never stop growing. Hold out 5 nights there and the run counts as won
    (the win's Grit and the next Heat), then keep going for Grit for every
-   night until they get in. Pays 75% more Grit.
+   night until they get in.
 
 A run is a campaign through the levels from the one you pick. At the dawn
 after night 5 (day 6) an army truck comes down the mountain pass into the
@@ -98,7 +114,9 @@ Last Stand. Nights held add up across the levels, for
 Grit.
 
 Levels are set up in `scripts/defs.gd` (`LEVELS`): which lanes open and when,
-and the Grit bonus. Your wins on each are counted.
+the Grit bonus, the base and country, and twists (more runners or brutes,
+slower dead, a heavier front lane, thicker fog). Bases and countries are in
+`scripts/bases.gd`. Your wins on each are counted.
 
 ## Runs and the camp
 
@@ -202,7 +220,7 @@ the GodotSteam add-on itself (it isn't kept in the repo).
 | `scenes/level/base_props.gd` | Dresses the base: the bunker (concrete, sandbags, steel door, lookout, ladder), plank huts with rusty tin roofs, slatted crates, oil drums, the canvas tent, the log gate and the plank walkway, drawn in detail where the placeholder boxes in `level.tscn` stand (move those to move them) |
 | `tools/bake.gd` | Works out the sounds and the land's height grid once and saves them in `assets/baked/` (not committed); the automatic build runs it before exporting, so released builds start about twice as fast |
 | `scenes/level/culvert.gd` | The end of each lane: a concrete headwall in an earth bank with big sewer pipes the dead come out of (where, in `defs.gd`: `PIPES`), ivy, rubble and a burning barrel, built in code |
-| `scenes/actors/guns.gd` | The guns (pistol, SMG, pump shotgun, scoped rifle, grenade launcher), built in code from low-poly blocks and tubes, sized by `barrel_length` in their `.tres`; also the kit the turret is built from |
+| `scenes/actors/guns.gd` | The guns (pistol, SMG, pump shotgun, scoped rifle, flamethrower, grenade launcher), built in code from low-poly blocks and tubes, sized by `barrel_length` in their `.tres`; also the kit the turret is built from |
 | `scenes/ui/research_tree.gd` | The research tree screen |
 | `scenes/level/forest.gd` | The woods; change **Seed Value** or **Density** in the Inspector to re-roll |
 | `scenes/level/mountains.gd` | The mountains and the pass behind the base; re-roll with **Seed Value** |
