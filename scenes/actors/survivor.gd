@@ -299,11 +299,16 @@ func sync(s: Dictionary, dt: float) -> void:
 		var step := pos - _last
 		if step.length() > 0.001 and dt > 0.0:
 			# Walking (you, with the keys) while still aiming: the legs stride
-			# the way you're going, the gun stays on target.
+			# the way you're going, the gun stays on target. Going away from
+			# where you aim, you walk backwards: hips to the front, the stride
+			# played in reverse, shorter steps.
 			_heading = atan2(step.x, step.y)
-			_phase += minf(step.length(), 0.5) / Body.stride_cycle(stride) * TAU
-			_legs(Body.hip_swing(_phase, stride), maxf(0.0, -cos(_phase)) * 0.9, Body.hip_swing(_phase + PI, stride), maxf(0.0, cos(_phase)) * 0.9)
-			hips.rotation.y = lerp_angle(hips.rotation.y, _heading, 0.3)
+			var backwards := absf(angle_difference(face, _heading)) > deg_to_rad(105.0)
+			var stroke := stride * (0.7 if backwards else 1.0)
+			var adv := minf(step.length(), 0.5) / Body.stride_cycle(stroke) * TAU
+			_phase += -adv if backwards else adv
+			_legs(Body.hip_swing(_phase, stroke), maxf(0.0, -cos(_phase)) * 0.9, Body.hip_swing(_phase + PI, stroke), maxf(0.0, cos(_phase)) * 0.9)
+			hips.rotation.y = lerp_angle(hips.rotation.y, _heading + PI if backwards else _heading, 0.3)
 		else:
 			# A slightly wide, braced stance; a little breathing.
 			_legs(0.12, 0.08, -0.12, 0.05)

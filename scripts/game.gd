@@ -449,7 +449,11 @@ func walk_player(dir: Vector2, dt: float) -> void:
 	if dir.length() > 1.0:
 		dir = dir.normalized()
 	var here := Vector2(s["x"], s["y"])
-	var step := dir * D.PLAYER_SPEED * dt
+	# Facing one way and walking the other: a slower backpedal (a little
+	# slower sideways, full pace forward).
+	var facing := Vector2.from_angle(s["aim"])
+	var back := smoothstep(0.0, -0.85, dir.normalized().dot(facing))
+	var step := dir * D.PLAYER_SPEED * lerpf(1.0, D.BACKPEDAL, back) * dt
 	var to := here + step
 	if not walkable(to):
 		# Slide along whatever's in the way.

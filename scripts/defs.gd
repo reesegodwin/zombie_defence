@@ -110,6 +110,7 @@ const BRUTES_FROM := 200.0            # and the first brutes
 # --- Scavenging, strangers, food -------------------------------------------
 const WALK_SPEED := 2.2                 # tiles per second, walking to and from the pass
 const PLAYER_SPEED := 3.4               # you, walking with WASD (tiles per second)
+const BACKPEDAL := 0.5                  # walking backwards (away from where you aim): this share of that pace
 # The route from the back of the base up through the mountain pass (x, y).
 const PASS_PATH := [Vector2(11.2, 22.5), Vector2(11.2, 29.0), Vector2(11.7, 32.5), Vector2(12.5, 36.0), Vector2(12.6, 40.0), Vector2(12.1, 44.0)]
 const SCRAP_TIERS := [[20, 36], [38, 64], [70, 120]]   # low, medium, high: min and max scrap

@@ -180,6 +180,7 @@ func _unit_checks() -> void:
 	var gwk = Game.new()
 	var pme: Dictionary = gwk.crew[0]
 	var wstart := Vector2(pme["x"], pme["y"])
+	pme["aim"] = PI / 2   # facing the way they walk (backwards would be slower)
 	for i in 60:
 		gwk.walk_player(Vector2(0, 1), 1.0 / 60.0)
 	check(pme["y"] > wstart.y + 2.5 and pme["state"] == "wall" and pme.has("post"), "WASD walks you down off the walkway into the yard (%.1f -> %.1f)" % [wstart.y, pme["y"]])
@@ -194,6 +195,19 @@ func _unit_checks() -> void:
 	for i in 200:
 		gwk.walk_player(Vector2(0, -1), 1.0 / 60.0)
 	check(Game.on_deck(Vector2(pme["x"], pme["y"])) and not pme.has("post") and pme["side"] == 0 and pme["y"] > D.WALL_Y, "walking up onto the front walkway puts you on that wall, not over it")
+
+	# Walking backwards (away from where you aim) is a slower backpedal.
+	var gbk = Game.new()
+	var bk: Dictionary = gbk.crew[0]
+	bk["x"] = 11.0; bk["y"] = 20.0; bk["post"] = Vector2(11, 20)
+	bk["aim"] = -PI / 2   # aiming at the front wall (up)
+	var y0: float = bk["y"]
+	gbk.walk_player(Vector2(0, -1), 0.2)
+	var fwd: float = y0 - bk["y"]
+	y0 = bk["y"]
+	gbk.walk_player(Vector2(0, 1), 0.2)
+	var bwd: float = bk["y"] - y0
+	check(fwd > 0.6 and absf(bwd / fwd - D.BACKPEDAL) < 0.02, "walking backwards is slower (%.2f vs %.2f m)" % [bwd, fwd])
 
 	# No range cap: a bullet carries on past a gun's reach. Aim gets worse with
 	# distance, except with the hunting rifle.
