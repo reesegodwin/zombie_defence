@@ -109,6 +109,7 @@ func apply_palette(key: String) -> void:
 	$Forest.set_pull(tr[0], tr[1])
 	haze = Bases.PALETTES.get(key, {}).get("haze", Color.WHITE)
 	weather.set_kind(Bases.PALETTES.get(key, {}).get("weather", ""))
+	Culvert.set_snow(float(Bases.PALETTES.get(key, {}).get("snow", 0.0)))
 
 
 # --- Spotlights -------------------------------------------------------------------

@@ -22,7 +22,7 @@ const THROAT_Z := -0.62    # where the black of a pipe's throat starts (behind t
 var side := 0
 var plug: MeshInstance3D    # bricks and boards over the pipes, for a level where this lane is shut
 
-static var _mat: StandardMaterial3D
+static var _mat: ShaderMaterial
 static var _void: StandardMaterial3D
 
 
@@ -298,13 +298,17 @@ func _ivy(k: Guns.Kit, half: float, pipes: Array) -> void:
 				Vector3(rng.randf_range(-0.4, 0.4), 0, rng.randf_range(-0.4, 0.4)))
 
 
-static func _material() -> StandardMaterial3D:
+static func _material() -> ShaderMaterial:
 	if _mat == null:
-		_mat = StandardMaterial3D.new()
-		_mat.vertex_color_use_as_albedo = true
-		_mat.vertex_color_is_srgb = true
-		_mat.roughness = 0.95
+		_mat = ShaderMaterial.new()
+		_mat.shader = preload("res://assets/shaders/prop.gdshader")
 	return _mat
+
+
+## Snow lying on everything built from this material that faces up (0 none,
+## 1 thick): set from the level's palette (level.gd).
+static func set_snow(amount: float) -> void:
+	_material().set_shader_parameter("snow", amount)
 
 
 static func _void_material() -> StandardMaterial3D:

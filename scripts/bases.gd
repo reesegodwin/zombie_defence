@@ -131,7 +131,7 @@ const BASES := {
 const PALETTES := {
 	"green": {},
 	"snow": {"grass": [Color(0.88, 0.9, 0.95), 0.92], "soil": [Color(0.78, 0.78, 0.8), 0.5], "trees": [Color(0.7, 0.78, 0.8), 0.35],
-		"tufts": [Color(0.85, 0.86, 0.82), 0.7], "haze": Color(0.85, 0.9, 1.0), "weather": "snow"},
+		"tufts": [Color(0.85, 0.86, 0.82), 0.7], "haze": Color(0.85, 0.9, 1.0), "weather": "snow", "snow": 0.85},
 	"marsh": {"grass": [Color(0.3, 0.31, 0.16), 0.8], "soil": [Color(0.22, 0.19, 0.13), 0.65], "trees": [Color(0.06, 0.11, 0.07), 0.6],
 		"tufts": [Color(0.42, 0.42, 0.18), 0.65], "haze": Color(0.78, 0.9, 0.78)},
 	"dust": {"grass": [Color(0.62, 0.52, 0.32), 0.8], "soil": [Color(0.7, 0.56, 0.38), 0.4], "trees": [Color(0.3, 0.29, 0.14), 0.5],
