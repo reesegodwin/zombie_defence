@@ -46,8 +46,8 @@ func _wanted() -> bool:
 		return false
 	if Input.mouse_mode != Input.MOUSE_MODE_VISIBLE:
 		return false
-	if main.hover_survivor >= 0:
-		return false
+	if main.pointing():
+		return false   # the hand: picking someone, sending them, placing something
 	return get_viewport().gui_get_hovered_control() == main.hud.field
 
 
