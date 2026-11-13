@@ -194,6 +194,10 @@ const TURRET_TURN := 2.4          # a turret's motorised swivel
 const AIM_TOLERANCE := 0.09
 # Once a wall is down: how the dead hunt inside the base.
 const SPREAD_CHANCE := 0.3        # this share of them pick another target than the nearest
+const FLANK := 0.6                # inside, each makes for its own spot on a ring round its target, this far out per metre away...
+const FLANK_MAX := 4.5            # ...up to this many metres, so the pack fans out and surrounds instead of queueing
+const FLANK_TURN := 1.9           # each comes round to its own side of the target, up to this far (radians) off its straight line
+const FLANK_CLOSE := 2.0          # and within this, straight for them
 const RETARGET := Vector2(0.8, 1.6)   # seconds between choosing again (random in range)
 const TURRET_REPAIR := 14.0       # turret health restored per second, per repairer
 const TURRET_PER_SCRAP := 5.0     # turret health for each scrap spent

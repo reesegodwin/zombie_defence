@@ -703,6 +703,12 @@ func _zombie_inside(z: Dictionary, T: Dictionary, dt: float) -> void:
 		z["prey"] = best
 		z["retarget"] = randf_range(D.RETARGET.x, D.RETARGET.y)
 		z.erase("path")
+		var bid: int = best.get("id", -1) if best != null else -2
+		if bid != z.get("approach_for", -3):
+			z.erase("approach")   # a new target: a new way in
+			z.erase("best_d")
+			z["stall"] = 0.0
+			z["approach_for"] = bid
 	if best == null:
 		return
 	var tower: bool = turrets.has(best)
@@ -711,7 +717,7 @@ func _zombie_inside(z: Dictionary, T: Dictionary, dt: float) -> void:
 	var reach: float = T["r"] + 0.45
 	if bd > reach:
 		var step: float = T["speed"] * z["spd"] * z["slow"] * 1.15 * dt
-		var goal := _next_waypoint(z, Vector2(best["x"], best["y"]))
+		var goal := _next_waypoint(z, _flank_goal(z, Vector2(best["x"], best["y"]), bd, dt))
 		var dv := goal - Vector2(z["x"], z["y"])
 		var dl := dv.length()
 		if dl > 0.001:
@@ -732,6 +738,52 @@ func _zombie_inside(z: Dictionary, T: Dictionary, dt: float) -> void:
 			hurt_turret(best, T["dmg"])
 		else:
 			hurt_survivor(best, T["dmg"] * D.BITE)
+
+
+## Where a zombie inside heads for on its way to its target at prey: while
+## it's still some way off, a point out to its own side of the target (each
+## has its own side and how far: z["flank"], -1..1), closing in as it nears,
+## so a pack fans out round the buildings and comes at you from all sides
+## instead of queueing up the same path. Up close, the target itself.
+func _flank_goal(z: Dictionary, prey: Vector2, dist: float, dt: float) -> Vector2:
+	if dist < D.FLANK_CLOSE:
+		return prey
+	if not z.has("flank"):
+		z["flank"] = randf_range(-1.0, 1.0)
+	# Not getting any closer (hemmed in round a corner)? Then straight for them.
+	if dist < z.get("best_d", INF) - 0.2:
+		z["best_d"] = dist
+		z["stall"] = 0.0
+	else:
+		z["stall"] = z.get("stall", 0.0) + dt
+	if z["stall"] > 2.5:
+		return prey
+	# A spot on a ring round the target, turned off its own bearing by its own
+	# angle (up to FLANK_TURN either way): it comes at you from there. The ring
+	# shrinks as it closes in. Blocked or outside? Turn less, same side.
+	var p := Vector2(z["x"], z["y"])
+	var back := (p - prey) / maxf(dist, 0.001)
+	if not z.has("approach"):
+		# Set when it picks its target (cleared on choosing again): a fixed
+		# bearing, so it closes in from there rather than circling.
+		z["approach"] = back.angle() + z["flank"] * D.FLANK_TURN
+	var r := minf((dist - D.FLANK_CLOSE) * D.FLANK + D.FLANK_CLOSE * 0.6, D.FLANK_MAX)
+	var straight := back.angle()
+	for k in 3:   # turned less...
+		var ang: float = lerp_angle(straight, z["approach"], [1.0, 0.6, 0.3][k])
+		for rk: float in [1.0, 0.65, 0.4]:   # ...or nearer in
+			var g := prey + Vector2.from_angle(ang) * r * rk
+			if (in_base(g) or on_deck(g)) and not _blocked(g):
+				return g
+	return prey
+
+
+## Somewhere the dead can't stand (the same as their paths go round)?
+static func _blocked(p: Vector2) -> bool:
+	for blk in D.BLOCKERS:
+		if blk.position != D.GATE_PATH.position and blk.grow(0.3).has_point(p):
+			return true
+	return false
 
 
 ## Who a zombie inside goes for: usually whatever's nearest (person or turret);
@@ -776,6 +828,8 @@ static func nav() -> AStarGrid2D:
 		_nav.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
 		_nav.update()
 		for blk in D.BLOCKERS:
+			if blk.position == D.GATE_PATH.position:
+				continue   # only kept clear for the truck: the dead walk over it
 			var r: Rect2 = blk.grow(0.3)
 			for cx in range(int((r.position.x - NAV_AREA.position.x) / NAV_CELL), int(ceil((r.end.x - NAV_AREA.position.x) / NAV_CELL))):
 				for cy in range(int((r.position.y - NAV_AREA.position.y) / NAV_CELL), int(ceil((r.end.y - NAV_AREA.position.y) / NAV_CELL))):
@@ -792,6 +846,8 @@ static func _nav_cell(p: Vector2) -> Vector2i:
 ## True if the straight line from a to b crosses no building.
 static func clear_line(a: Vector2, b: Vector2) -> bool:
 	for blk in D.BLOCKERS:
+		if blk.position == D.GATE_PATH.position:
+			continue   # only kept clear for the truck
 		var r: Rect2 = blk.grow(0.3)   # a body's width round each building
 		# Slab test of the segment against the rectangle.
 		var t0 := 0.0
