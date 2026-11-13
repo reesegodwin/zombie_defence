@@ -180,7 +180,8 @@ func _pose_aim(_k := 1.0) -> void:
 		var at: Vector2 = gp[i]
 		var local := gun.position + Vector3(0.0 if i == 0 else 0.012, -at.y, _rear + at.x * _length)
 		var t: Vector3 = gun_pivot.transform * local
-		_reach("r" if i == 0 else "l", t)
+		# (The body's "_l" joints are on its right side: it faces +z.)
+		_reach("l" if i == 0 else "r", t)
 
 
 ## Bends an arm so its hand lands on t (in the spine's space): two-bone IK,
@@ -377,7 +378,7 @@ func sync(s: Dictionary, dt: float) -> void:
 ## Where each hand goes on the gun (from its rear end, as a share of its
 ## length; down from the bore, metres): [right grip, left hand].
 const GRIPS := {
-	"pistol": [Vector2(0.12, 0.045), Vector2(0.14, 0.05)],     # both on the grip
+	"pistol": [Vector2(0.17, 0.08), Vector2(0.19, 0.09)],      # both round the grip, the left cupping the right
 	"smg": [Vector2(0.36, 0.055), Vector2(0.62, 0.035)],
 	"shotgun": [Vector2(0.24, 0.045), Vector2(0.47, 0.03)],     # left on the pump
 	"rifle": [Vector2(0.2, 0.045), Vector2(0.42, 0.03)],
@@ -398,8 +399,9 @@ func _set_weapon(key: String) -> void:
 	if key == "pistol":
 		gun.position = Guns.HOLD   # held out in front, both hands
 	else:
-		# Shouldered: the butt in the pocket of the right shoulder.
-		var sh: Vector3 = j["shoulder_r"].position
+		# Shouldered: the butt in the pocket of the right shoulder (the body's
+		# "_l" side: it faces +z, so its right is -x).
+		var sh: Vector3 = j["shoulder_l"].position
 		var butt := Vector3(sh.x * 0.62, sh.y - 0.07, 0.07)
 		gun.position = butt - gun_pivot.position - Vector3(0, 0, _rear)
 	muzzle.position = gun.position + Vector3(0, 0.01, g["muzzle"])

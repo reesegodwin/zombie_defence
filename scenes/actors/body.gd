@@ -396,9 +396,9 @@ static func survivor(root: Node3D, look: Dictionary) -> Dictionary:
 			_part(j, knee, "s_kneepad", Color("26282a"), PLAIN, Vector3(0, -0.005, 0.05), Vector3.ONE)
 			_part(j, knee, "s_thigh_strap", LEATHER, PLAIN, Vector3(0, 0.035, 0.004), Vector3(0.76, 1, 0.72))
 			_part(j, knee, "s_thigh_strap", LEATHER, PLAIN, Vector3(0, -0.05, 0.0), Vector3(0.72, 1, 0.72))
-		if look.get("holster", false) and side > 0:
-			_part(j, hip, "s_holster", LEATHER, PLAIN, Vector3(0.083 * legw.x, -0.2, 0.012), Vector3.ONE, Vector3(0.12, 0, 0))
-			_part(j, hip, "s_grip", Color("1c1c1e"), PLAIN, Vector3(0.088 * legw.x, -0.115, -0.012), Vector3.ONE, Vector3(-0.3, 0, 0))
+		if look.get("holster", false) and side < 0:   # (on the right thigh: the body faces +z, so its right is -x)
+			_part(j, hip, "s_holster", LEATHER, PLAIN, Vector3(-0.083 * legw.x, -0.2, 0.012), Vector3.ONE, Vector3(0.12, 0, 0))
+			_part(j, hip, "s_grip", Color("1c1c1e"), PLAIN, Vector3(-0.088 * legw.x, -0.115, -0.012), Vector3.ONE, Vector3(-0.3, 0, 0))
 			_part(j, hip, "s_thigh_strap", LEATHER, PLAIN, Vector3(0, -0.15, 0.0), legw)
 			_part(j, hip, "s_thigh_strap", LEATHER, PLAIN, Vector3(0, -0.245, 0.002), legw * Vector3(0.9, 1, 0.9))
 		_part(j, knee, "s_boot_shaft", shoes, PLAIN, Vector3(0, -0.29, 0.0), Vector3.ONE, Vector3.ZERO, "leather")
