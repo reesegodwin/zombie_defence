@@ -362,6 +362,7 @@ func apply_graphics() -> void:
 	env.glow_enabled = not low
 	level.spot_detail(not low)
 	level.grass.set_quality(q)
+	level.weather.set_quality(q)
 
 
 ## Rebuilds the ground fog at the quality picked in Options.
@@ -483,6 +484,7 @@ func _process(dt: float) -> void:
 		get_tree().create_timer(1.6 if game.won else 2.5).timeout.connect(func(): if game.over: hud.show_game_over(result))
 	rig.shake = maxf(rig.shake, game.shake * 0.6)
 	_sync_scene(dt)
+	level.weather.follow(rig.position)
 	_sync_truck()
 	_set_mood()
 	hud.update_hud()

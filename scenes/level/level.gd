@@ -8,10 +8,12 @@ const Culvert = preload("res://scenes/level/culvert.gd")
 const GroundFog = preload("res://scenes/level/ground_fog.gd")
 const Grass = preload("res://scenes/level/grass.gd")
 const BaseProps = preload("res://scenes/level/base_props.gd")
+const Weather = preload("res://scenes/level/weather.gd")
 const Guns = preload("res://scenes/actors/guns.gd")
 
 var ground_fog: Node3D
 var grass: Node3D
+var weather: Node3D
 var culverts: Array = []
 var _yard_lights: Array = []     # the lamps in the yard (base_props.gd)
 
@@ -101,6 +103,7 @@ func apply_palette(key: String) -> void:
 	var tr: Array = Bases.pull(key, "trees")
 	$Forest.set_pull(tr[0], tr[1])
 	haze = Bases.PALETTES.get(key, {}).get("haze", Color.WHITE)
+	weather.set_kind(Bases.PALETTES.get(key, {}).get("weather", ""))
 
 
 # --- Spotlights -------------------------------------------------------------------
@@ -262,6 +265,10 @@ func _ready() -> void:
 	grass = Grass.new()
 	grass.name = "Grass"
 	add_child(grass)
+	# Snow or ash falling, on some levels.
+	weather = Weather.new()
+	weather.name = "Weather"
+	add_child(weather)
 	# The sewer pipes at the far end of every lane.
 	for side in D.LANES.size():
 		var c := Culvert.new()
