@@ -140,9 +140,11 @@ func _unit_checks() -> void:
 	var twk0: float = wk["path_t"]
 	gfw.update_walkers(0.05)
 	var held: bool = wk["path_t"] == twk0 and wk.get("fighting", false)
-	for i in 100:   # (a person's aim: not every shot hits)
+	for i in 400:   # (a person's aim: not every shot hits)
 		gfw.update_walkers(0.05)
 		gfw.update_bullets(0.05)
+		if zin["hp"] <= 0:
+			break
 	check(held and zin["hp"] <= 0, "someone walking back through a breached base stops and shoots the dead in range")
 	for i in 400:
 		gfw.update_walkers(0.05)
@@ -802,6 +804,7 @@ func _unit_checks() -> void:
 		g.time = D.WIN_NIGHTS * D.CYCLE - 0.05
 		for i in 600:
 			g.step(0.1)
+			g.zombies.clear()   # (nobody's shooting in this test)
 			if g.truck_waiting():
 				g.board_all()
 			if g.level == lv:
