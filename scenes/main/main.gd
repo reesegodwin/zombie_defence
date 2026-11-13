@@ -485,6 +485,7 @@ func _process(dt: float) -> void:
 	rig.shake = maxf(rig.shake, game.shake * 0.6)
 	_sync_scene(dt)
 	level.weather.follow(rig.position)
+	_sync_bench_signs()
 	_sync_truck()
 	_set_mood()
 	hud.update_hud()
@@ -712,6 +713,41 @@ func bench_rect(id: String) -> Rect2:
 		var c2 := Vector2(clampf(r.get_center().x, view.position.x, view.end.x), clampf(r.get_center().y, view.position.y, view.end.y))
 		return Rect2(c2 - Vector2(20, 20), Vector2(40, 40))
 	return r
+
+
+## Each bench wears a small sign over it ("Workshop (B)") until it's first
+## been used on this computer, so a new player sees what it's for.
+const BENCH_SIGNS := {"workshop": "Workshop (B)", "research": "Research (T)"}
+var _signs := {}
+
+func bench_used(id: String) -> void:
+	var key := "bench_" + id
+	if not settings.tutorial_done.has(key):
+		settings.tutorial_done.append(key)
+		settings.save()
+	_sync_bench_signs()
+
+
+func _sync_bench_signs() -> void:
+	for id in BENCH_SIGNS:
+		var n = level.get_node_or_null(BENCH_NODES[id])
+		if n == null:
+			continue
+		if not _signs.has(id) or not is_instance_valid(_signs[id]):
+			var l := Label3D.new()
+			l.text = BENCH_SIGNS[id]
+			l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+			l.no_depth_test = true
+			l.fixed_size = true
+			l.pixel_size = 0.0011
+			l.font_size = 30
+			l.outline_size = 10
+			l.outline_modulate = Color(0.05, 0.05, 0.06, 0.85)
+			l.modulate = Color(1.0, 0.85, 0.4)
+			l.position = Vector3(0, 2.35, 0)
+			n.add_child(l)
+			_signs[id] = l
+		_signs[id].visible = started and not settings.tutorial_done.has("bench_" + id)
 
 
 func open_bench(id: String) -> void:

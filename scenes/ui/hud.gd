@@ -793,6 +793,7 @@ func toggle_workshop() -> void:
 	workshop.visible = not workshop.visible and not main.game.over
 	if workshop.visible:
 		_refresh_shop()
+		main.bench_used("workshop")
 
 
 func _build_shop() -> void:
@@ -894,6 +895,7 @@ func toggle_research() -> void:
 		btn_research.release_focus()
 	elif not main.game.over and main.started:
 		_hinted_research = true
+		main.bench_used("research")
 		if workshop.visible:
 			toggle_workshop()
 		close_inventory()
