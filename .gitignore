@@ -10,3 +10,6 @@ addons/godotsteam/
 
 # Blender scripts
 __pycache__/
+
+# Blender keeps the last save beside each file
+*.blend1

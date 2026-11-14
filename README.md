@@ -250,6 +250,7 @@ the GodotSteam add-on itself (it isn't kept in the repo).
 | `scenes/level/mountains.gd` | The mountains and the pass behind the base; re-roll with **Seed Value** |
 | `scenes/ui/scavenge_map.tscn`, `map_canvas.gd` | The hand-drawn scavenging map |
 | `scenes/actors/zombie.tscn`, `zombie.gd` | A zombie: how it moves (its shamble, reach and claw) |
+| `scenes/actors/survivor_model.gd`, `assets/models/survivors/` | The survivors: four people modelled in Blender (see "The survivor models" below): the drifter (you: long hair and a beard, a worn work jacket over a stained T-shirt, cargo trousers with padded knees, laced boots, a bat slung on his back), the scavenger (a woman in a beanie and a fleece-collared jacket, a rucksack, a knee pad, a holster on her thigh), the clerk (slicked-back hair, a shirt with the sleeves rolled, a strap across him, jeans turned up at the ankle) and the rancher (a fleece-lined leather jacket, a satchel). Real proportions, draped cloth with painted wear and grime, hair in strands; 170,000 to 215,000 triangles each, drawn in less detail when small on screen. `survivor_model.gd` loads one, tints its skin, hair and jacket to the survivor's own colours, and turns its skeleton to match the joints the actor poses. Which model each of the cast is: `OUTFITS` there (every woman is the scavenger, for now; the garrison's soldiers have no model yet and are still built in code) |
 | `scenes/actors/body.gd`, `scenes/actors/skin_rig.gd`, `assets/shaders/body.gdshader` | Everyone's bodies, built in code on a shared skeleton of joints, each a single finely made skin (25,000 to 45,000 triangles, drawn in less detail when small on screen) that bends with the joints. Zombies: seven models of the shambling dead (`ZOMBIE_MODELS`: a T-shirt and jeans out at the knees, a striped sweater, a buttoned work shirt, a shirt hanging open over a vest, a vest and cut-offs, bare chested with the ribs showing, and one torn open to the ribs with glowing eyes): a gaunt body with collarbones, ribs, kneecaps and wrist bones, a sculpted face with sunken milky eyes and bared teeth, blood round the mouth and up the arms, boots or bare feet, thin or lank hair or none. Each zombie type lists the models it comes as and its shirt colours (`data/zombies/*.tres`); the horde shares 64 bodies, made ahead of time while you're in the menus. Survivors: six models of the living (`SURVIVOR_MODELS`), in a man's build or a woman's: the scout (you: hood up over a cap, a dust mask, a pack with an axe and a bottle strapped on, gloves, jeans, a holster on the thigh), the soldier (a vest hung with pouches, cargo trousers, knee pads), and others in a tank top, an open jacket and scarf, a shirt with the sleeves rolled under a pack and bedroll, or a hooded jacket; with their own faces, hair (cropped, long, a ponytail, shaved), beards, belts and laced boots. The shader adds veins, bruises, sores and grime to dead skin, a softer blotchiness to living skin, strands to hair, a weave and creases to cloth, the sweater's stripes and the glow of eyes |
 | `scenes/actors/survivor.tscn`, `survivor.gd` | A survivor: aiming with both hands, walking, kneeling to repair, reloading, falling; gun, muzzle flash and name label |
 | `scenes/traps/*.tscn` | Spike strip, bear trap, landmine and fuel slick |
@@ -359,8 +360,53 @@ placing and moving traps, shooting, buying in the workshop, sending someone
 scavenging from the map and waiting for them to come back, game over,
 restart) and saves screenshots to `shots/`.
 
+## The survivor models
+
+The survivors are made in Blender by `tools/blender/build_survivors.py`, which
+writes `assets/models/survivors/<name>.gltf` (what the game loads, with its
+textures beside it) and `art/survivors/<name>.blend` (to open and change by
+hand; export over the `.gltf` and the game picks it up). `people.py` says who
+they are: the body each is shaped into, their colouring, and what they wear
+and carry, step by step.
+
+Each starts from the MakeHuman base human (`tools/blender/makehuman/`, in the
+public domain), shaped into one particular person. Clothes are cut from the
+body's own fitted surface, made a little too big and left to hang in
+Blender's cloth simulation, so they fold and crease as cloth does; collars,
+pockets, knee pads, laces and straps are laid onto them. Hair and beards are
+grown as locks from the scalp and jaw, combed in a style and laid over the
+head and shoulders. Every surface is then baked (how hidden from the light it
+is, where it is in space) and painted from that: skin with its flush, lips,
+brows, stubble and grime; cloth with its weave, fading, creased shadows and
+dirt.
+
+To build them again (all four take about half an hour; add names to build
+only some), with Blender 4.5 as a Python module:
+
+```bash
+pip install bpy==4.5.16 numpy pillow
+```
+
+```bash
+python tools/blender/build_survivors.py
+```
+
+Set `TEX=512` for smaller textures and a much quicker build while trying
+things out, and `FAST=1` to skip the cloth simulation.
+
+```bash
+godot --path . --script res://tests/survivor_sheet.gd -- shots
+```
+
+Renders each model from four sides, its face and its upper body, and a
+line-up of the cast as the game shows them, guns in hand.
+
 ## Credits
 
 Oswald font by Vernon Adams and others, and Caveat font by Impallari Type,
 both under the SIL Open Font License
-(`assets/fonts/LICENSE.txt`). Everything else was made for this project.
+(`assets/fonts/LICENSE.txt`). The survivors are built on the MakeHuman base
+mesh, shape targets, skeleton, skin weights and eye, by the MakeHuman team,
+released into the public domain under CC0
+(`tools/blender/makehuman/LICENSE.md`). Everything else was made for this
+project.

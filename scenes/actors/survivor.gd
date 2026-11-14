@@ -1,4 +1,6 @@
-# The look of one survivor: one of the models in scenes/actors/body.gd, who
+# The look of one survivor: one of the people modelled in Blender
+# (scenes/actors/survivor_model.gd; the garrison's soldiers are still built in
+# code, by scenes/actors/body.gd), who
 # holds their gun in both hands, turns to aim, recoils and flashes the muzzle;
 # walks with a proper stride when sent somewhere; kneels to hammer at the wall
 # when repairing; works the gun when reloading; and falls when killed. When
@@ -8,6 +10,7 @@ extends Node3D
 const D = preload("res://scripts/defs.gd")
 const Game = preload("res://scripts/game.gd")
 const Body = preload("res://scenes/actors/body.gd")
+const Model = preload("res://scenes/actors/survivor_model.gd")
 const Guns = preload("res://scenes/actors/guns.gd")
 
 ## Light energy of the muzzle flash.
@@ -45,6 +48,9 @@ var _hp_bar: Node3D         # health, over their head when they're hurt
 var _hp_fill: MeshInstance3D
 
 var _weapon := ""
+var _hip_y := Body.HIP_H    # how high this body's hips are
+var _chest := 0.04          # how far above them its upper body turns
+var _stride_scale := 1.0    # its legs' length, against the one body.gd's stride is worked out for
 var _height := D.DECK_H
 var _heading := 0.0
 var _last := Vector2.ZERO
@@ -98,6 +104,7 @@ static func look_of(s: Dictionary, model := "") -> Dictionary:
 		model = "scout" if s["is_player"] else s.get("model", pick[rng.randi() % pick.size()])
 	var M: Dictionary = Body.SURVIVOR_MODELS[model]
 	var look: Dictionary = M.duplicate()
+	look["model"] = model
 	var who: Dictionary = {} if s["is_player"] else D.CHARACTERS.get(s["name"], {})
 	var styles: Array = M["hair"]
 	if fem:   # short hair is the exception
@@ -132,16 +139,26 @@ static func look_of(s: Dictionary, model := "") -> Dictionary:
 	return look
 
 
+## model: which outfit of Body.SURVIVOR_MODELS, or which of the models made
+## in Blender (Model.MODELS), to be (else as look_of says).
 func setup(s: Dictionary, model := "") -> void:
-	var look := look_of(s, model)
-	if look["build"] == "f":
-		scale = Vector3.ONE * 0.95
-	j = Body.survivor(self, look)
+	var look := look_of(s, "" if model in Model.MODELS else model)
+	var made: String = model if model in Model.MODELS else Model.for_look(look)
+	if made != "":
+		# One of the people modelled in Blender, in this survivor's own colouring.
+		j = Model.build(self, made, look["skin"], look["hair"], look["shirt"] if not s["is_player"] else null)
+		_hip_y = j["hips"].position.y
+		_chest = j["spine"].position.y - _hip_y
+		_stride_scale = j["leg"] / Body.LEG
+	else:
+		if look["build"] == "f":
+			scale = Vector3.ONE * 0.95
+		j = Body.survivor(self, look)
 	upper = j["spine"]
 	hips = j["hips"]
 	# The gun, held in front at chest height, and its muzzle flash.
 	gun_pivot = Node3D.new()
-	gun_pivot.position = Vector3(0.06, 0.3, 0.2)
+	gun_pivot.position = Vector3(0.06, 0.34 - _chest, 0.2)
 	upper.add_child(gun_pivot)
 	gun = MeshInstance3D.new()
 	gun.material_override = Guns.material()
@@ -304,7 +321,7 @@ func sync(s: Dictionary, dt: float) -> void:
 	position = Vector3(pos.x, _height, pos.y)
 	if s["weapon"] != _weapon:
 		_set_weapon(s["weapon"])
-	var hip_y := Body.HIP_H
+	var hip_y := _hip_y
 	flash_mesh.visible = false
 	flash_light.light_energy = 0.0
 	gun.visible = true
@@ -316,12 +333,12 @@ func sync(s: Dictionary, dt: float) -> void:
 		if step.length() > 0.0005:
 			_heading = atan2(step.x, step.y)
 		# Stride by distance walked, so the feet stay planted.
-		_phase += minf(step.length(), 0.5) / Body.stride_cycle(stride) * TAU
+		_phase += minf(step.length(), 0.5) / Body.stride_cycle(stride, _stride_scale) * TAU
 		var sw := sin(_phase)
 		_legs(Body.hip_swing(_phase, stride), maxf(0.0, -cos(_phase)) * 0.9, Body.hip_swing(_phase + PI, stride), maxf(0.0, cos(_phase)) * 0.9)
 		var bob := absf(cos(_phase)) * 0.035
 		hips.position.y = hip_y + bob
-		upper.position = Vector3(0, hip_y + 0.04 + bob, 0)
+		upper.position = Vector3(0, hip_y + _chest + bob, 0)
 		hips.rotation.y = lerp_angle(hips.rotation.y, _heading, 0.3)
 		upper.rotation.y = hips.rotation.y
 		upper.rotation.z = sw * 0.03
@@ -346,7 +363,7 @@ func sync(s: Dictionary, dt: float) -> void:
 		upper.rotation.y = face
 		_legs(-1.45, 1.55, 0.1, 1.5)
 		hips.position.y = hip_y - 0.32
-		upper.position = Vector3(0, hip_y - 0.28, 0)
+		upper.position = Vector3(0, hip_y - 0.32 + _chest, 0)
 		upper.rotation.x = 0.35
 		upper.rotation.z = 0.0
 		gun.visible = false
@@ -384,7 +401,7 @@ func sync(s: Dictionary, dt: float) -> void:
 			_heading = atan2(step.x, step.y)
 			var backwards := absf(angle_difference(face, _heading)) > deg_to_rad(105.0)
 			var stroke := stride * (0.7 if backwards else 1.0)
-			var adv := minf(step.length(), 0.5) / Body.stride_cycle(stroke) * TAU
+			var adv := minf(step.length(), 0.5) / Body.stride_cycle(stroke, _stride_scale) * TAU
 			_phase += -adv if backwards else adv
 			_legs(Body.hip_swing(_phase, stroke), maxf(0.0, -cos(_phase)) * 0.9, Body.hip_swing(_phase + PI, stroke), maxf(0.0, cos(_phase)) * 0.9)
 			hips.rotation.y = lerp_angle(hips.rotation.y, _heading + PI if backwards else _heading, 0.3)
@@ -393,7 +410,7 @@ func sync(s: Dictionary, dt: float) -> void:
 			_legs(0.12, 0.08, -0.12, 0.05)
 		var breathe := sin(_t * 1.7) * 0.008
 		var recoil: float = s["recoil"] * 0.9
-		upper.position = Vector3(0, hip_y + 0.04 + breathe, 0) - Vector3(cos(ang), 0, sin(ang)) * recoil
+		upper.position = Vector3(0, hip_y + _chest + breathe, 0) - Vector3(cos(ang), 0, sin(ang)) * recoil
 		# Reloading: the gun tips up, the other hand works it, a bar fills up.
 		_bar.visible = reloading
 		if reloading:
