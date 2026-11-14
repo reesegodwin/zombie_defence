@@ -11,3 +11,10 @@
   `Co-Authored-By` or `Claude-Session` lines to commit messages.
 - End every reply to the user with a next step or suggestion for the game's
   development (what to build, fix or playtest next, and why).
+- When a task would be done better with another piece of software or service
+  (as Blender was for the models, `tools/blender/`), say so: what it is, what
+  it would improve, and what's needed to connect it (installed in the cloud
+  session, a host allowed in the environment's network settings, an account or
+  API key, or something on the user's own computer). Recommend it before
+  starting the work, and don't connect anything that needs the user's account,
+  money or computer without asking.
