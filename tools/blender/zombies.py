@@ -20,7 +20,7 @@ import sys
 
 import bpy  # first: it brings bmesh and mathutils with it
 import bmesh
-from mathutils import Matrix, Vector, noise
+from mathutils import Matrix, Quaternion, Vector, noise
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 OUT = os.path.join(ROOT, "assets", "models")
@@ -90,9 +90,94 @@ def bump(d, r):
 
 
 # --- The body ---------------------------------------------------------------
+#
+# The body is built as volumes that melt into each other (metaballs), a few
+# families of them: the torso with the neck, the shoulders and the hips;
+# each arm with its palm; each leg with its foot. Then the sculpted head and
+# the fingers are pushed into them, everything is fused into one skin
+# (voxel remesh), the creases where the families meet are smoothed into
+# fillets, and it's thinned to the vertex budget.
 
-def _skeleton():
-    """The skin modifier's frame: points with radii, joined into a body."""
+MB = 0.573   # a metaball's surface sits at this fraction of its radius
+
+
+def _family(name, res):
+    mb = bpy.data.metaballs.new(name)
+    mb.resolution = res
+    mb.render_resolution = res
+    mb.threshold = 0.6
+    obj = bpy.data.objects.new(name, mb)
+    bpy.context.collection.objects.link(obj)
+    return mb
+
+
+def _blob(mb, at, half, rot=None):
+    """An ellipsoid with these half-sizes (where its surface would be alone)."""
+    e = mb.elements.new(type="ELLIPSOID")
+    r = max(half)
+    e.co = at
+    e.radius = r / MB
+    e.stiffness = 2.0
+    e.size_x, e.size_y, e.size_z = half[0] / r, half[1] / r, half[2] / r
+    if rot is not None:
+        e.rotation = rot
+    return e
+
+
+def _rod(mb, a, b, r):
+    """A capsule of radius r from a to b."""
+    a, b = Vector(a), Vector(b)
+    e = mb.elements.new(type="CAPSULE")
+    e.co = (a + b) / 2
+    e.radius = r / MB
+    e.stiffness = 2.0
+    e.size_x = (b - a).length / 2   # (a capsule's length is in metres, not radii)
+    e.rotation = Vector((1, 0, 0)).rotation_difference((b - a).normalized())
+    return e
+
+
+def _volumes(res):
+    torso = _family("Torso", res)
+    _blob(torso, (0, 0.905, -0.008), (0.112, 0.085, 0.084))       # pelvis
+    for s in (-1, 1):
+        _blob(torso, (s * 0.056, 0.865, -0.04), (0.062, 0.065, 0.055))   # buttocks
+    _blob(torso, (0, 0.99, 0.0), (0.11, 0.07, 0.072))              # low belly
+    _blob(torso, (0, 1.065, 0.0), (0.104, 0.07, 0.068))            # waist
+    _blob(torso, (0, 1.18, 0.006), (0.108, 0.095, 0.08))           # ribcage
+    _blob(torso, (0, 1.29, 0.0), (0.113, 0.075, 0.08))             # chest
+    _blob(torso, (0, 1.355, -0.008), (0.135, 0.05, 0.064))         # shoulder girdle
+    for s in (-1, 1):
+        _blob(torso, (s * 0.062, 1.425, -0.02), (0.06, 0.04, 0.045))    # trapezius, rising to the neck
+        _blob(torso, (s * 0.152, 1.37, 0.0), (0.05, 0.048, 0.05))        # deltoid
+    _rod(torso, (0, 1.38, -0.022), (0, 1.54, -0.004), 0.05)      # neck, up into the back of the jaw
+    _blob(torso, (0, 1.425, -0.018), (0.068, 0.03, 0.058))       # the neck flaring into the shoulders
+    arms = {}
+    for s, n in ((-1, "l"), (1, "r")):
+        a = _family("Arm" + n, res)
+        _blob(a, (s * 0.158, 1.365, 0.0), (0.048, 0.05, 0.048))
+        _rod(a, (s * 0.168, 1.35, 0.0), (s * 0.174, 1.11, -0.004), 0.036)
+        _blob(a, (s * 0.176, 1.24, 0.006), (0.034, 0.075, 0.042))    # biceps
+        _rod(a, (s * 0.174, 1.105, -0.004), (s * 0.176, 0.87, 0.0), 0.029)
+        _blob(a, (s * 0.176, 1.03, 0.004), (0.033, 0.07, 0.04))     # forearm muscle
+        _blob(a, (s * 0.176, 0.845, 0.0), (0.019, 0.02, 0.026))     # wrist
+        _blob(a, (s * 0.174, 0.795, 0.003), (0.015, 0.04, 0.039))   # palm
+        arms[n] = a
+    for s, n in ((-1, "l"), (1, "r")):
+        g = _family("Leg" + n, res)
+        # (Narrow enough at the side to leave the hanging hands a gap.)
+        _rod(g, (s * 0.076, 0.87, 0.0), (s * 0.079, 0.5, 0.01), 0.05)
+        _blob(g, (s * 0.074, 0.74, 0.01), (0.05, 0.12, 0.066))      # thigh
+        _blob(g, (s * 0.08, 0.465, 0.014), (0.046, 0.045, 0.046))  # knee
+        _blob(g, (s * 0.08, 0.35, -0.012), (0.048, 0.1, 0.052))    # calf
+        _rod(g, (s * 0.08, 0.46, 0.006), (s * 0.08, 0.09, 0.0), 0.035)
+        _blob(g, (s * 0.08, 0.075, -0.002), (0.032, 0.032, 0.034))  # ankle
+        _blob(g, (s * 0.082, 0.032, 0.068), (0.04, 0.038, 0.115), rot=Quaternion((1, 0, 0), 0.06))   # foot
+        _blob(g, (s * 0.08, 0.04, -0.024), (0.033, 0.036, 0.035))  # heel
+    return ["Torso", "Arml", "Armr", "Legl", "Legr"]
+
+
+def _fingers():
+    """Finger and thumb tubes for both hands, reaching into the palms."""
     pts, rad, edges = [], [], []
 
     def add(p, r, parent=None):
@@ -102,111 +187,170 @@ def _skeleton():
             edges.append((parent, len(pts) - 1))
         return len(pts) - 1
 
-    pelvis = add((0, 0.90, 0.0), 0.128)
-    waist = add((0, 1.02, 0.0), 0.114, pelvis)
-    belly = add((0, 1.12, 0.004), 0.118, waist)
-    chest = add((0, 1.24, 0.01), 0.13, belly)
-    upper = add((0, 1.34, 0.0), 0.12, chest)
-    nb = add((0, 1.43, -0.008), 0.062, upper)
-    neck = add((0, 1.49, 0.0), 0.052, nb)
-    add((0, 1.55, 0.008), 0.048, neck)
+    roots = []
     for s in (-1, 1):
-        # Shoulder and arm, hanging straight down.
-        cl = add((s * 0.095, 1.395, -0.004), 0.055, upper)
-        sh = add((s * 0.158, 1.385, 0.0), 0.05, cl)
-        ua = add((s * 0.17, 1.25, 0.0), 0.045, sh)
-        el = add((s * 0.172, 1.10, -0.004), 0.034, ua)
-        fa = add((s * 0.172, 1.0, 0.004), 0.038, el)
-        wr = add((s * 0.172, 0.84, 0.0), 0.025, fa)
-        palm = add((s * 0.172, 0.79, 0.002), 0.03, wr)
-        # Four fingers, curled a little, spread front to back; a thumb.
-        for k, (fz, ln) in enumerate(((0.022, 0.92), (0.008, 1.0), (-0.007, 0.96), (-0.021, 0.8))):
-            kn = add((s * 0.172, 0.752, fz), 0.0095, palm)
-            mid = add((s * (0.172 - 0.004), 0.752 - 0.034 * ln, fz * 1.05), 0.0085, kn)
-            add((s * (0.172 - 0.012), 0.752 - 0.062 * ln, fz * 1.05), 0.0072, mid)
-        tb = add((s * 0.166, 0.80, 0.026), 0.012, palm)
-        tm = add((s * 0.161, 0.778, 0.042), 0.0095, tb)
-        add((s * 0.156, 0.758, 0.05), 0.008, tm)
-        # Leg and foot.
-        hip = add((s * 0.085, 0.84, 0.0), 0.082, pelvis)
-        th = add((s * 0.086, 0.69, 0.006), 0.072, hip)
-        ak = add((s * 0.083, 0.55, 0.01), 0.055, th)
-        kn2 = add((s * 0.08, 0.465, 0.014), 0.045, ak)
-        calf = add((s * 0.08, 0.36, -0.008), 0.054, kn2)
-        shin = add((s * 0.08, 0.22, 0.0), 0.037, calf)
-        ank = add((s * 0.08, 0.085, 0.0), 0.029, shin)
-        add((s * 0.08, 0.035, -0.035), 0.03, ank)          # heel
-        fm = add((s * 0.082, 0.045, 0.055), 0.034, ank)
-        ball = add((s * 0.086, 0.03, 0.125), 0.031, fm)
-        add((s * 0.088, 0.024, 0.175), 0.022, ball)
-    return pts, rad, edges
-
-
-def _body_mesh(levels):
-    pts, rad, edges = _skeleton()
-    me = bpy.data.meshes.new("frame")
+        for fz, ln in ((0.022, 0.92), (0.008, 1.0), (-0.007, 0.96), (-0.021, 0.8)):
+            kn = add((s * 0.171, 0.775, fz), 0.009)
+            roots.append(kn)
+            k2 = add((s * 0.171, 0.752, fz), 0.0092, kn)
+            mid = add((s * (0.171 - 0.004), 0.752 - 0.034 * ln, fz * 1.05), 0.0083, k2)
+            add((s * (0.171 - 0.012), 0.752 - 0.062 * ln, fz * 1.05), 0.007, mid)
+        tb = add((s * 0.168, 0.805, 0.02), 0.012)
+        roots.append(tb)
+        tm = add((s * 0.162, 0.78, 0.042), 0.0095, tb)
+        add((s * 0.157, 0.759, 0.05), 0.0078, tm)
+    me = bpy.data.meshes.new("fingers")
     me.from_pydata([Vector(p) for p in pts], edges, [])
-    obj = bpy.data.objects.new("frame", me)
+    obj = bpy.data.objects.new("fingers", me)
     bpy.context.collection.objects.link(obj)
     sk = obj.modifiers.new("skin", "SKIN")
-    sk.branch_smoothing = 0.6
     for i, r in enumerate(rad):
         d = me.skin_vertices[0].data[i]
         d.radius = (r, r)
-        d.use_root = i == 0
+        d.use_root = i in roots
     ss = obj.modifiers.new("sub", "SUBSURF")
-    ss.levels = levels
+    ss.levels = 2
+    return obj
+
+
+def _mesh_obj(name, bm):
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    obj = bpy.data.objects.new(name, me)
+    bpy.context.collection.objects.link(obj)
+    return obj
+
+
+FILLETS = [   # (centre, radius, strength): where families meet, smoothed into one
+    ((0, 1.515, -0.01), 0.035, 0.6),   # where the neck meets the jaw
+    ((0, 1.55, -0.05), 0.05, 0.8),     # the back of the neck into the skull
+    ((0, 0.83, 0.0), 0.06, 0.8),       # the crotch
+]
+for _s in (-1, 1):
+    FILLETS += [
+        ((_s * 0.155, 1.37, 0.0), 0.075, 1.0),    # shoulder: arm into deltoid and trapezius
+        ((_s * 0.13, 1.3, 0.0), 0.05, 0.7),       # the armpit
+        ((_s * 0.09, 0.86, 0.0), 0.085, 1.0),     # hip: thigh into the pelvis
+        ((_s * 0.171, 0.765, 0.0), 0.028, 0.6),   # knuckles: fingers into the palm
+        ((_s * 0.08, 0.06, 0.02), 0.06, 0.5),     # ankle into the foot
+    ]
+
+
+def _body_mesh(hi):
+    """The whole bare body, one closed skin, as a bmesh."""
+    names = _volumes(0.006 if hi else 0.008)
+    hb = bmesh.new()
+    hb.verts.layers.int.new("region")
+    _head(hb, 48, 36)
+    C = Vector((0, 1.635, 0.008))
+    for s in (-1, 1):
+        _small(hb, "ball", C + Vector((s * 0.074, -0.004, -0.012)), (0.01, 0.03, 0.02), "skin", rot=(0.12, s * 0.35, 0), segs=14, rings=10)
+    parts = [_mesh_obj("head", hb), _fingers()]
     dg = bpy.context.evaluated_depsgraph_get()
-    ev = obj.evaluated_get(dg)
+    for n in names:
+        ob = bpy.data.objects[n]
+        me = bpy.data.meshes.new_from_object(ob.evaluated_get(dg))
+        mo = bpy.data.objects.new(n + "_m", me)
+        bpy.context.collection.objects.link(mo)
+        parts.append(mo)
+    for n in names:
+        bpy.data.objects.remove(bpy.data.objects[n])
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in parts:
+        o.select_set(True)
+        bpy.context.view_layer.objects.active = o
+        bpy.ops.object.convert(target="MESH")
+    for o in parts:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = parts[0]
+    bpy.ops.object.join()
+    body = bpy.context.active_object
+    rm = body.modifiers.new("fuse", "REMESH")
+    rm.mode = "VOXEL"
+    rm.voxel_size = 0.0035 if hi else 0.005
+    bpy.ops.object.modifier_apply(modifier="fuse")
     bm = bmesh.new()
-    bm.from_mesh(ev.to_mesh())
-    ev.to_mesh_clear()
+    bm.from_mesh(body.data)
+    bpy.data.objects.remove(body)
+    _fillet(bm)
+    # Soles flat on the ground.
+    for v in bm.verts:
+        if v.co.y < 0.004:
+            v.co.y = 0.0
+    # Thin it to the budget: Blender's decimate keeps the detail where it bends.
+    target = 6800 if hi else 1600
+    obj = _mesh_obj("body", bm)
+    dm = obj.modifiers.new("thin", "DECIMATE")
+    dm.ratio = min(1.0, target / max(1, len(obj.data.vertices)))
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.modifier_apply(modifier="thin")
+    bm = bmesh.new()
+    bm.from_mesh(obj.data)
     bpy.data.objects.remove(obj)
     return bm
 
 
-def _shape_body(bm, top):
-    """Anatomy pressed into the skin frame: a flat chest and back, hollow
-    belly, collarbones, ribs, buttocks, kneecaps, flat feet and hands."""
+def _fillet(bm, iters=10):
+    """Smooths the creases where the separately built volumes were fused,
+    strongest at each join and fading out, so faces and hands keep their
+    detail; then a light pass all over (but the face) for the voxel steps."""
+    w = {}
+    for v in bm.verts:
+        k = 0.0
+        for c, r, st in FILLETS:
+            k = max(k, st * bump((v.co - Vector(c)).length, r))
+        face = smooth(1.5, 1.56, v.co.y)
+        w[v] = max(k, 0.25 * (1 - face))
+    for _ in range(iters):
+        new = {}
+        for v, k in w.items():
+            if k <= 0.0 or not v.link_edges:
+                continue
+            avg = Vector()
+            for e in v.link_edges:
+                avg += e.other_vert(v).co
+            avg /= len(v.link_edges)
+            new[v] = v.co.lerp(avg, 0.5 * k)
+        for v, co in new.items():
+            v.co = co
+
+
+def _details(bm):
+    """The small things pressed into the skin: ribs, collarbones, a hollow
+    belly, kneecaps."""
+    bm.normal_update()
     for v in bm.verts:
         x, y, z = v.co
         ax = abs(x)
-        torso = smooth(0.145, 0.115, ax) * smooth(0.80, 0.86, y) * smooth(1.47, 1.42, y)
-        # A torso is wider than it is deep.
-        z *= 1.0 - 0.3 * torso
-        # Hollow, starved belly; a ribcage standing out above it.
-        if z > 0:
-            z -= 0.016 * torso * bump(abs(y - 1.08), 0.07) * smooth(0.11, 0.0, ax)
-            rib = smooth(1.03, 1.08, y) * smooth(1.32, 1.27, y) * smooth(0.0, 0.03, ax)
+        d = 0.0
+        if z > 0.02 and ax < 0.13:
+            rib = smooth(1.06, 1.1, y) * smooth(1.32, 1.27, y) * smooth(0.0, 0.03, ax)
             ridge = 0.5 + 0.5 * math.cos(math.tau * (y + ax * 0.3) / 0.043)
-            z += 0.0035 * rib * ridge * ridge * torso
-            # Collarbones.
-            z += 0.006 * torso * bump(abs(y - (1.405 - ax * 0.12)), 0.012) * smooth(0.02, 0.05, ax) * smooth(0.14, 0.11, ax)
-            # A flat chest with a little pectoral shelf.
-            z += 0.006 * torso * bump(abs(y - 1.3), 0.05) * bump(abs(ax - 0.06), 0.06)
-        else:
-            # Shoulder blades, and the buttocks below the waist.
-            z -= 0.008 * torso * bump(abs(y - 1.3), 0.06) * bump(abs(ax - 0.07), 0.05)
-            z -= 0.02 * bump(abs(y - 0.86), 0.08) * bump(abs(ax - 0.07), 0.07)
-        # The trapezius rising from the shoulders to the neck.
-        if y > 1.36 and ax < 0.16:
-            y += 0.022 * smooth(0.15, 0.06, ax) * smooth(1.36, 1.42, y) * smooth(0.03, 0.05, ax)
-        # Kneecaps and the backs of the knees.
-        leg = smooth(0.03, 0.05, ax) * smooth(0.13, 0.11, ax)
-        if y < 0.6:
-            if z > 0.01:
-                z += 0.008 * leg * bump(abs(y - 0.47), 0.03)
-            # Calf muscle, behind.
-            if z < -0.01:
-                z -= 0.006 * leg * bump(abs(y - 0.37), 0.08)
-        # Flat feet with soles on the ground; a flat palm.
-        if y < 0.07:
-            y = max(0.0, 0.01 + (y - 0.01) * 0.75)
-        hand = smooth(0.85, 0.82, y) * smooth(0.14, 0.16, ax) * smooth(0.6, 0.7, y)
-        if hand > 0:
-            cx = 0.172 if x > 0 else -0.172
-            x = cx + (x - cx) * (1.0 - 0.45 * hand * smooth(0.758, 0.775, y))
-        v.co = Vector((x, y, z))
+            d += 0.0025 * rib * ridge * ridge
+            d += 0.004 * bump(abs(y - (1.4 - ax * 0.12)), 0.012) * smooth(0.055, 0.075, ax) * smooth(0.13, 0.1, ax) * smooth(1.43, 1.41, y)
+            d -= 0.008 * bump(abs(y - 1.06), 0.06) * smooth(0.1, 0.0, ax)
+        if y < 0.55 and z > 0.02 and 0.04 < ax < 0.12:
+            d += 0.005 * bump(abs(y - 0.47), 0.03)
+        if d:
+            v.co = v.co + v.normal * d
+
+
+def _head_regions(bm):
+    """The mouth's dark inside and the scalp, found on the fused skin."""
+    reg = bm.verts.layers.int["region"]
+    C = Vector((0, 1.635, 0.008))
+    for v in bm.verts:
+        q = v.co - C
+        if v.co.y < 1.53 or (q.x / 0.09) ** 2 + (q.y / 0.13) ** 2 + (q.z / 0.12) ** 2 > 1.0:
+            continue
+        if q.z > 0.02 and math.hypot(q.x / 0.0225, (q.y + 0.066) / 0.0105) < 0.85:
+            v[reg] = REGIONS["mouth"]
+            continue
+        f = max(0.0, min(1.0, q.z / 0.1 * 0.5 + 0.5))
+        line = -0.055 + (0.066 + 0.055) * f ** 2.4 - abs(q.x) * 0.22 * f
+        if q.y > line:
+            v[reg] = REGIONS["scalp"]
 
 
 def _head(bm, segs, rings):
@@ -221,7 +365,7 @@ def _head(bm, segs, rings):
         q = Vector((u.x * 0.077, u.y * 0.116, u.z * 0.1))
         if q.y < 0:   # the jaw narrows; the back of the skull gives way to the neck
             k = smooth(0.0, -0.11, q.y)
-            q.x *= 1 - 0.24 * k
+            q.x *= 1 - 0.17 * k
             if q.z < 0:
                 q.z *= 1 - 0.4 * k
         if q.z > 0:
@@ -298,6 +442,7 @@ def _owners(bm):
     to it in space but far from it over the skin, so it can't claim it."""
     import heapq
     bm.verts.ensure_lookup_table()
+    bm.normal_update()
     own = [None] * len(bm.verts)
     dist = [1e9] * len(bm.verts)
     heap = []
@@ -325,6 +470,12 @@ def _owners(bm):
         if own[v.index] is None:
             ins = _inside(v.co)
             own[v.index] = min(ins, key=ins.get)
+        # The flank under the armpit is the chest's, however close the arm:
+        # it faces out towards the arm, where the arm's inside faces in.
+        c = v.co
+        if own[v.index].startswith(("Shoulder", "Elbow")) and abs(c.x) < 0.15 and c.y < 1.33:
+            if v.normal.x * math.copysign(1.0, c.x) > 0.15 or abs(c.x) < 0.125:
+                own[v.index] = "Spine" if c.y > 0.97 else "Hips"
     return own
 
 
@@ -344,6 +495,9 @@ def _weights(p, owner):
         e = ins[b] - ins[owner]
         if e < 0.35:
             w[b] = math.exp(-max(e, 0.0) / 0.08)
+            if b != owner and (b.startswith("Shoulder") or owner.startswith("Shoulder")) and "Spine" in (b, owner):
+                # The arm and the chest only share the shoulder itself, not the flank below it.
+                w[b] *= smooth(1.27, 1.36, p.y)
     if owner in ("Hips", "Spine") and abs(p.x) < 0.15:   # the hips and the spine share the waist
         t = smooth(0.94, 1.04, p.y)
         w = {"Hips": 1 - t, "Spine": t}
@@ -388,11 +542,23 @@ def _cloth(bm, pred, region, offset, loose=None, thick=0.0035, seed=0.0, cover=N
     lay = bm.faces.layers.int["layer"]
     reg = bm.verts.layers.int["region"]
     if edge is not None:
+        bm.normal_update()
         for v in new_verts:
-            if v.is_boundary:
+            if v.is_boundary and abs(v.normal.y) < 0.55:   # (not where it runs flat, over a shoulder)
                 y = edge(v.co, names[v[bl]])
                 if y is not None:
                     v.co.y += max(-0.02, min(0.02, y - v.co.y))
+    # Straighten the open edges: each point eased towards its neighbours
+    # along the edge, so hems and necklines don't zig-zag over the faces.
+    rim = [v for v in new_verts if v.is_boundary]
+    for _ in range(4):
+        moved = {}
+        for v in rim:
+            nb = [e.other_vert(v).co for e in v.link_edges if e.is_boundary]
+            if len(nb) == 2:
+                moved[v] = v.co.lerp((nb[0] + nb[1]) / 2, 0.5)
+        for v, co in moved.items():
+            v.co = co
     bm.normal_update()
     for v in new_verts:
         n = v.normal
@@ -402,13 +568,20 @@ def _cloth(bm, pred, region, offset, loose=None, thick=0.0035, seed=0.0, cover=N
         v[reg] = region
     for f in new_faces:
         f[lay] = 1
-    if thick > 0 and not _LO["on"]:   # far off, nobody sees how thick the cloth is
-        res = bmesh.ops.solidify(bm, geom=new_faces, thickness=thick)
-        for g in res["geom"]:
-            if isinstance(g, bmesh.types.BMFace):
-                g[lay] = 1
-            elif isinstance(g, bmesh.types.BMVert):
-                g[reg] = region
+    if thick > 0 and not _LO["on"]:   # far off, nobody sees the inside of the cloth
+        # Its inside: a copy turned inside out, a little in. (A copy, not
+        # Blender's solidify, so its points keep their bone weights and
+        # move with the cloth.)
+        inner = bmesh.ops.duplicate(bm, geom=new_faces)
+        in_faces = [g for g in inner["geom"] if isinstance(g, bmesh.types.BMFace)]
+        in_verts = [g for g in inner["geom"] if isinstance(g, bmesh.types.BMVert)]
+        bm.normal_update()
+        for v in in_verts:
+            v.co = v.co - v.normal * thick
+            v[reg] = region
+        bmesh.ops.reverse_faces(bm, faces=in_faces)
+        for f in in_faces:
+            f[lay] = 1
     if cover is not None and hidden:
         bmesh.ops.delete(bm, geom=hidden, context="FACES")
 
@@ -503,7 +676,7 @@ def _dress(bm, top, legs, feet, seed):
         def in_boot(c, b, s=s):
             return b == ("Kneer" if s > 0 else "Kneel") and c.y < 0.2
 
-        _cloth(bm, boot, R["boot"], 0.008, lambda c: 0.006 * smooth(0.06, 0.0, c.y) + 0.006 * smooth(0.12, 0.2, c.z), thick=0.004, seed=seed + 5, cover=in_boot,
+        _cloth(bm, boot, R["boot"], 0.008, lambda c: 0.005 * smooth(0.06, 0.0, c.y) + 0.002 * smooth(0.12, 0.2, c.z), thick=0.004, seed=seed + 5, cover=in_boot,
                edge=lambda c, b, s=s: _hem(c, 0.25, 0.01, seed + 5 + s) if c.y > 0.15 else None)
         reg = bm.verts.layers.int["region"]
         for v in bm.verts:
@@ -518,11 +691,11 @@ def build(model, hi=True):
     M = MODELS[model]
     seed = float(sum(map(ord, model)) % 50)
     _LO["on"] = not hi
-    bm = _body_mesh(2 if hi else 1)
+    bm = _body_mesh(hi)
     reg = bm.verts.layers.int.new("region")
     lay = bm.faces.layers.int.new("layer")
-    _shape_body(bm, M["top"])
-    _head(bm, 36 if hi else 14, 26 if hi else 9)
+    _details(bm)
+    _head_regions(bm)
     # Fingernails and toenails.
     for v in bm.verts:
         c = v.co
@@ -548,7 +721,6 @@ def build(model, hi=True):
     parts = []
     for s in (-1, 1):
         parts += _small(bm, "ball", C + Vector((s * 0.032, 0.004, 0.0625)), (0.0115, 0.0115, 0.0115), "eye", segs=12 if hi else 8, rings=8 if hi else 5)
-        parts += _small(bm, "ball", C + Vector((s * 0.077, -0.004, -0.012)), (0.009, 0.03, 0.019), "skin", rot=(0.12, s * 0.35, 0), segs=10, rings=6)
     rnd = noise.random
     noise.seed_set(int(seed) + 11)
     for k in range(8):
@@ -595,7 +767,10 @@ def build(model, hi=True):
         if v[reg] == REGIONS["button"]:
             v[dl].clear()
             v[dl][bones.index("Spine")] = 1.0
-    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    # (Only the hair's faces need turning outwards: the fused body and the
+    # cloth copied off it already face the right way, and the cloth's
+    # insides face in on purpose.)
+    bmesh.ops.recalc_face_normals(bm, faces=[f for f in bm.faces if f.verts[0][reg] == REGIONS["strand"]])
     return bm
 
 
@@ -724,7 +899,11 @@ def _preview(obj, rig, name):
     for view, at, look, pose in (
         ("front", (0.9, 1.1, 2.6), (0, 0.95, 0), False),
         ("face", (0.12, 1.66, 0.42), (0, 1.62, 0), False),
+        ("side", (2.6, 1.1, 0.0), (0, 0.95, 0), False),
+        ("back", (-0.9, 1.3, -2.4), (0, 1.0, 0), False),
+        ("neck", (0.45, 1.5, 0.55), (0, 1.42, 0), False),
         ("reach", (1.6, 1.2, 1.9), (0, 0.95, 0), True),
+        ("reachside", (1.5, 1.05, -0.2), (0, 1.15, 0.15), True),
     ):
         cam.location = bl(at)
         cam.rotation_mode = "QUATERNION"
